@@ -47,11 +47,11 @@ export function VerseSelector({
     }
   }, [book, chapter, maxChapters]);
 
-  const handleValueChange = (type: 'translation' | 'book' | 'chapter', value: string) => {
+  const handleValueChange = (type: 'book' | 'chapter', value: string) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     current.set(type, value);
     // When translation or book changes, reset chapter to 1
-    if (type === 'translation' || type === 'book') {
+    if (type === 'book') {
         current.set('chapter', '1');
     }
     router.push(`${pathname}?${current.toString()}`);
@@ -72,16 +72,12 @@ export function VerseSelector({
     return (
         <Card className="animate-in fade-in duration-500">
             <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    <div className="space-y-2">
-                        <Label htmlFor="translation" className="font-headline">Translation</Label>
-                        <Skeleton className="h-10 w-full" />
-                    </div>
-                    <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div className="space-y-2 md:col-span-1">
                         <Label htmlFor="book" className="font-headline">Book</Label>
                         <Skeleton className="h-10 w-full" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 md:col-span-1">
                         <Label htmlFor="chapter" className="font-headline">Chapter</Label>
                         <Skeleton className="h-10 w-full" />
                     </div>
@@ -95,21 +91,8 @@ export function VerseSelector({
   return (
     <Card className="animate-in fade-in duration-500">
       <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div className="space-y-2">
-            <Label htmlFor="translation" className="font-headline">Translation</Label>
-            <Select value={translation} onValueChange={(v) => handleValueChange('translation', v)}>
-              <SelectTrigger id="translation">
-                <SelectValue placeholder="Select translation" />
-              </SelectTrigger>
-              <SelectContent>
-                {translations.map(t => (
-                  <SelectItem key={t.id} value={t.id}>{t.englishName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="space-y-2 md:col-span-1">
             <Label htmlFor="book" className="font-headline">Book</Label>
             <Select value={book} onValueChange={(v) => handleValueChange('book', v)} disabled={books.length === 0}>
               <SelectTrigger id="book">
@@ -122,7 +105,7 @@ export function VerseSelector({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-1">
             <Label htmlFor="chapter" className="font-headline">Chapter</Label>
             <Input
               id="chapter"

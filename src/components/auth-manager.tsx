@@ -1,7 +1,8 @@
 "use client";
 
-import { useUser, useAuth } from "@/firebase";
-import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { useUser, useAuth, useFirestore, setDocumentNonBlocking } from "@/firebase";
+import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, UserCredential } from "firebase/auth";
+import { doc } from 'firebase/firestore';
 import { Button } from "./ui/button";
 import { LogIn, LogOut } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
@@ -13,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 export function AuthManager() {
     const { user, isUserLoading } = useUser();
     const auth = useAuth();
+    const firestore = useFirestore();
     const { toast } = useToast();
 
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -20,6 +22,19 @@ export function AuthManager() {
     const [password, setPassword] = useState("");
     const [isSigningIn, setIsSigningIn] = useState(false);
 
+    const handleUserCreation = (userCredential: UserCredential) => {
+        const user = userCredential.user;
+        if (firestore && user) {
+            const userDocRef = doc(firestore, "users", user.uid);
+            const userData = {
+                id: user.uid,
+                email: user.email,
+            };
+            // This is a non-blocking call. We don't wait for it to finish.
+            setDocumentNonBlocking(userDocRef, userData, { merge: true });
+        }
+    };
+    
     const handleAuth = async () => {
         if (!email || !password) {
             toast({ variant: "destructive", title: "Missing fields", description: "Please enter email and password." });
@@ -27,13 +42,14 @@ export function AuthManager() {
         }
         setIsSigningIn(true);
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
             toast({ title: "Signed In", description: `Welcome back!` });
             setIsAuthModalOpen(false);
         } catch (error: any) {
             if (error.code === 'auth/user-not-found') {
                 try {
-                    await createUserWithEmailAndPassword(auth, email, password);
+                    const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    handleUserCreation(newUserCredential); // Create user doc in Firestore
                     toast({ title: "Account Created", description: "Welcome to Verse Insights!" });
                     setIsAuthModalOpen(false);
                 } catch (signUpError: any) {
