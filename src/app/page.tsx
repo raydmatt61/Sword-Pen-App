@@ -8,7 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 async function getChapter(
   book: string,
   chapter: string,
-  translation: string
+  translation: string,
+  retries = 1
 ): Promise<BibleChapterResponse | null> {
   try {
     const response = await fetch(
@@ -16,15 +17,34 @@ async function getChapter(
       { cache: 'no-store' }
     );
     if (!response.ok) {
-      if (response.status !== 404) {
-        console.error(`API Error: ${response.status} ${response.statusText}`);
-      }
-      return null;
+        if (response.status !== 404) {
+            console.error(`API Error: ${response.status} ${response.statusText}`);
+        }
+        if (retries > 0) {
+            console.log(`Retrying fetch for ${book} ${chapter}...`);
+            await new Promise(res => setTimeout(res, 1000)); // Wait 1 second before retrying
+            return getChapter(book, chapter, translation, retries - 1);
+        }
+        return null;
     }
     const data = await response.json();
+    // Sometimes the API returns an empty response for BSB, so we check for that.
+    if (!data || !data.verses || data.verses.length === 0) {
+        if (retries > 0) {
+            console.log(`Retrying fetch for ${book} ${chapter} (empty response)...`);
+            await new Promise(res => setTimeout(res, 1000));
+            return getChapter(book, chapter, translation, retries - 1);
+        }
+        return null;
+    }
     return data;
   } catch (error) {
     console.error('Failed to fetch chapter:', error);
+    if (retries > 0) {
+        console.log(`Retrying fetch for ${book} ${chapter} (catch block)...`);
+        await new Promise(res => setTimeout(res, 1000));
+        return getChapter(book, chapter, translation, retries - 1);
+    }
     return null;
   }
 }
@@ -45,7 +65,7 @@ async function ChapterLoader({
       <Card className="mt-6 animate-in fade-in duration-500">
         <CardContent className="pt-6">
           <p className="text-center text-muted-foreground">
-            Could not load chapter. Please select a different book, chapter, or translation.
+            Could not load chapter. The selected translation may not be available for this book, or there was a network issue. Please try a different book, chapter, or translation.
           </p>
         </CardContent>
       </Card>
