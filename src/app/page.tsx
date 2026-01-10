@@ -7,6 +7,7 @@ import { BIBLE_BOOKS_ABBR, TRANSLATIONS } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
+import { QrCodeGenerator } from '@/components/qr-code-generator';
 
 async function getChapter(
   book: string,
@@ -137,7 +138,10 @@ export default async function Home({
             Deepen your biblical understanding with AI-powered insights.
             </p>
         </div>
-        <AuthManager />
+        <div className="flex items-center gap-2">
+            <QrCodeGenerator />
+            <AuthManager />
+        </div>
       </header>
 
       <VerseSelector 
