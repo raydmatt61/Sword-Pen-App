@@ -2,50 +2,30 @@
 import { Suspense } from 'react';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse } from '@/lib/bible';
+import type { BibleChapterResponse, Book } from '@/lib/bible';
+import { BIBLE_BOOKS_ABBR } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AuthManager } from '@/components/auth-manager';
 
 async function getChapter(
   book: string,
   chapter: string,
-  translation: string,
-  retries = 3 // Increased retries to 3
+  translation: string
 ): Promise<BibleChapterResponse | null> {
   try {
+    const bookId = BIBLE_BOOKS_ABBR[book] || book;
     const response = await fetch(
-      `https://bible-api.com/${book}+${chapter}?translation=${translation}`,
-      { cache: 'no-store' }
+      `https://bible.helloao.org/api/${translation}/${bookId}/${chapter}.json`
     );
     if (!response.ok) {
-        if (response.status !== 404) {
-            console.error(`API Error: ${response.status} ${response.statusText}`);
-        }
-        if (retries > 0) {
-            console.log(`Retrying fetch for ${book} ${chapter} (${3 - retries + 1}/3)...`);
-            await new Promise(res => setTimeout(res, 1000)); // Wait 1 second before retrying
-            return getChapter(book, chapter, translation, retries - 1);
-        }
+        console.error(`API Error: ${response.status} ${response.statusText}`);
         return null;
     }
     const data = await response.json();
-    // Sometimes the API returns an empty response for BSB, so we check for that.
-    if (!data || !data.verses || data.verses.length === 0) {
-        if (retries > 0) {
-            console.log(`Retrying fetch for ${book} ${chapter} (empty response, ${3 - retries + 1}/3)...`);
-            await new Promise(res => setTimeout(res, 1000));
-            return getChapter(book, chapter, translation, retries - 1);
-        }
-        return null;
-    }
     return data;
   } catch (error) {
     console.error('Failed to fetch chapter:', error);
-    if (retries > 0) {
-        console.log(`Retrying fetch for ${book} ${chapter} (catch block, ${3 - retries + 1}/3)...`);
-        await new Promise(res => setTimeout(res, 1000));
-        return getChapter(book, chapter, translation, retries - 1);
-    }
     return null;
   }
 }
@@ -61,7 +41,7 @@ async function ChapterLoader({
 }) {
   const chapterData = await getChapter(book, chapter, translation);
 
-  if (!chapterData || chapterData.verses.length === 0) {
+  if (!chapterData || !chapterData.chapter || !chapterData.chapter.content) {
     return (
       <Card className="mt-6 animate-in fade-in duration-500">
         <CardContent className="pt-6">
@@ -77,7 +57,7 @@ async function ChapterLoader({
   return <BibleDisplay chapterData={chapterData} />;
 }
 
-export default function Home({
+export default async function Home({
   searchParams,
 }: {
   searchParams?: {
@@ -88,20 +68,31 @@ export default function Home({
 }) {
   const book = searchParams?.book || 'John';
   const chapter = searchParams?.chapter || '3';
-  const translation = searchParams?.translation || 'bsb';
+  const translation = searchParams?.translation || 'BSB';
+
+  const booksRes = await fetch(`https://bible.helloao.org/api/${translation}/books.json`);
+  const books: Book[] = await booksRes.json().then(d => d.books);
 
   return (
     <main className="container mx-auto px-4 py-8 md:py-12">
-      <header className="text-center mb-8 animate-in fade-in duration-500">
-        <h1 className="text-4xl md:text-5xl font-headline font-bold text-primary">
-          Verse Insights
-        </h1>
-        <p className="text-lg text-muted-foreground mt-2 font-headline">
-          Deepen your biblical understanding with AI-powered insights.
-        </p>
+       <header className="text-center mb-8 animate-in fade-in duration-500 flex justify-between items-center">
+        <div></div>
+        <div>
+            <h1 className="text-4xl md:text-5xl font-headline font-bold text-primary">
+            Verse Insights
+            </h1>
+            <p className="text-lg text-muted-foreground mt-2 font-headline">
+            Deepen your biblical understanding with AI-powered insights.
+            </p>
+        </div>
+        <AuthManager />
       </header>
 
-      <VerseSelector defaultValues={{ book, chapter, translation }} />
+
+      <VerseSelector 
+        defaultValues={{ book, chapter, translation }}
+        books={books}
+      />
 
       <Suspense fallback={<BibleDisplaySkeleton />}>
         <ChapterLoader book={book} chapter={chapter} translation={translation} />

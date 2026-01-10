@@ -67,3 +67,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+.hl-yellow { background-color: #fff59d !important; color: black !important; }
+.hl-green { background-color: #c8e6c9 !important; color: black !important; }
+.hl-blue { background-color: #bbdefb !important; color: black !important; }
+.hl-pink { background-color: #f8bbd0 !important; color: black !important; }
+.ul-red { border-bottom: 3px solid #e53935; padding-bottom: 1px; }
+.ul-purple { border-bottom: 3px solid #8e24aa; padding-bottom: 1px; }
+.ul-orange { border-bottom: 3px solid #fb8c00; padding-bottom: 1px; }

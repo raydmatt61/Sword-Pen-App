@@ -1,38 +1,49 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from '@/components/ui/label';
-import { BIBLE_BOOKS, TRANSLATIONS, BOOK_CHAPTERS } from '@/lib/bible';
+import { BIBLE_BOOKS, TRANSLATIONS, type Book } from '@/lib/bible';
 import { Search } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 
-export function VerseSelector({ defaultValues }: { defaultValues: { book: string; chapter: string; translation: string } }) {
+export function VerseSelector({ defaultValues, books }: { defaultValues: { book: string; chapter: string; translation: string }, books: Book[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   
+  const [translation, setTranslation] = useState(defaultValues.translation);
   const [book, setBook] = useState(defaultValues.book);
   const [chapter, setChapter] = useState(defaultValues.chapter);
-  const [translation, setTranslation] = useState(defaultValues.translation);
-  const [maxChapters, setMaxChapters] = useState(BOOK_CHAPTERS[defaultValues.book] || 1);
-
+  
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+  
+  const maxChapters = useMemo(() => {
+      const selectedBook = books.find(b => b.commonName === book);
+      return selectedBook?.numberOfChapters || 1;
+  }, [books, book]);
 
   useEffect(() => {
-    setMaxChapters(BOOK_CHAPTERS[book] || 1);
-    if (parseInt(chapter) > (BOOK_CHAPTERS[book] || 1)) {
+    if (parseInt(chapter) > maxChapters) {
       setChapter('1');
     }
-  }, [book, chapter]);
+  }, [book, chapter, maxChapters]);
+
+  const handleTranslationChange = (newTranslation: string) => {
+    setTranslation(newTranslation);
+    // When translation changes, reload the page with the new translation to get the right book list
+    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    current.set('translation', newTranslation);
+    router.push(`${pathname}?${current.toString()}`);
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,13 +86,13 @@ export function VerseSelector({ defaultValues }: { defaultValues: { book: string
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div className="space-y-2">
             <Label htmlFor="translation" className="font-headline">Translation</Label>
-            <Select value={translation} onValueChange={setTranslation}>
+            <Select value={translation} onValueChange={handleTranslationChange}>
               <SelectTrigger id="translation">
                 <SelectValue placeholder="Select translation" />
               </SelectTrigger>
               <SelectContent>
                 {TRANSLATIONS.map(t => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  <SelectItem key={t.id} value={t.id}>{t.englishName}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -93,8 +104,8 @@ export function VerseSelector({ defaultValues }: { defaultValues: { book: string
                 <SelectValue placeholder="Select book" />
               </SelectTrigger>
               <SelectContent>
-                {BIBLE_BOOKS.map(b => (
-                  <SelectItem key={b} value={b}>{b}</SelectItem>
+                {books.map(b => (
+                  <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
