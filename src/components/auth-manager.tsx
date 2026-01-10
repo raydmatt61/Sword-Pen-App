@@ -47,6 +47,11 @@ export function AuthManager() {
             setIsAuthModalOpen(false);
         } catch (error: any) {
             if (error.code === 'auth/user-not-found') {
+                 if (password.length < 6) {
+                    toast({ variant: "destructive", title: "Sign-up failed", description: "Password must be at least 6 characters long." });
+                    setIsSigningIn(false);
+                    return;
+                }
                 try {
                     const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
                     handleUserCreation(newUserCredential); // Create user doc in Firestore
@@ -55,7 +60,10 @@ export function AuthManager() {
                 } catch (signUpError: any) {
                     toast({ variant: "destructive", title: "Sign-up failed", description: signUpError.message });
                 }
-            } else {
+            } else if (error.code === 'auth/invalid-credential') {
+                toast({ variant: "destructive", title: "Sign-in failed", description: "Incorrect email or password. Please try again." });
+            }
+            else {
                 toast({ variant: "destructive", title: "Sign-in failed", description: error.message });
             }
         } finally {
