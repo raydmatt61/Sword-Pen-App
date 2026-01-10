@@ -45,7 +45,7 @@ async function ChapterLoader({
       <Card className="mt-6 animate-in fade-in duration-500">
         <CardContent className="pt-6">
           <p className="text-center text-muted-foreground">
-            Select a book and chapter to begin, or check your selection.
+            Could not load chapter. Please select a different book, chapter, or translation.
           </p>
         </CardContent>
       </Card>
@@ -66,7 +66,7 @@ export default function Home({
 }) {
   const book = searchParams?.book || 'John';
   const chapter = searchParams?.chapter || '3';
-  const translation = searchParams?.translation || 'bsb';
+  const translation = searchParams?.translation || 'kjv';
 
   return (
     <main className="container mx-auto px-4 py-8 md:py-12">

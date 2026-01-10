@@ -23,7 +23,7 @@ export const BOOK_CHAPTERS: Record<string, number> = {
 };
 
 export const TRANSLATIONS = [
-  { id: 'bsb', name: 'Berean Standard Bible' },
+  { id: 'kjv', name: 'King James Version' },
   { id: 'web', name: 'World English Bible' },
 ];
 
