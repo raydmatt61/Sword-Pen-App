@@ -19,20 +19,27 @@ async function getChapter(
 
   while (attempts < maxRetries) {
     try {
+      // CRITICAL FIX: Ensure we use the abbreviation for the API call.
       const bookId = BIBLE_BOOKS_ABBR[book] || book;
       const response = await fetch(
         `https://bible.helloao.org/api/${translation}/${bookId}/${chapter}.json`
       );
 
       if (response.ok) {
-        const data = await response.json();
-        // Add a check to ensure the response is valid JSON with expected structure
-        if (data && data.chapter && data.chapter.content) {
-            return data;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            // Add a check to ensure the response is valid JSON with expected structure
+            if (data && data.chapter && data.chapter.content) {
+                return data;
+            }
+        } else {
+             console.error(`API Error: Expected JSON but received ${contentType} for ${translation}/${bookId}/${chapter}`);
         }
+      } else {
+        console.error(`API Error for ${translation}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
       }
-      console.error(`API Error or invalid data for ${translation}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
-      // If not ok, fall through to retry
+      // If not ok or not JSON, fall through to retry
     } catch (error) {
       console.error('Failed to fetch chapter (attempt ' + (attempts + 1) + '):', error);
       // Fall through to retry
@@ -61,11 +68,12 @@ async function ChapterLoader({
   const chapterData = await getChapter(book, chapter, translation);
 
   if (!chapterData) {
+    const translationName = TRANSLATIONS.find(t => t.id === translation)?.englishName || translation;
     return (
       <Card className="mt-6 animate-in fade-in duration-500">
         <CardContent className="pt-6">
           <p className="text-center text-muted-foreground">
-            Could not load chapter <span className="font-bold">{book} {chapter}</span> in the <span className="font-bold">{translation.toUpperCase()}</span> translation.
+            Could not load chapter <span className="font-bold">{book} {chapter}</span> in the <span className="font-bold">{translationName}</span> translation.
             This may be due to a network issue or the translation not being available for this book. Please try a different selection.
           </p>
         </CardContent>
