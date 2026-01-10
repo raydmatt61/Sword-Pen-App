@@ -42,8 +42,8 @@ export function AuthManager() {
         }
         setIsSigningIn(true);
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            toast({ title: "Signed In", description: `Welcome back!` });
+            await signInWithEmailAndPassword(auth, email, password);
+            toast({ title: "Signed In", description: `Welcome back, ${email}!` });
             setIsAuthModalOpen(false);
         } catch (error: any) {
             if (error.code === 'auth/user-not-found') {
@@ -55,16 +55,16 @@ export function AuthManager() {
                 try {
                     const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
                     handleUserCreation(newUserCredential); // Create user doc in Firestore
-                    toast({ title: "Account Created", description: "Welcome to Verse Insights!" });
+                    toast({ title: "Account Created!", description: `Welcome to Verse Insights, ${email}!` });
                     setIsAuthModalOpen(false);
                 } catch (signUpError: any) {
                     toast({ variant: "destructive", title: "Sign-up failed", description: signUpError.message });
                 }
-            } else if (error.code === 'auth/invalid-credential') {
+            } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
                 toast({ variant: "destructive", title: "Sign-in failed", description: "Incorrect email or password. Please try again." });
             }
             else {
-                toast({ variant: "destructive", title: "Sign-in failed", description: error.message });
+                toast({ variant: "destructive", title: "Authentication failed", description: error.message });
             }
         } finally {
             setIsSigningIn(false);
