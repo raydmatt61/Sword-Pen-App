@@ -13,22 +13,38 @@ async function getChapter(
   chapter: string,
   translation: string
 ): Promise<BibleChapterResponse | null> {
-  try {
-    const bookId = BIBLE_BOOKS_ABBR[book] || book;
-    const response = await fetch(
-      `https://bible.helloao.org/api/${translation}/${bookId}/${chapter}.json`
-    );
-    if (!response.ok) {
-        console.error(`API Error: ${response.status} ${response.statusText}`);
-        return null;
+  let attempts = 0;
+  const maxRetries = 3;
+  const delay = 1000; // 1 second
+
+  while (attempts < maxRetries) {
+    try {
+      const bookId = BIBLE_BOOKS_ABBR[book] || book;
+      // The API uses the full book name for some, abbreviation for others. Let's try to be flexible.
+      const response = await fetch(
+        `https://bible.helloao.org/api/${translation}/${bookId}/${chapter}.json`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+      console.error(`API Error: ${response.status} ${response.statusText}`);
+      // If not ok, fall through to retry
+    } catch (error) {
+      console.error('Failed to fetch chapter (attempt ' + (attempts + 1) + '):', error);
+      // Fall through to retry
     }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Failed to fetch chapter:', error);
-    return null;
+    
+    attempts++;
+    if (attempts < maxRetries) {
+      await new Promise(res => setTimeout(res, delay));
+    }
   }
+
+  console.error(`Failed to fetch chapter after ${maxRetries} attempts.`);
+  return null;
 }
+
 
 async function ChapterLoader({
   book,
@@ -71,7 +87,9 @@ export default async function Home({
   const translation = searchParams?.translation || 'BSB';
 
   const booksRes = await fetch(`https://bible.helloao.org/api/${translation}/books.json`);
-  const books: Book[] = await booksRes.json().then(d => d.books);
+  const booksData = await booksRes.json();
+  const books: Book[] = booksData.books;
+
 
   return (
     <main className="container mx-auto px-4 py-8 md:py-12">
