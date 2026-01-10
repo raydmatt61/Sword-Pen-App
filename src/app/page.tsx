@@ -2,8 +2,8 @@
 import { Suspense } from 'react';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book } from '@/lib/bible';
-import { BIBLE_BOOKS_ABBR } from '@/lib/bible';
+import type { BibleChapterResponse, Book, Translation as TranslationType } from '@/lib/bible';
+import { BIBLE_BOOKS_ABBR, TRANSLATIONS } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
@@ -20,15 +20,18 @@ async function getChapter(
   while (attempts < maxRetries) {
     try {
       const bookId = BIBLE_BOOKS_ABBR[book] || book;
-      // The API uses the full book name for some, abbreviation for others. Let's try to be flexible.
       const response = await fetch(
         `https://bible.helloao.org/api/${translation}/${bookId}/${chapter}.json`
       );
+
       if (response.ok) {
         const data = await response.json();
-        return data;
+        // Add a check to ensure the response is valid JSON with expected structure
+        if (data && data.chapter && data.chapter.content) {
+            return data;
+        }
       }
-      console.error(`API Error: ${response.status} ${response.statusText}`);
+      console.error(`API Error or invalid data for ${translation}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
       // If not ok, fall through to retry
     } catch (error) {
       console.error('Failed to fetch chapter (attempt ' + (attempts + 1) + '):', error);
@@ -57,7 +60,7 @@ async function ChapterLoader({
 }) {
   const chapterData = await getChapter(book, chapter, translation);
 
-  if (!chapterData || !chapterData.chapter || !chapterData.chapter.content) {
+  if (!chapterData) {
     return (
       <Card className="mt-6 animate-in fade-in duration-500">
         <CardContent className="pt-6">
@@ -73,6 +76,21 @@ async function ChapterLoader({
   return <BibleDisplay chapterData={chapterData} />;
 }
 
+async function getBooks(translation: string): Promise<Book[]> {
+  try {
+    const booksRes = await fetch(`https://bible.helloao.org/api/${translation}/books.json`);
+    if (!booksRes.ok) {
+      console.error(`Failed to fetch books for ${translation}: ${booksRes.status}`);
+      return [];
+    }
+    const booksData = await booksRes.json();
+    return booksData.books || [];
+  } catch (error) {
+    console.error(`Error fetching books for ${translation}:`, error);
+    return [];
+  }
+}
+
 export default async function Home({
   searchParams,
 }: {
@@ -82,14 +100,15 @@ export default async function Home({
     translation?: string;
   };
 }) {
-  const book = searchParams?.book || 'John';
-  const chapter = searchParams?.chapter || '3';
   const translation = searchParams?.translation || 'BSB';
+  const book = searchParams?.book || 'John';
+  const chapter = searchParams?.chapter || '1';
 
-  const booksRes = await fetch(`https://bible.helloao.org/api/${translation}/books.json`);
-  const booksData = await booksRes.json();
-  const books: Book[] = booksData.books;
-
+  // Fetch the list of books for the selected (or default) translation.
+  const books = await getBooks(translation);
+  
+  // If for some reason the books list is empty, we can't proceed.
+  // We can show an error or a limited UI. For now, we'll pass an empty array.
 
   return (
     <main className="container mx-auto px-4 py-8 md:py-12">
@@ -106,10 +125,10 @@ export default async function Home({
         <AuthManager />
       </header>
 
-
       <VerseSelector 
         defaultValues={{ book, chapter, translation }}
         books={books}
+        translations={TRANSLATIONS}
       />
 
       <Suspense fallback={<BibleDisplaySkeleton />}>

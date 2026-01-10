@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -7,11 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from '@/components/ui/label';
-import { BIBLE_BOOKS, TRANSLATIONS, type Book } from '@/lib/bible';
+import type { Book, Translation } from '@/lib/bible';
 import { Search } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 
-export function VerseSelector({ defaultValues, books }: { defaultValues: { book: string; chapter: string; translation: string }, books: Book[] }) {
+export function VerseSelector({ 
+    defaultValues, 
+    books,
+    translations
+}: { 
+    defaultValues: { book: string; chapter: string; translation: string }, 
+    books: Book[],
+    translations: Translation[]
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -27,7 +36,8 @@ export function VerseSelector({ defaultValues, books }: { defaultValues: { book:
   }, []);
   
   const maxChapters = useMemo(() => {
-      const selectedBook = books.find(b => b.commonName === book);
+      // Find book by commonName or id, as the value might be either depending on the context
+      const selectedBook = books.find(b => b.commonName === book || b.id === book);
       return selectedBook?.numberOfChapters || 1;
   }, [books, book]);
 
@@ -37,11 +47,13 @@ export function VerseSelector({ defaultValues, books }: { defaultValues: { book:
     }
   }, [book, chapter, maxChapters]);
 
-  const handleTranslationChange = (newTranslation: string) => {
-    setTranslation(newTranslation);
-    // When translation changes, reload the page with the new translation to get the right book list
+  const handleValueChange = (type: 'translation' | 'book' | 'chapter', value: string) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
-    current.set('translation', newTranslation);
+    current.set(type, value);
+    // When translation or book changes, reset chapter to 1
+    if (type === 'translation' || type === 'book') {
+        current.set('chapter', '1');
+    }
     router.push(`${pathname}?${current.toString()}`);
   }
 
@@ -86,12 +98,12 @@ export function VerseSelector({ defaultValues, books }: { defaultValues: { book:
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div className="space-y-2">
             <Label htmlFor="translation" className="font-headline">Translation</Label>
-            <Select value={translation} onValueChange={handleTranslationChange}>
+            <Select value={translation} onValueChange={(v) => handleValueChange('translation', v)}>
               <SelectTrigger id="translation">
                 <SelectValue placeholder="Select translation" />
               </SelectTrigger>
               <SelectContent>
-                {TRANSLATIONS.map(t => (
+                {translations.map(t => (
                   <SelectItem key={t.id} value={t.id}>{t.englishName}</SelectItem>
                 ))}
               </SelectContent>
@@ -99,7 +111,7 @@ export function VerseSelector({ defaultValues, books }: { defaultValues: { book:
           </div>
           <div className="space-y-2">
             <Label htmlFor="book" className="font-headline">Book</Label>
-            <Select value={book} onValueChange={setBook}>
+            <Select value={book} onValueChange={(v) => handleValueChange('book', v)} disabled={books.length === 0}>
               <SelectTrigger id="book">
                 <SelectValue placeholder="Select book" />
               </SelectTrigger>
@@ -120,9 +132,10 @@ export function VerseSelector({ defaultValues, books }: { defaultValues: { book:
               min="1"
               max={maxChapters}
               required
+              disabled={books.length === 0}
             />
           </div>
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full" disabled={books.length === 0}>
             <Search className="mr-2 h-4 w-4" />
             Load Chapter
           </Button>
