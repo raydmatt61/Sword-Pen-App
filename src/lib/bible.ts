@@ -1,3 +1,4 @@
+
 export type Translation = {
     id: string;
     name: string;
@@ -24,7 +25,7 @@ export const BIBLE_BOOKS = Object.keys(BIBLE_BOOKS_ABBR);
 
 export const TRANSLATIONS: Translation[] = [
   { id: 'BSB', name: 'Berean Standard Bible', englishName: 'Berean Standard Bible' },
-  { id: 'WEB', name: 'World English Bible', englishName: 'World English Bible' },
+  { id: 'web', name: 'World English Bible', englishName: 'World English Bible' },
   { id: 'KJV', name: 'King James Version', englishName: 'King James Version' },
   { id: 'NET', name: 'New English Translation', englishName: 'New English Translation' },
 ];
