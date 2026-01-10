@@ -1,0 +1,183 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "email"
+      ]
+    },
+    "Annotation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Annotation",
+      "type": "object",
+      "description": "Represents a user's annotation for a specific verse.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the annotation.  This will be a composite key using translation, book, chapter, verse."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Annotation)"
+        },
+        "translation": {
+          "type": "string",
+          "description": "The Bible translation used (e.g., BSB, WEB)."
+        },
+        "book": {
+          "type": "string",
+          "description": "The book of the Bible (e.g., JHN)."
+        },
+        "chapter": {
+          "type": "number",
+          "description": "The chapter number."
+        },
+        "verse": {
+          "type": "number",
+          "description": "The verse number."
+        },
+        "note": {
+          "type": "string",
+          "description": "User's note for the verse."
+        },
+        "highlight": {
+          "type": "string",
+          "description": "Highlight style applied to the verse (e.g., hl-yellow, hl-green)."
+        },
+        "underline": {
+          "type": "string",
+          "description": "Underline style applied to the verse (e.g., ul-red, ul-purple)."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "translation",
+        "book",
+        "chapter",
+        "verse"
+      ]
+    },
+    "ChapterNote": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChapterNote",
+      "type": "object",
+      "description": "Represents a user's note for an entire chapter.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the chapter note. This will be a composite key using translation, book, chapter."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N ChapterNote)"
+        },
+        "translation": {
+          "type": "string",
+          "description": "The Bible translation used (e.g., BSB, WEB)."
+        },
+        "book": {
+          "type": "string",
+          "description": "The book of the Bible (e.g., JHN)."
+        },
+        "chapter": {
+          "type": "number",
+          "description": "The chapter number."
+        },
+        "note": {
+          "type": "string",
+          "description": "User's note for the chapter."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "translation",
+        "book",
+        "chapter"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. User ID is used as the document ID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/annotations/{annotationId}",
+        "definition": {
+          "entityName": "Annotation",
+          "schema": {
+            "$ref": "#/backend/entities/Annotation"
+          },
+          "description": "Stores annotations for each user. Annotation ID is a composite key (translation-book-chapter-verse).",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "annotationId",
+              "description": "The unique identifier for the annotation (translation-book-chapter-verse)."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/chapterNotes/{chapterNoteId}",
+        "definition": {
+          "entityName": "ChapterNote",
+          "schema": {
+            "$ref": "#/backend/entities/ChapterNote"
+          },
+          "description": "Stores chapter notes for each user. ChapterNote ID is a composite key (translation-book-chapter).",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "chapterNoteId",
+              "description": "The unique identifier for the chapter note (translation-book-chapter)."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure data isolation and efficient querying while adhering to the principles of Authorization Independence, Structural Segregation, and Access Modeling.  Annotations and ChapterNotes are stored as subcollections under each user's document, enabling path-based ownership and simplified security rules. This approach avoids hierarchical `get()` calls and enables atomic operations. \n\n*   **Users Collection:** Stores user profiles.  Authorization is managed at the user document level, primarily for managing user-specific data.\n*   **Annotations Subcollection:** Each user has a subcollection `/users/{userId}/annotations/{annotationId}` to store their annotations. The `annotationId` is a composite key constructed using the translation, book, chapter, and verse. This direct path ownership simplifies rules and ensures each user can only access their own annotations.\n*   **ChapterNotes Subcollection:** Each user has a subcollection `/users/{userId}/chapterNotes/{chapterNoteId}` to store their chapter notes. The `chapterNoteId` is a composite key constructed using the translation, book, and chapter, similar to annotations.  This isolates chapter notes to the owning user.\n\nThis structure achieves **Authorization Independence** by directly associating annotations and chapter notes with the user's document. Security rules can directly verify `request.auth.uid` against the `userId` without needing to read parent documents.\n\nThis structure supports required **QAPs**:\n\n*   List all annotations for a specific user: Secure `list` operations are possible by querying the `/users/{userId}/annotations` collection.  Security rules can ensure that only the authenticated user can list annotations within their own user document.\n*   List all chapter notes for a specific user: Secure `list` operations are possible by querying the `/users/{userId}/chapterNotes` collection.  Security rules can ensure that only the authenticated user can list chapter notes within their own user document."
+  }
+}
