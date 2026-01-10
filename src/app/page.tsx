@@ -1,3 +1,4 @@
+
 import { Suspense } from 'react';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
@@ -9,7 +10,7 @@ async function getChapter(
   book: string,
   chapter: string,
   translation: string,
-  retries = 1
+  retries = 3 // Increased retries to 3
 ): Promise<BibleChapterResponse | null> {
   try {
     const response = await fetch(
@@ -21,7 +22,7 @@ async function getChapter(
             console.error(`API Error: ${response.status} ${response.statusText}`);
         }
         if (retries > 0) {
-            console.log(`Retrying fetch for ${book} ${chapter}...`);
+            console.log(`Retrying fetch for ${book} ${chapter} (${3 - retries + 1}/3)...`);
             await new Promise(res => setTimeout(res, 1000)); // Wait 1 second before retrying
             return getChapter(book, chapter, translation, retries - 1);
         }
@@ -31,7 +32,7 @@ async function getChapter(
     // Sometimes the API returns an empty response for BSB, so we check for that.
     if (!data || !data.verses || data.verses.length === 0) {
         if (retries > 0) {
-            console.log(`Retrying fetch for ${book} ${chapter} (empty response)...`);
+            console.log(`Retrying fetch for ${book} ${chapter} (empty response, ${3 - retries + 1}/3)...`);
             await new Promise(res => setTimeout(res, 1000));
             return getChapter(book, chapter, translation, retries - 1);
         }
@@ -41,7 +42,7 @@ async function getChapter(
   } catch (error) {
     console.error('Failed to fetch chapter:', error);
     if (retries > 0) {
-        console.log(`Retrying fetch for ${book} ${chapter} (catch block)...`);
+        console.log(`Retrying fetch for ${book} ${chapter} (catch block, ${3 - retries + 1}/3)...`);
         await new Promise(res => setTimeout(res, 1000));
         return getChapter(book, chapter, translation, retries - 1);
     }
@@ -65,7 +66,8 @@ async function ChapterLoader({
       <Card className="mt-6 animate-in fade-in duration-500">
         <CardContent className="pt-6">
           <p className="text-center text-muted-foreground">
-            Could not load chapter. The selected translation may not be available for this book, or there was a network issue. Please try a different book, chapter, or translation.
+            Could not load chapter <span className="font-bold">{book} {chapter}</span> in the <span className="font-bold">{translation.toUpperCase()}</span> translation.
+            This may be due to a network issue or the translation not being available for this book. Please try a different selection.
           </p>
         </CardContent>
       </Card>
