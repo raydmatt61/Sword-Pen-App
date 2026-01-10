@@ -1,11 +1,12 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'Verse Insights',
-  description: 'Deepen your biblical understanding with AI-powered insights.',
+  title: 'Sword and Pen Bible',
+  description: 'A modern Bible study tool for notes and insights.',
 };
 
 export default function RootLayout({

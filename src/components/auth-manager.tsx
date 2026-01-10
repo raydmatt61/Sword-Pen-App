@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -111,7 +112,7 @@ export function AuthManager() {
     try {
         const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
         handleUserDocCreation(newUserCredential);
-        toast({ title: "Account Created!", description: `Welcome to Verse Insights, ${email}!` });
+        toast({ title: "Account Created!", description: `Welcome to Sword and Pen Bible, ${email}!` });
         setIsAuthModalOpen(false);
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
@@ -162,7 +163,7 @@ export function AuthManager() {
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Verse Insights</DialogTitle>
+            <DialogTitle>Sword and Pen Bible</DialogTitle>
             <DialogDescription>
               Sign in or create an account to save your notes and highlights.
             </DialogDescription>
