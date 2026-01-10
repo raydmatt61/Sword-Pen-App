@@ -83,8 +83,15 @@ async function getBooks(translation: string): Promise<Book[]> {
       console.error(`Failed to fetch books for ${translation}: ${booksRes.status}`);
       return [];
     }
-    const booksData = await booksRes.json();
-    return booksData.books || [];
+    // Check content type before parsing as JSON
+    const contentType = booksRes.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        const booksData = await booksRes.json();
+        return booksData.books || [];
+    } else {
+        console.error(`Expected JSON but received ${contentType} for ${translation}`);
+        return [];
+    }
   } catch (error) {
     console.error(`Error fetching books for ${translation}:`, error);
     return [];
