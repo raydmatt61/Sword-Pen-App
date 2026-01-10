@@ -1,118 +1,247 @@
-"use client";
+'use client';
 
-import { useUser, useAuth, useFirestore, setDocumentNonBlocking } from "@/firebase";
-import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, UserCredential } from "firebase/auth";
+import {
+  useUser,
+  useAuth,
+  useFirestore,
+  setDocumentNonBlocking,
+} from '@/firebase';
+import {
+  signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  type UserCredential,
+} from 'firebase/auth';
 import { doc } from 'firebase/firestore';
-import { Button } from "./ui/button";
-import { LogIn, LogOut } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from './ui/button';
+import { LogIn, LogOut } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from './ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export function AuthManager() {
-    const { user, isUserLoading } = useUser();
-    const auth = useAuth();
-    const firestore = useFirestore();
-    const { toast } = useToast();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
-    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState('signin');
 
-    const handleUserCreation = (userCredential: UserCredential) => {
-        const user = userCredential.user;
-        if (firestore && user) {
-            const userDocRef = doc(firestore, "users", user.uid);
-            const userData = {
-                id: user.uid,
-                email: user.email,
-            };
-            // This is a non-blocking call. We don't wait for it to finish.
-            setDocumentNonBlocking(userDocRef, userData, { merge: true });
-        }
-    };
-    
-    const handleAuth = async () => {
-        if (!email || !password) {
-            toast({ variant: "destructive", title: "Missing fields", description: "Please enter email and password." });
-            return;
-        }
-        setIsSigningIn(true);
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            toast({ title: "Signed In", description: `Welcome back, ${email}!` });
-            setIsAuthModalOpen(false);
-        } catch (error: any) {
-            if (error.code === 'auth/user-not-found') {
-                 if (password.length < 6) {
-                    toast({ variant: "destructive", title: "Sign-up failed", description: "Password must be at least 6 characters long." });
-                    setIsSigningIn(false);
-                    return;
-                }
-                try {
-                    const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    handleUserCreation(newUserCredential); // Create user doc in Firestore
-                    toast({ title: "Account Created!", description: `Welcome to Verse Insights, ${email}!` });
-                    setIsAuthModalOpen(false);
-                } catch (signUpError: any) {
-                    toast({ variant: "destructive", title: "Sign-up failed", description: signUpError.message });
-                }
-            } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-                toast({ variant: "destructive", title: "Sign-in failed", description: "Incorrect email or password. Please try again." });
-            }
-            else {
-                toast({ variant: "destructive", title: "Authentication failed", description: error.message });
-            }
-        } finally {
-            setIsSigningIn(false);
-        }
-    };
-
-    if (isUserLoading) {
-        return <Button variant="outline" size="sm" disabled>Loading...</Button>;
+  const handleUserDocCreation = (userCredential: UserCredential) => {
+    const user = userCredential.user;
+    if (firestore && user) {
+      const userDocRef = doc(firestore, 'users', user.uid);
+      const userData = {
+        id: user.uid,
+        email: user.email,
+      };
+      setDocumentNonBlocking(userDocRef, userData, { merge: true });
     }
+  };
 
-    if (user) {
-        return (
-            <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground hidden md:block">{user.email}</p>
-                <Button variant="ghost" size="icon" onClick={() => signOut(auth)}>
-                    <LogOut className="h-5 w-5" />
-                </Button>
-            </div>
-        );
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing fields',
+        description: 'Please enter both email and password.',
+      });
+      return;
     }
+    setIsProcessing(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: 'Signed In', description: `Welcome back, ${email}!` });
+      setIsAuthModalOpen(false);
+    } catch (error: any) {
+      if (
+        error.code === 'auth/invalid-credential' ||
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/user-not-found'
+      ) {
+        toast({
+          variant: 'destructive',
+          title: 'Sign-in failed',
+          description: 'Incorrect email or password. Please try again.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Authentication failed',
+          description: error.message,
+        });
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
+  const handleSignUp = async () => {
+    if (!email || !password) {
+        toast({
+            variant: "destructive",
+            title: "Missing fields",
+            description: "Please enter both email and password."
+        });
+        return;
+    }
+    if (password.length < 6) {
+        toast({
+            variant: "destructive",
+            title: "Sign-up failed",
+            description: "Password must be at least 6 characters long."
+        });
+        return;
+    }
+    setIsProcessing(true);
+    try {
+        const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
+        handleUserDocCreation(newUserCredential);
+        toast({ title: "Account Created!", description: `Welcome to Verse Insights, ${email}!` });
+        setIsAuthModalOpen(false);
+    } catch (error: any) {
+        if (error.code === 'auth/email-already-in-use') {
+             toast({
+                variant: "destructive",
+                title: "Sign-up failed",
+                description: "This email is already in use. Try signing in instead."
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Sign-up failed",
+                description: error.message
+            });
+        }
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
+  if (isUserLoading) {
     return (
-        <>
-            <Button variant="outline" onClick={() => setIsAuthModalOpen(true)}>
-                <LogIn className="mr-2" />
-                Sign In
-            </Button>
-            <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Sign In or Create Account</DialogTitle>
-                        <DialogDescription>Enter your email and password. An account will be created if you don't have one.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="email-auth" className="text-right">Email</Label>
-                            <Input id="email-auth" value={email} onChange={(e) => setEmail(e.target.value)} className="col-span-3" />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="password-auth" className="text-right">Password</Label>
-                            <Input id="password-auth" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="col-span-3" />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={handleAuth} disabled={isSigningIn}>{isSigningIn ? "Processing..." : "Continue"}</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </>
+      <Button variant="outline" size="sm" disabled>
+        Loading...
+      </Button>
     );
+  }
+
+  if (user) {
+    return (
+      <div className="flex items-center gap-2">
+        <p className="hidden text-sm text-muted-foreground md:block">
+          {user.email}
+        </p>
+        <Button variant="ghost" size="icon" onClick={() => signOut(auth)}>
+          <LogOut className="h-5 w-5" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Button variant="outline" onClick={() => setIsAuthModalOpen(true)}>
+        <LogIn className="mr-2" />
+        Sign In
+      </Button>
+      <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Verse Insights</DialogTitle>
+            <DialogDescription>
+              Sign in or create an account to save your notes and highlights.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+            <TabsContent value="signin">
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="email-signin" className="text-right">
+                    Email
+                  </Label>
+                  <Input
+                    id="email-signin"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="password-signin" className="text-right">
+                    Password
+                  </Label>
+                  <Input
+                    id="password-signin"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleSignIn} disabled={isProcessing}>
+                  {isProcessing ? 'Signing In...' : 'Sign In'}
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+            <TabsContent value="signup">
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="email-signup" className="text-right">
+                        Email
+                    </Label>
+                    <Input
+                        id="email-signup"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="col-span-3"
+                    />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="password-signup" className="text-right">
+                        Password
+                    </Label>
+                    <Input
+                        id="password-signup"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="col-span-3"
+                    />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleSignUp} disabled={isProcessing}>
+                        {isProcessing ? 'Creating Account...' : 'Create Account'}
+                    </Button>
+                </DialogFooter>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
