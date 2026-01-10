@@ -6,8 +6,8 @@
  * accessible only to the user who created it. This ensures user data privacy and isolation.
  *
  * Data Structure:
- * The data is organized hierarchically. All user-specific data, including annotations
- * and chapter notes, is stored in subcollections under a main `/users/{userId}` document.
+ * The data is organized hierarchically. All user-specific data, including annotations,
+ * is stored in a subcollection under a main `/users/{userId}` document.
  * This structure makes ownership explicit in the document path, simplifying security logic.
  *
  * Key Security Decisions:
@@ -94,22 +94,6 @@ service cloud.firestore {
        * @principle Enforces document ownership for all operations on a user's private subcollection.
        */
       match /annotations/{annotationId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId);
-        allow update: if isExistingOwner(userId) && isUserIdImmutable();
-        allow delete: if isExistingOwner(userId);
-      }
-
-      /**
-       * @description Manages a user's private notes for entire Bible chapters.
-       * @path /users/{userId}/chapterNotes/{chapterNoteId}
-       * @allow (create, update, delete) An authenticated user can manage chapter notes within their own profile.
-       * @allow (get, list) A user can read and list their own chapter notes.
-       * @deny  (create, read, write) A user cannot access another user's chapter notes.
-       * @principle Enforces document ownership for all operations on a user's private subcollection.
-       */
-      match /chapterNotes/{chapterNoteId} {
         allow get: if isOwner(userId);
         allow list: if isOwner(userId);
         allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId);

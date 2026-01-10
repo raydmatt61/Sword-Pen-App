@@ -58,12 +58,3 @@ export type Annotation = {
   highlight?: string;
   underline?: string;
 };
-
-export type ChapterNote = {
-    id?: string;
-    userId: string;
-    translation: string;
-    book: string;
-    chapter: number;
-    note?: string;
-};

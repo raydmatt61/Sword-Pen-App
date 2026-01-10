@@ -3,14 +3,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, deleteField } from 'firebase/firestore';
-import type { Annotation, BibleChapterResponse, ChapterContentItem, ChapterNote } from '@/lib/bible';
+import type { Annotation, BibleChapterResponse, ChapterContentItem } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { BookText, Save } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
 import { cn } from '@/lib/utils';
-import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 function AnnotationControls({ onHighlight, onUnderline, onClear, onSaveNote, onCopy, isDirty }: { onHighlight: (style: string) => void, onUnderline: (style: string) => void, onClear: () => void, onSaveNote: () => void, onCopy: () => void, isDirty: boolean }) {
     const highlightColors = [
@@ -64,7 +64,6 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     const [selectedVerse, setSelectedVerse] = useState<string | null>(null);
     const [selectedVerseText, setSelectedVerseText] = useState<string>('');
     const [verseNote, setVerseNote] = useState('');
-    const [chapterNote, setChapterNote] = useState('');
 
     const bookId = chapterData.book.id;
     const chapterNum = chapterData.chapter.number;
@@ -91,29 +90,6 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     }, [annotations, bookId, chapterNum, translationId]);
 
 
-    // Fetch Chapter Note
-    const chapterNoteDocRef = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        const chapterNoteId = `${translationId}-${bookId}-${chapterNum}`;
-        return doc(firestore, `users/${user.uid}/chapterNotes`, chapterNoteId);
-    }, [user, firestore, translationId, bookId, chapterNum]);
-
-    // Non-blocking write for chapter note
-    const handleChapterNoteChange = (note: string) => {
-        setChapterNote(note);
-        if (chapterNoteDocRef && user) {
-            const data: ChapterNote = {
-                id: chapterNoteDocRef.id,
-                userId: user.uid,
-                translation: translationId,
-                book: bookId,
-                chapter: chapterNum,
-                note: note,
-            };
-            setDocumentNonBlocking(chapterNoteDocRef, data, { merge: true });
-        }
-    };
-
     const handleSelectVerse = useCallback((verse: Extract<ChapterContentItem, { type: 'verse' }>) => {
         setSelectedVerse(verse.number);
         const verseText = verse.content.map(c => typeof c === 'string' ? c : (c.text || '')).join('');
@@ -137,6 +113,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         const ref = getAnnotationRef(verseNum);
         if(ref) {
             const payload: Annotation = {
+                id: ref.id,
                 userId: user.uid,
                 translation: translationId,
                 book: bookId,
@@ -181,24 +158,6 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         <div className="mt-6 grid md:grid-cols-3 gap-6 animate-in fade-in duration-500">
             <div className="md:col-span-1">
                 <div className="sticky top-6 z-10 flex flex-col gap-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline text-2xl flex items-center gap-3">
-                                <BookText className="text-primary" />
-                                Chapter Notes
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             <Textarea
-                                placeholder={`Write your notes for ${fullReference} here...`}
-                                value={chapterNote}
-                                onChange={(e) => handleChapterNoteChange(e.target.value)}
-                                rows={6}
-                                className="font-body text-base"
-                                disabled={!user}
-                            />
-                        </CardContent>
-                    </Card>
                      <Card>
                         <CardHeader>
                             <CardTitle className="font-headline text-xl">
