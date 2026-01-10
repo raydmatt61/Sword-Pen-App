@@ -66,7 +66,7 @@ export default function Home({
 }) {
   const book = searchParams?.book || 'John';
   const chapter = searchParams?.chapter || '3';
-  const translation = searchParams?.translation || 'kjv';
+  const translation = searchParams?.translation || 'bsb';
 
   return (
     <main className="container mx-auto px-4 py-8 md:py-12">
