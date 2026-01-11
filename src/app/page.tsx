@@ -67,7 +67,7 @@ function ChapterLoader({
   book: string;
   chapter: string;
   translation: string;
-  children: (chapterData: BibleChapterResponse) => React.ReactNode;
+  children: (chapterData: BibleChapterResponse | null) => React.ReactNode;
 }) {
   const chapterData = getChapter(book, chapter, translation);
 
@@ -146,7 +146,8 @@ export default async function Home({
       <div className="flex-grow overflow-y-auto p-4">
         <Suspense fallback={<BibleDisplaySkeleton />}>
           <ChapterLoader book={book} chapter={chapter} translation={translation}>
-            {(chapterData) => {
+            {async (chapterDataPromise) => {
+              const chapterData = await chapterDataPromise;
               if (!chapterData) {
                 const translationName = TRANSLATIONS.find(t => t.id === translation)?.englishName || translation;
                 return (
