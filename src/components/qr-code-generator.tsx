@@ -17,13 +17,26 @@ import {
 export function QrCodeGenerator() {
   const [url, setUrl] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // This ensures that window is defined, as it's only available on the client
-    if (typeof window !== 'undefined') {
+    // This hook ensures that the component will re-render on the client
+    // after the initial server render.
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    // This effect now safely runs only on the client, after isClient is true.
+    if (isOpen && isClient) {
       setUrl(window.location.href);
     }
-  }, [isOpen]); // Re-check URL if the dialog is re-opened, in case the page changed
+  }, [isOpen, isClient]);
+
+  // Don't render the component on the server or during the initial client render
+  // before the isClient state is set.
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
