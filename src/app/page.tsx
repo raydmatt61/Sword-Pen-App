@@ -144,7 +144,7 @@ export default async function Home({
         </div>
       </header>
 
-      <div className="sticky top-4 z-20">
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm -mx-4 px-4 pt-2 pb-4">
         <VerseSelector 
           defaultValues={{ book, chapter, translation }}
           books={books}

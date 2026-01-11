@@ -54,7 +54,7 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete }) {
                 </PopoverContent>
             </Popover>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNote}><StickyNote /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete} disabled><Trash2 /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 /></Button>
         </div>
     )
 }
@@ -235,11 +235,13 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
             annotationToUpdate = { ...newAnnotation, id: newDocRef.id };
             setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() }, { merge: true });
             setActiveAnnotation(null); // Reset after creation
+            setSelection(null);
         }
         // If there is an active annotation, update it
         else if (annotationToUpdate) {
              const docRef = doc(firestore, `users/${user.uid}/annotations`, annotationToUpdate.id);
              setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+             setActiveAnnotation(null); // Reset after update
         }
         
         setSelection(null);
@@ -250,6 +252,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
             const docRef = doc(firestore, `users/${user.uid}/annotations`, activeAnnotation.id);
             deleteDocumentNonBlocking(docRef);
             setActiveAnnotation(null);
+            setSelection(null);
         }
     }
     
@@ -258,6 +261,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         createOrUpdateAnnotation({ note });
         toast({ title: "Note Saved", description: "Your annotation note has been saved." });
         setActiveAnnotation(null);
+        setSelection(null);
     }
 
     const handleAnnotationClick = (annotation: Annotation) => {
@@ -272,7 +276,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         <div className="mt-6 grid md:grid-cols-3 gap-6 animate-in fade-in duration-500" ref={displayRef}>
             
             <div className="md:col-span-1">
-                <div className="sticky top-4 md:top-[100px] z-10 flex flex-col gap-6">
+                <div className="sticky top-[116px] z-10 flex flex-col gap-6">
                      <Card>
                         <CardHeader>
                             <CardTitle className="font-headline text-xl">
@@ -318,7 +322,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                                    onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
                                    onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined })}
                                    onNote={() => createOrUpdateAnnotation({note: ''})}
-                                   onDelete={() => { /* can't delete from selection */ }}
+                                   onDelete={handleDeleteAnnotation}
                                />
                            </CardFooter>
                         )}
