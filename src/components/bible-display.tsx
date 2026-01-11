@@ -49,10 +49,39 @@ function VerseComponent({
 
         return parts;
     }, [verseText, annotations, onAnnotationClick]);
+    
+    const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
+        const supElement = event.currentTarget;
+        const pElement = supElement.parentElement;
+        if (!pElement) return;
+
+        const selection = window.getSelection();
+        if (!selection) return;
+
+        const range = document.createRange();
+        // Skip the sup element (the first child) and select the rest
+        const textNodes = Array.from(pElement.childNodes).filter(node => node !== supElement);
+        if (textNodes.length > 0) {
+            range.setStart(textNodes[0], 0);
+            const lastNode = textNodes[textNodes.length - 1];
+            range.setEnd(lastNode, lastNode.textContent?.length || 0);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // Manually trigger the selection change handler
+            document.dispatchEvent(new Event('selectionchange'));
+        }
+    };
+
 
     return (
         <p className="text-lg leading-relaxed font-body" data-verse-number={verse.number}>
-            <sup className="font-headline font-bold text-primary mr-2 select-none">{verse.number}</sup>
+            <sup 
+                className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
+                onClick={handleVerseNumberClick}
+            >
+                {verse.number}
+            </sup>
             {renderedContent}
         </p>
     );
@@ -117,19 +146,19 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                 }
             }
         } else {
-             setSelection(null);
+             // Only clear selection if there's no text selected anywhere on the page
+             if (sel && sel.isCollapsed) {
+                setSelection(null);
+             }
         }
     };
     
     useEffect(() => {
         // Use document selectionchange event which is more reliable on mobile
         document.addEventListener('selectionchange', handleTextSelect);
-        // Fallback for some desktop browser quirks with a mouseup event
-        document.addEventListener('mouseup', handleTextSelect);
 
         return () => {
             document.removeEventListener('selectionchange', handleTextSelect);
-            document.removeEventListener('mouseup', handleTextSelect);
         };
     }, [user, setSelection, setActiveAnnotation]); // Rerun if user changes
     
@@ -140,7 +169,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     const fullReference = `${chapterData.book.name} ${chapterData.chapter.number}`;
 
     return (
-        <div>
+        <div className="pt-4">
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
@@ -168,4 +197,5 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         </div>
     );
 }
+
 
