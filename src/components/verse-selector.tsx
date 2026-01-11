@@ -9,8 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from '@/components/ui/label';
 import type { Book, Translation } from '@/lib/bible';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Rewind } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
+
+const PREVIOUS_LOCATION_KEY = 'previousBibleLocation';
+
+type BibleLocation = {
+    book: string;
+    chapter: string;
+    translation: string;
+};
 
 export function VerseSelector({ 
     defaultValues, 
@@ -30,9 +38,14 @@ export function VerseSelector({
   const [chapter, setChapter] = useState(defaultValues.chapter);
   
   const [isClient, setIsClient] = useState(false);
+  const [previousLocation, setPreviousLocation] = useState<BibleLocation | null>(null);
 
   useEffect(() => {
     setIsClient(true);
+    const storedPrevLocation = sessionStorage.getItem(PREVIOUS_LOCATION_KEY);
+    if (storedPrevLocation) {
+        setPreviousLocation(JSON.parse(storedPrevLocation));
+    }
   }, []);
   
   const maxChapters = useMemo(() => {
@@ -55,6 +68,16 @@ export function VerseSelector({
     }
   }, [book, chapter, maxChapters]);
 
+  const saveCurrentLocationAsPrevious = () => {
+    const currentLocation = {
+        book: searchParams.get('book') || defaultValues.book,
+        chapter: searchParams.get('chapter') || defaultValues.chapter,
+        translation: searchParams.get('translation') || defaultValues.translation,
+    };
+    sessionStorage.setItem(PREVIOUS_LOCATION_KEY, JSON.stringify(currentLocation));
+    setPreviousLocation(currentLocation);
+  };
+
   const navigate = useCallback((newValues: { book?: string; chapter?: string; translation?: string }) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     for (const [key, value] of Object.entries(newValues)) {
@@ -71,6 +94,7 @@ export function VerseSelector({
   };
 
   const handleChapterNav = (direction: 'prev' | 'next') => {
+    saveCurrentLocationAsPrevious();
     let currentChapter = parseInt(chapter);
     if (direction === 'prev' && currentChapter > 1) {
         currentChapter--;
@@ -83,8 +107,17 @@ export function VerseSelector({
     navigate({ chapter: newChapter });
   };
 
+  const handleGoBack = () => {
+    if (previousLocation) {
+        // The location we are navigating *to* (the previous one) becomes the new "previous" for the next back action.
+        saveCurrentLocationAsPrevious();
+        navigate(previousLocation);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    saveCurrentLocationAsPrevious();
     navigate({ book, chapter, translation });
   };
 
@@ -145,6 +178,16 @@ export function VerseSelector({
                 </div>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
+                <Button
+                    variant="outline"
+                    size="icon"
+                    type="button"
+                    onClick={handleGoBack}
+                    disabled={!previousLocation}
+                    aria-label="Previous Location"
+                >
+                    <Rewind className="h-4 w-4" />
+                </Button>
                 <Button 
                     variant="outline" 
                     size="icon" 
