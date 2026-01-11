@@ -128,13 +128,13 @@ export default async function Home({
 
   return (
     <main className="container mx-auto px-4 py-8 md:py-12">
-       <header className="text-center mb-8 animate-in fade-in duration-500 flex justify-between items-center">
+       <header className="text-center mb-6 md:mb-8 animate-in fade-in duration-500 flex justify-between items-center">
         <div></div>
         <div>
-            <h1 className="text-4xl md:text-5xl font-headline font-bold text-primary">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-headline font-bold text-primary">
             The Sword & Pen
             </h1>
-            <p className="text-lg text-muted-foreground mt-2 font-headline">
+            <p className="text-base md:text-lg text-muted-foreground mt-2 font-headline">
             Deepen your biblical understanding with AI-powered insights.
             </p>
         </div>
@@ -144,11 +144,14 @@ export default async function Home({
         </div>
       </header>
 
-      <VerseSelector 
-        defaultValues={{ book, chapter, translation }}
-        books={books}
-        translations={TRANSLATIONS}
-      />
+      <div className="sticky top-4 z-20">
+        <VerseSelector 
+          defaultValues={{ book, chapter, translation }}
+          books={books}
+          translations={TRANSLATIONS}
+        />
+      </div>
+
 
       <Suspense fallback={<BibleDisplaySkeleton />}>
         <ChapterLoader book={book} chapter={chapter} translation={translation} />
