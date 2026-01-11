@@ -14,12 +14,10 @@ import { collection } from 'firebase/firestore';
 function VerseComponent({
     verse,
     annotations,
-    onTextSelect,
     onAnnotationClick,
 }: {
     verse: Extract<ChapterContentItem, { type: 'verse' }>;
     annotations: Annotation[];
-    onTextSelect: (e: React.MouseEvent<HTMLParagraphElement>) => void;
     onAnnotationClick: (annotation: Annotation) => void;
 }) {
     const verseText = useMemo(() => verse.content.map(c => typeof c === 'string' ? c : (c.text || '')).join(''), [verse.content]);
@@ -53,7 +51,7 @@ function VerseComponent({
     }, [verseText, annotations, onAnnotationClick]);
 
     return (
-        <p className="text-lg leading-relaxed font-body" data-verse-number={verse.number} onMouseUp={onTextSelect}>
+        <p className="text-lg leading-relaxed font-body" data-verse-number={verse.number}>
             <sup className="font-headline font-bold text-primary mr-2 select-none">{verse.number}</sup>
             {renderedContent}
         </p>
@@ -92,7 +90,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         return annotationMap;
     }, [annotations, bookId, chapterNum, translationId]);
 
-    const handleTextSelect = (e: React.MouseEvent<HTMLDivElement>) => {
+    const handleTextSelect = () => {
         if (!user) return;
         const sel = window.getSelection();
 
@@ -104,20 +102,36 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                 verseEl = verseEl.parentElement;
             }
 
-            if (!verseEl) {
+            if (!verseEl || !verseEl.closest('.bible-content')) {
                  setSelection(null);
                  return;
             };
             const verseNum = verseEl.getAttribute('data-verse-number');
 
             if (verseNum) {
-                setSelection({ range, verseNum });
-                setActiveAnnotation(null);
+                // Check if the selection is within our bible content to avoid capturing other selections
+                const contentContainer = document.querySelector('.bible-content');
+                if (contentContainer && contentContainer.contains(range.commonAncestorContainer)) {
+                    setSelection({ range, verseNum });
+                    setActiveAnnotation(null);
+                }
             }
         } else {
              setSelection(null);
         }
     };
+    
+    useEffect(() => {
+        // Use document selectionchange event which is more reliable on mobile
+        document.addEventListener('selectionchange', handleTextSelect);
+        // Fallback for some desktop browser quirks with a mouseup event
+        document.addEventListener('mouseup', handleTextSelect);
+
+        return () => {
+            document.removeEventListener('selectionchange', handleTextSelect);
+            document.removeEventListener('mouseup', handleTextSelect);
+        };
+    }, [user, setSelection, setActiveAnnotation]); // Rerun if user changes
     
     const handleAnnotationClick = (annotation: Annotation) => {
         setActiveAnnotation(annotation);
@@ -132,8 +146,8 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                     <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
                         <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
                 </CardHeader>
-                <CardContent onMouseUp={handleTextSelect}>
-                    <div className="space-y-2 select-text">
+                <CardContent>
+                    <div className="space-y-2 select-text bible-content">
                             {chapterData.chapter.content.map((item, index) => {
                             if (item.type === 'heading') {
                                 return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 select-none"><Balancer>{item.content.join(' ')}</Balancer></h4>
@@ -143,7 +157,6 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                                             key={item.number} 
                                             verse={item} 
                                             annotations={chapterAnnotations[item.number] || []}
-                                            onTextSelect={handleTextSelect}
                                             onAnnotationClick={handleAnnotationClick}
                                         />
                             }
@@ -155,3 +168,4 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         </div>
     );
 }
+
