@@ -46,7 +46,7 @@ service cloud.firestore {
     }
 
     // Checks if the requesting user is the owner of an existing document.
-    // CRITICAL: Used for all update operations to prevent writes to non-existent paths.
+    // CRITICAL: Used for some update operations to prevent writes to non-existent paths.
     function isExistingOwner(userId) {
       return isOwner(userId) && exists(path);
     }
@@ -113,11 +113,9 @@ service cloud.firestore {
       match /annotations/{annotationId} {
         allow read: if isOwner(userId);
         allow create: if isCreatingOwner(userId) && hasValidUserIdOnCreate(userId) && isValidAnnotation();
-        allow update: if isExistingOwner(userId) && isUserIdImmutable();
+        allow update: if isOwner(userId) && isUserIdImmutable();
         allow delete: if isOwner(userId);
       }
     }
   }
 }
-
-    
