@@ -168,6 +168,12 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                 <CardTitle className="font-headline text-xl">
                     Annotation
                 </CardTitle>
+                {(activeAnnotation || selection) && (
+                    <Button variant="ghost" size="icon" onClick={resetAnnotationState} className="h-6 w-6">
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Close annotation</span>
+                    </Button>
+                )}
             </CardHeader>
             <CardContent className="p-2 md:p-4">
                  {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
