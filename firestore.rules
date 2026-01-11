@@ -1,3 +1,4 @@
+
 /**
  * This ruleset enforces a strict user-ownership model for a Bible annotation application.
  *
@@ -118,3 +119,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

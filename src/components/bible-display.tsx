@@ -279,59 +279,57 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     return (
         <div className="grid md:grid-cols-3 gap-6 animate-in fade-in duration-500" ref={displayRef}>
             
-            <div className="md:col-span-1">
-                <div className="sticky top-[110px] z-10 flex flex-col gap-6">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline text-xl">
-                                Annotation
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
-                             !activeAnnotation && !selection ? <p className="text-sm text-muted-foreground">Select text or an annotation to see details.</p> :
-                             !activeAnnotation && selection ? <p className="font-bold font-headline text-primary">New selection in v. {selection.verseNum}</p> :
-                             activeAnnotation ?
-                             (
-                                <div className="flex flex-col gap-4">
-                                    <p className="font-bold font-headline text-primary">{fullReference}:{activeAnnotation.verse}</p>
-                                    <blockquote className="p-2 border-l-4 border-muted bg-muted/20 rounded-r-lg">
-                                        <Balancer>{activeAnnotation.text}</Balancer>
-                                    </blockquote>
-                                    <Textarea
-                                        placeholder="Your thoughts on this selection..."
-                                        value={note}
-                                        onChange={(e) => setNote(e.target.value)}
-                                        className="font-body text-base"
-                                        rows={5}
-                                    />
-                                    <div className="flex flex-col gap-2">
-                                        <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}><Save className="mr-2"/>Save Note</Button>
-                                         <Button onClick={handleDeleteAnnotation} size="sm" variant="destructive"><Trash2 className="mr-2"/>Delete Annotation</Button>
-                                    </div>
-                                    {note && (
-                                        <AiInsightGenerator
-                                            verse={`${fullReference}:${activeAnnotation.verse} ("${activeAnnotation.text}")`}
-                                            annotation={note}
-                                        />
-                                    )}
+             <div className="md:col-span-1 md:sticky md:top-[124px] self-start z-10 flex flex-col gap-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline text-xl">
+                            Annotation
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
+                         !activeAnnotation && !selection ? <p className="text-sm text-muted-foreground">Select text or an annotation to see details.</p> :
+                         !activeAnnotation && selection ? <p className="font-bold font-headline text-primary">New selection in v. {selection.verseNum}</p> :
+                         activeAnnotation ?
+                         (
+                            <div className="flex flex-col gap-4">
+                                <p className="font-bold font-headline text-primary">{fullReference}:{activeAnnotation.verse}</p>
+                                <blockquote className="p-2 border-l-4 border-muted bg-muted/20 rounded-r-lg">
+                                    <Balancer>{activeAnnotation.text}</Balancer>
+                                </blockquote>
+                                <Textarea
+                                    placeholder="Your thoughts on this selection..."
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    className="font-body text-base"
+                                    rows={5}
+                                />
+                                <div className="flex flex-col gap-2">
+                                    <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}><Save className="mr-2"/>Save Note</Button>
+                                     <Button onClick={handleDeleteAnnotation} size="sm" variant="destructive"><Trash2 className="mr-2"/>Delete Annotation</Button>
                                 </div>
-                             )
-                             : null
-                             }
-                        </CardContent>
-                        {selection && (
-                           <CardFooter ref={toolbarRef}>
-                               <AnnotationToolbar 
-                                   onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
-                                   onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined })}
-                                   onNote={() => createOrUpdateAnnotation({note: ''})}
-                                   onDelete={handleDeleteAnnotation}
-                               />
-                           </CardFooter>
-                        )}
-                    </Card>
-                </div>
+                                {note && (
+                                    <AiInsightGenerator
+                                        verse={`${fullReference}:${activeAnnotation.verse} ("${activeAnnotation.text}")`}
+                                        annotation={note}
+                                    />
+                                )}
+                            </div>
+                         )
+                         : null
+                         }
+                    </CardContent>
+                    {selection && (
+                       <CardFooter ref={toolbarRef}>
+                           <AnnotationToolbar 
+                               onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
+                               onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined })}
+                               onNote={() => createOrUpdateAnnotation({note: ''})}
+                               onDelete={handleDeleteAnnotation}
+                           />
+                       </CardFooter>
+                    )}
+                </Card>
             </div>
             <div className="md:col-span-2">
                 <Card>
@@ -363,6 +361,8 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         </div>
     );
 }
+
+    
 
     
 
