@@ -2,7 +2,7 @@
 import { Suspense } from 'react';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book, Translation as TranslationType } from '@/lib/bible';
+import type { BibleChapterResponse, Book } from '@/lib/bible';
 import { BIBLE_BOOKS_ABBR, TRANSLATIONS } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -83,11 +83,7 @@ async function ChapterLoader({
     );
   }
 
-  return (
-     <AnnotationWrapper chapterData={chapterData}>
-        <BibleDisplay />
-     </AnnotationWrapper>
-  );
+  return <BibleDisplay chapterData={chapterData} />;
 }
 
 async function getBooks(translation: string): Promise<Book[]> {
@@ -125,11 +121,9 @@ export default async function Home({
   const book = searchParams?.book || 'John';
   const chapter = searchParams?.chapter || '1';
 
-  // Fetch the list of books for the selected (or default) translation.
   const books = await getBooks(translation);
-  
-  // If for some reason the books list is empty, we can't proceed.
-  // We can show an error or a limited UI. For now, we'll pass an empty array.
+
+  const chapterData = await getChapter(book, chapter, translation);
 
   return (
     <main className="container mx-auto px-4 py-8 md:py-12">
@@ -149,12 +143,13 @@ export default async function Home({
         </div>
       </header>
       
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm -mx-4 px-4 pb-4">
+      <div className="sticky top-2 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm -mx-4 px-4 pb-4">
         <VerseSelector 
           defaultValues={{ book, chapter, translation }}
           books={books}
           translations={TRANSLATIONS}
         />
+        {chapterData && <AnnotationWrapper chapterData={chapterData} />}
       </div>
       <div className="mt-4">
         <Suspense fallback={<BibleDisplaySkeleton />}>
@@ -167,40 +162,24 @@ export default async function Home({
 
 function BibleDisplaySkeleton() {
   return (
-    <div className="flex flex-col md:flex-row gap-4">
-        <div className="md:w-1/3 md:max-w-sm flex-shrink-0 order-1 md:order-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline text-xl">
-                        Annotation
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">Loading annotations...</p>
-                </CardContent>
-            </Card>
+    <Card>
+      <CardContent className="pt-6 space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
         </div>
-        <div className="order-2 md:order-1 md:flex-1">
-            <Card>
-              <CardContent className="pt-6 space-y-6">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              </CardContent>
-            </Card>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-1/2" />
         </div>
-    </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+      </CardContent>
+    </Card>
   );
 }

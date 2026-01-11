@@ -15,7 +15,7 @@ import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/no
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import Balancer from 'react-wrap-balancer';
 import { useToast } from '@/hooks/use-toast';
-import { AnnotationProvider } from '@/contexts/annotation-context';
+import { useAnnotationContext } from '@/contexts/annotation-context';
 
 const highlightColors = [
     { class: 'hl-yellow', color: '#fff59d' },
@@ -60,13 +60,16 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete }) {
     )
 }
 
-export function AnnotationWrapper({ chapterData, children }: { chapterData: BibleChapterResponse, children: React.ReactNode }) {
+export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterResponse }) {
     const { user } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const [selection, setSelection] = useState<{ range: Range, verseNum: string } | null>(null);
-    const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
+    const {
+        selection, setSelection,
+        activeAnnotation, setActiveAnnotation,
+    } = useAnnotationContext();
+
     const [isEditingNote, setIsEditingNote] = useState(false);
     const [note, setNote] = useState('');
     const noteDirty = useMemo(() => activeAnnotation && note !== (activeAnnotation.note || ''), [activeAnnotation, note]);
@@ -77,61 +80,6 @@ export function AnnotationWrapper({ chapterData, children }: { chapterData: Bibl
     const chapterNum = chapterData.chapter.number;
     const translationId = chapterData.translation.id;
     const fullReference = `${chapterData.book.name} ${chapterNum}`;
-
-    const annotationsQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return collection(firestore, `users/${user.uid}/annotations`);
-    }, [user, firestore]);
-
-    const { data: annotations } = useCollection<Annotation>(annotationsQuery);
-
-    const chapterAnnotations = useMemo(() => {
-        if (!annotations) return {};
-        const annotationMap: Record<string, Annotation[]> = {};
-        annotations.filter(a => a.book === bookId && a.chapter === chapterNum && a.translation === translationId)
-        .forEach(a => {
-            if (!annotationMap[a.verse]) {
-                annotationMap[a.verse] = [];
-            }
-            annotationMap[a.verse].push(a);
-        });
-        return annotationMap;
-    }, [annotations, bookId, chapterNum, translationId]);
-
-    const handleTextSelect = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!user) return;
-        const sel = window.getSelection();
-
-        // Check if the selection is inside the toolbar, if so, ignore it
-        if (toolbarRef.current?.contains(sel?.anchorNode?.parentElement as Node)) {
-            return;
-        }
-
-        if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-            const range = sel.getRangeAt(0);
-
-            let verseEl = range.startContainer.parentElement;
-            while(verseEl && !verseEl.hasAttribute('data-verse-number')) {
-                verseEl = verseEl.parentElement;
-            }
-
-            if (!verseEl) {
-                 setSelection(null);
-                 return;
-            };
-            const verseNum = verseEl.getAttribute('data-verse-number');
-
-            if (verseNum) {
-                setSelection({ range, verseNum });
-                setActiveAnnotation(null);
-                setIsEditingNote(false);
-            }
-        } else {
-             if (e.target instanceof Node && !toolbarRef.current?.contains(e.target)) {
-                 setSelection(null);
-            }
-        }
-    };
 
     const resetAnnotationState = () => {
         setActiveAnnotation(null);
@@ -200,106 +148,92 @@ export function AnnotationWrapper({ chapterData, children }: { chapterData: Bibl
         resetAnnotationState();
     }
 
-    const handleAnnotationClick = (annotation: Annotation) => {
-        setActiveAnnotation(annotation);
-        setNote(annotation.note || '');
-        setIsEditingNote(false);
-        setSelection(null);
-    };
-
     const handleCancelEdit = () => {
         setNote(activeAnnotation?.note || '');
         setIsEditingNote(false);
     }
-    
-    const contextValue = {
-        chapterData,
-        chapterAnnotations,
-        handleTextSelect,
-        handleAnnotationClick
-    };
+
+    // Effect to update local note state when active annotation changes
+    useMemo(() => {
+        if (activeAnnotation) {
+            setNote(activeAnnotation.note || '');
+            setIsEditingNote(false);
+            setSelection(null);
+        }
+    }, [activeAnnotation, setSelection]);
 
     return (
-        <AnnotationProvider value={contextValue}>
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="md:w-1/3 md:max-w-sm flex-shrink-0 order-1 md:order-2">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline text-xl">
-                                Annotation
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
-                             !activeAnnotation && !selection ? <p className="text-sm text-muted-foreground">Select text or an annotation to see details.</p> :
-                             !activeAnnotation && selection ? <p className="font-bold font-headline text-primary">New selection in v. {selection.verseNum}</p> :
-                             activeAnnotation ?
-                             (
-                                <div className="flex flex-col gap-4">
-                                    <p className="font-bold font-headline text-primary">{fullReference}:{activeAnnotation.verse}</p>
-                                    <blockquote className="p-2 border-l-4 border-muted bg-muted/20 rounded-r-lg">
-                                        <Balancer>{activeAnnotation.text}</Balancer>
-                                    </blockquote>
-                                    {isEditingNote ? (
-                                        <>
-                                            <Textarea
-                                                placeholder="Your thoughts on this selection..."
-                                                value={note}
-                                                onChange={(e) => setNote(e.target.value)}
-                                                className="font-body text-base"
-                                                rows={5}
-                                            />
-                                            <div className="flex gap-2">
-                                                <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}><Save className="mr-2"/>Save</Button>
-                                                <Button onClick={handleCancelEdit} size="sm" variant="ghost"><Ban className="mr-2"/>Cancel</Button>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            {activeAnnotation.note ? (
-                                                <p className="font-body text-base p-2 whitespace-pre-wrap">{activeAnnotation.note}</p>
-                                            ) : (
-                                                <p className="text-sm text-muted-foreground p-2">No note for this annotation.</p>
-                                            )}
-                                            <div className="flex flex-col gap-2">
-                                                <Button onClick={() => setIsEditingNote(true)} size="sm" variant="outline"><Pencil className="mr-2"/>{activeAnnotation.note ? 'Edit Note' : 'Add Note'}</Button>
-                                                
-                                            </div>
-                                        </>
-                                    )}
-                                     {(activeAnnotation.note && !isEditingNote) && (
-                                        <AiInsightGenerator
-                                            verse={`${fullReference}:${activeAnnotation.verse} ("${activeAnnotation.text}")`}
-                                            annotation={activeAnnotation.note}
-                                        />
-                                    )}
+        <Card>
+            <CardHeader className="py-2 px-4 flex-row items-center justify-between">
+                <CardTitle className="font-headline text-xl">
+                    Annotation
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 md:p-4">
+                 {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
+                 !activeAnnotation && !selection ? <p className="text-sm text-muted-foreground">Select text or an annotation to see details.</p> :
+                 !activeAnnotation && selection ? <p className="font-bold font-headline text-primary">New selection in v. {selection.verseNum}</p> :
+                 activeAnnotation ?
+                 (
+                    <div className="flex flex-col gap-2">
+                        <p className="font-bold font-headline text-primary text-sm">{fullReference}:{activeAnnotation.verse}</p>
+                        <blockquote className="p-2 border-l-4 border-muted bg-muted/20 rounded-r-lg text-sm">
+                            <Balancer>{activeAnnotation.text}</Balancer>
+                        </blockquote>
+                        {isEditingNote ? (
+                            <>
+                                <Textarea
+                                    placeholder="Your thoughts on this selection..."
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    className="font-body text-sm"
+                                    rows={3}
+                                />
+                                <div className="flex gap-2">
+                                    <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}><Save className="mr-2"/>Save</Button>
+                                    <Button onClick={handleCancelEdit} size="sm" variant="ghost"><Ban className="mr-2"/>Cancel</Button>
                                 </div>
-                             )
-                             : null
-                             }
-                        </CardContent>
-                         {(selection || activeAnnotation) && (
-                           <CardFooter ref={toolbarRef}>
-                               <AnnotationToolbar 
-                                   onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
-                                   onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined })}
-                                   onNote={() => {
-                                        if (activeAnnotation) {
-                                            setIsEditingNote(true);
-                                        } else {
-                                           createOrUpdateAnnotation({note: ''});
-                                        }
-                                   }}
-                                   onDelete={handleDeleteAnnotation}
-                               />
-                           </CardFooter>
+                            </>
+                        ) : (
+                            <>
+                                {activeAnnotation.note ? (
+                                    <p className="font-body text-sm p-2 whitespace-pre-wrap">{activeAnnotation.note}</p>
+                                ) : (
+                                    <p className="text-xs text-muted-foreground p-2">No note for this annotation.</p>
+                                )}
+                                <div className="flex flex-col gap-2">
+                                    <Button onClick={() => setIsEditingNote(true)} size="sm" variant="outline"><Pencil className="mr-2"/>{activeAnnotation.note ? 'Edit Note' : 'Add Note'}</Button>
+                                    
+                                </div>
+                            </>
                         )}
-                    </Card>
-                </div>
-                <div className="order-2 md:order-1 md:flex-1">
-                  {children}
-                </div>
-            </div>
-        </AnnotationProvider>
+                         {(activeAnnotation.note && !isEditingNote) && (
+                            <AiInsightGenerator
+                                verse={`${fullReference}:${activeAnnotation.verse} ("${activeAnnotation.text}")`}
+                                annotation={activeAnnotation.note}
+                            />
+                        )}
+                    </div>
+                 )
+                 : null
+                 }
+            </CardContent>
+             {(selection || activeAnnotation) && (
+               <CardFooter ref={toolbarRef} className="p-2">
+                   <AnnotationToolbar 
+                       onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
+                       onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined })}
+                       onNote={() => {
+                            if (activeAnnotation) {
+                                setIsEditingNote(true);
+                            } else {
+                               createOrUpdateAnnotation({note: ''});
+                            }
+                       }}
+                       onDelete={handleDeleteAnnotation}
+                   />
+               </CardFooter>
+            )}
+        </Card>
     );
 }

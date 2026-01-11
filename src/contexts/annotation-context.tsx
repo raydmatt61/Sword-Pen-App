@@ -1,19 +1,29 @@
 
 "use client";
 
-import { createContext, useContext, ReactNode } from 'react';
-import type { Annotation, BibleChapterResponse } from '@/lib/bible';
+import { createContext, useContext, ReactNode, useState, Dispatch, SetStateAction } from 'react';
+import type { Annotation } from '@/lib/bible';
 
 interface AnnotationContextType {
-    chapterData: BibleChapterResponse;
-    chapterAnnotations: Record<string, Annotation[]>;
-    handleTextSelect: (e: React.MouseEvent<HTMLDivElement>) => void;
-    handleAnnotationClick: (annotation: Annotation) => void;
+    selection: { range: Range, verseNum: string } | null;
+    setSelection: Dispatch<SetStateAction<{ range: Range, verseNum: string } | null>>;
+    activeAnnotation: Annotation | null;
+    setActiveAnnotation: Dispatch<SetStateAction<Annotation | null>>;
 }
 
 const AnnotationContext = createContext<AnnotationContextType | undefined>(undefined);
 
-export const AnnotationProvider = ({ value, children }: { value: AnnotationContextType, children: ReactNode }) => {
+export const AnnotationProvider = ({ children }: { children: ReactNode }) => {
+    const [selection, setSelection] = useState<{ range: Range, verseNum: string } | null>(null);
+    const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
+
+    const value = {
+        selection,
+        setSelection,
+        activeAnnotation,
+        setActiveAnnotation,
+    };
+
     return <AnnotationContext.Provider value={value}>{children}</AnnotationContext.Provider>;
 };
 
