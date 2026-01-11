@@ -118,17 +118,16 @@ export default async function Home({
 
   return (
     <main className="flex flex-col h-screen">
-       <header className="text-center py-4 px-4 animate-in fade-in duration-500 flex justify-between items-center border-b">
-        <div className="w-1/3"></div>
-        <div className="w-1/3">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-bold text-primary">
+       <header className="flex items-center justify-between border-b p-2 md:p-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
             The Sword & Pen
-            </h1>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1 font-headline">
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1 font-headline">
             Deepen your Bible study with annotations, notes and AI-powered insights.
-            </p>
+          </p>
         </div>
-        <div className="flex items-center gap-2 w-1/3 justify-end">
+        <div className="flex items-center gap-2">
             <QrCodeGenerator />
             <AuthManager />
         </div>
