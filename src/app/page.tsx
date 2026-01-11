@@ -4,7 +4,7 @@ import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book, Translation as TranslationType } from '@/lib/bible';
 import { BIBLE_BOOKS_ABBR, TRANSLATIONS } from '@/lib/bible';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
 import { QrCodeGenerator } from '@/components/qr-code-generator';
@@ -85,8 +85,8 @@ async function ChapterLoader({
 
   return (
      <AnnotationWrapper chapterData={chapterData}>
-        {(props) => <BibleDisplay {...props} chapterData={chapterData} />}
-      </AnnotationWrapper>
+        <BibleDisplay />
+     </AnnotationWrapper>
   );
 }
 
@@ -149,13 +149,15 @@ export default async function Home({
         </div>
       </header>
       
-      <div className="sticky top-2 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm -mx-4 px-4 pb-4">
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm -mx-4 px-4 pb-4">
         <VerseSelector 
           defaultValues={{ book, chapter, translation }}
           books={books}
           translations={TRANSLATIONS}
         />
-        <Suspense fallback={<AnnotationSkeleton />}>
+      </div>
+      <div className="mt-4">
+        <Suspense fallback={<BibleDisplaySkeleton />}>
           <ChapterLoader book={book} chapter={chapter} translation={translation} />
         </Suspense>
       </div>
@@ -163,36 +165,42 @@ export default async function Home({
   );
 }
 
-function AnnotationSkeleton() {
-    return (
-        <Card>
-            <CardContent className="pt-6">
-                 <p className="text-sm text-muted-foreground">Loading annotations...</p>
-            </CardContent>
-        </Card>
-    )
-}
-
 function BibleDisplaySkeleton() {
   return (
-    <Card className="mt-4">
-      <CardContent className="pt-6 space-y-6">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-1/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
+    <div className="flex flex-col md:flex-row gap-4">
+        <div className="md:w-1/3 md:max-w-sm flex-shrink-0 order-1 md:order-2">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline text-xl">
+                        Annotation
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">Loading annotations...</p>
+                </CardContent>
+            </Card>
         </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-1/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-1/2" />
+        <div className="order-2 md:order-1 md:flex-1">
+            <Card>
+              <CardContent className="pt-6 space-y-6">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              </CardContent>
+            </Card>
         </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-1/4" />
-          <Skeleton className="h-4 w-2/3" />
-        </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

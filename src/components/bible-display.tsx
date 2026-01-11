@@ -6,6 +6,8 @@ import { type Annotation, type BibleChapterResponse, type ChapterContentItem } f
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Balancer from 'react-wrap-balancer';
+import { useAnnotationContext } from '@/contexts/annotation-context';
+
 
 function VerseComponent({
     verse,
@@ -56,24 +58,18 @@ function VerseComponent({
     );
 }
 
-export type BibleDisplayProps = {
-    chapterData: BibleChapterResponse;
-    chapterAnnotations: Record<string, Annotation[]>;
-    handleTextSelect: (e: React.MouseEvent<HTMLDivElement>) => void;
-    handleAnnotationClick: (annotation: Annotation) => void;
-};
-
-export function BibleDisplay({
-    chapterData,
-    chapterAnnotations,
-    handleTextSelect,
-    handleAnnotationClick
-}: BibleDisplayProps) {
+export function BibleDisplay() {
+    const { 
+        chapterData, 
+        chapterAnnotations, 
+        handleTextSelect, 
+        handleAnnotationClick 
+    } = useAnnotationContext();
     
     const fullReference = `${chapterData.book.name} ${chapterData.chapter.number}`;
 
     return (
-        <div className="mt-4">
+        <div className="mt-4 md:mt-0">
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
