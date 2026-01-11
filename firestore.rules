@@ -112,7 +112,7 @@ service cloud.firestore {
       match /annotations/{annotationId} {
         allow read: if isOwner(userId);
         allow create: if isCreatingOwner(userId) && hasValidUserIdOnCreate(userId) && isValidAnnotation();
-        allow update: if isExistingOwner(userId) && isUserIdImmutable() && isValidAnnotation();
+        allow update: if isExistingOwner(userId) && isUserIdImmutable();
         allow delete: if isOwner(userId);
       }
     }
