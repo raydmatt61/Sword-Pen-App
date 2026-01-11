@@ -132,7 +132,7 @@ export default async function Home({
         <div></div>
         <div>
             <h1 className="text-4xl md:text-5xl font-headline font-bold text-primary">
-            Sword and Pen Bible
+            The Sword & Pen
             </h1>
             <p className="text-lg text-muted-foreground mt-2 font-headline">
             Deepen your biblical understanding with AI-powered insights.

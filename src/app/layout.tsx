@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'Sword and Pen Bible',
+  title: 'The Sword & Pen',
   description: 'A modern Bible study tool for notes and insights.',
 };
 
