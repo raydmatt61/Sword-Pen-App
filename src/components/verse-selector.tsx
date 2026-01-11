@@ -91,7 +91,7 @@ export function VerseSelector({
   if (!isClient) {
     return (
         <Card className="animate-in fade-in duration-500">
-            <CardContent className="pt-6">
+            <CardContent className="pt-2">
                 <div className="flex flex-col sm:flex-row gap-2 items-end">
                     <div className="grid grid-cols-2 gap-2 w-full">
                         <div className="space-y-2">
@@ -114,7 +114,7 @@ export function VerseSelector({
 
   return (
     <Card className="animate-in fade-in duration-500">
-      <CardContent className="pt-6">
+      <CardContent className="pt-2">
         <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 items-end">
             <div className="grid grid-cols-2 gap-2 w-full">
                 <div className="space-y-2">
