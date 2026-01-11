@@ -72,16 +72,16 @@ export function VerseSelector({
     return (
         <Card className="animate-in fade-in duration-500">
             <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div className="space-y-2 md:col-span-1">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 items-end">
+                    <div className="space-y-2 col-span-1">
                         <Label htmlFor="book" className="font-headline">Book</Label>
                         <Skeleton className="h-10 w-full" />
                     </div>
-                    <div className="space-y-2 md:col-span-1">
+                    <div className="space-y-2 col-span-1">
                         <Label htmlFor="chapter" className="font-headline">Chapter</Label>
                         <Skeleton className="h-10 w-full" />
                     </div>
-                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full col-span-2 md:col-span-1" />
                 </div>
             </CardContent>
         </Card>
@@ -91,8 +91,8 @@ export function VerseSelector({
   return (
     <Card className="animate-in fade-in duration-500">
       <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          <div className="space-y-2 md:col-span-1">
+        <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-3 gap-4 items-end">
+          <div className="space-y-2 col-span-1">
             <Label htmlFor="book" className="font-headline">Book</Label>
             <Select value={book} onValueChange={(v) => handleValueChange('book', v)} disabled={books.length === 0}>
               <SelectTrigger id="book">
@@ -105,7 +105,7 @@ export function VerseSelector({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2 md:col-span-1">
+          <div className="space-y-2 col-span-1">
             <Label htmlFor="chapter" className="font-headline">Chapter</Label>
             <Input
               id="chapter"
@@ -118,7 +118,7 @@ export function VerseSelector({
               disabled={books.length === 0}
             />
           </div>
-          <Button type="submit" className="w-full" disabled={books.length === 0}>
+          <Button type="submit" className="w-full col-span-2 md:col-span-1" disabled={books.length === 0}>
             <Search className="mr-2 h-4 w-4" />
             Load Chapter
           </Button>
