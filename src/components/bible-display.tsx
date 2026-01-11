@@ -8,7 +8,7 @@ import { type Annotation, type BibleChapterResponse, type ChapterContentItem } f
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { BookText, Save, Trash2, StickyNote, Highlighter, Underline, Palette, X } from 'lucide-react';
+import { BookText, Save, Trash2, StickyNote, Highlighter, Underline, Palette, X, Pencil, Ban } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
 import { cn } from '@/lib/utils';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -116,6 +116,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
 
     const [selection, setSelection] = useState<{ range: Range, verseNum: string } | null>(null);
     const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
+    const [isEditingNote, setIsEditingNote] = useState(false);
     const [note, setNote] = useState('');
     const noteDirty = useMemo(() => activeAnnotation && note !== (activeAnnotation.note || ''), [activeAnnotation, note]);
 
@@ -187,6 +188,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
             if (verseNum) {
                 setSelection({ range, verseNum });
                 setActiveAnnotation(null);
+                setIsEditingNote(false);
             }
         } else {
             // This logic allows clicking away to deselect.
@@ -200,6 +202,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         setActiveAnnotation(null);
         setSelection(null);
         setNote('');
+        setIsEditingNote(false);
     };
 
     const createOrUpdateAnnotation = async (data: Partial<Omit<Annotation, 'id' | 'userId' | 'createdAt'>>) => {
@@ -239,25 +242,27 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
 
             const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
             annotationToUpdate = { ...newAnnotation, id: newDocRef.id };
-            setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() }, { merge: true });
+            setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() });
             resetAnnotationState(); // Reset after creation
         }
         // If there is an active annotation, update it
         else if (annotationToUpdate) {
              const docRef = doc(firestore, `users/${user.uid}/annotations`, annotationToUpdate.id);
              setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
-             resetAnnotationState(); // Reset after update
+             // After updating, we might want to refresh the active annotation or reset
+             // For now, we reset to provide clear feedback.
+             resetAnnotationState();
         }
-        
-        setSelection(null);
     };
 
     const handleDeleteAnnotation = () => {
         if (activeAnnotation && firestore && user) {
             const docRef = doc(firestore, `users/${user.uid}/annotations`, activeAnnotation.id);
             deleteDocumentNonBlocking(docRef);
-            setActiveAnnotation(null);
-            setSelection(null);
+            resetAnnotationState();
+        } else if (selection) {
+            // If just a selection is active, just clear it
+            resetAnnotationState();
         }
     }
     
@@ -265,21 +270,28 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         if (!activeAnnotation || !noteDirty) return;
         createOrUpdateAnnotation({ note });
         toast({ title: "Note Saved", description: "Your annotation note has been saved." });
-        resetAnnotationState(); // Reset after saving note
+        setIsEditingNote(false); // Go back to read-only mode
+        // Don't reset the whole state, just the editing part
     }
 
     const handleAnnotationClick = (annotation: Annotation) => {
         setActiveAnnotation(annotation);
         setNote(annotation.note || '');
+        setIsEditingNote(false);
         setSelection(null);
     };
+
+    const handleCancelEdit = () => {
+        setNote(activeAnnotation?.note || '');
+        setIsEditingNote(false);
+    }
 
     const verses = chapterData.chapter.content.filter(item => item.type === 'verse') as Extract<ChapterContentItem, { type: 'verse' }>[];
 
     return (
-        <div className="grid md:grid-cols-3 gap-6 animate-in fade-in duration-500" ref={displayRef}>
+        <div className="flex flex-col md:grid md:grid-cols-3 gap-6 animate-in fade-in duration-500" ref={displayRef}>
             
-             <div className="md:col-span-1 md:sticky md:top-[124px] self-start z-10 flex flex-col gap-6">
+             <div className="order-1 md:col-span-1 md:sticky md:top-[124px] self-start z-10 flex flex-col gap-6">
                  <Card>
                     <CardHeader>
                         <CardTitle className="font-headline text-xl">
@@ -297,21 +309,37 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                                 <blockquote className="p-2 border-l-4 border-muted bg-muted/20 rounded-r-lg">
                                     <Balancer>{activeAnnotation.text}</Balancer>
                                 </blockquote>
-                                <Textarea
-                                    placeholder="Your thoughts on this selection..."
-                                    value={note}
-                                    onChange={(e) => setNote(e.target.value)}
-                                    className="font-body text-base"
-                                    rows={5}
-                                />
-                                <div className="flex flex-col gap-2">
-                                    <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}><Save className="mr-2"/>Save Note</Button>
-                                     <Button onClick={handleDeleteAnnotation} size="sm" variant="destructive"><Trash2 className="mr-2"/>Delete Annotation</Button>
-                                </div>
-                                {note && (
+                                {isEditingNote ? (
+                                    <>
+                                        <Textarea
+                                            placeholder="Your thoughts on this selection..."
+                                            value={note}
+                                            onChange={(e) => setNote(e.target.value)}
+                                            className="font-body text-base"
+                                            rows={5}
+                                        />
+                                        <div className="flex gap-2">
+                                            <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}><Save className="mr-2"/>Save</Button>
+                                            <Button onClick={handleCancelEdit} size="sm" variant="ghost"><Ban className="mr-2"/>Cancel</Button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        {activeAnnotation.note ? (
+                                            <p className="font-body text-base p-2 whitespace-pre-wrap">{activeAnnotation.note}</p>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground p-2">No note for this annotation.</p>
+                                        )}
+                                        <div className="flex flex-col gap-2">
+                                            <Button onClick={() => setIsEditingNote(true)} size="sm" variant="outline"><Pencil className="mr-2"/>{activeAnnotation.note ? 'Edit Note' : 'Add Note'}</Button>
+                                            <Button onClick={handleDeleteAnnotation} size="sm" variant="destructive"><Trash2 className="mr-2"/>Delete Annotation</Button>
+                                        </div>
+                                    </>
+                                )}
+                                {(activeAnnotation.note && !isEditingNote) && (
                                     <AiInsightGenerator
                                         verse={`${fullReference}:${activeAnnotation.verse} ("${activeAnnotation.text}")`}
-                                        annotation={note}
+                                        annotation={activeAnnotation.note}
                                     />
                                 )}
                             </div>
@@ -319,7 +347,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                          : null
                          }
                     </CardContent>
-                    {selection && (
+                    {(selection && !activeAnnotation) && (
                        <CardFooter ref={toolbarRef}>
                            <AnnotationToolbar 
                                onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
@@ -331,7 +359,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                     )}
                 </Card>
             </div>
-            <div className="md:col-span-2">
+            <div className="order-2 md:col-span-2">
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
@@ -361,6 +389,8 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         </div>
     );
 }
+
+    
 
     
 
