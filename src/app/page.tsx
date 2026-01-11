@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
 import { QrCodeGenerator } from '@/components/qr-code-generator';
+import { AnnotationWrapper } from '@/components/annotation-wrapper';
 
 async function getChapter(
   book: string,
@@ -82,7 +83,11 @@ async function ChapterLoader({
     );
   }
 
-  return <BibleDisplay chapterData={chapterData} />;
+  return (
+     <AnnotationWrapper chapterData={chapterData}>
+        {(props) => <BibleDisplay {...props} chapterData={chapterData} />}
+      </AnnotationWrapper>
+  );
 }
 
 async function getBooks(translation: string): Promise<Book[]> {
@@ -128,41 +133,49 @@ export default async function Home({
 
   return (
     <main className="container mx-auto px-4 py-8 md:py-12">
-       <header className="text-center mb-6 md:mb-8 animate-in fade-in duration-500 flex justify-between items-center">
-        <div></div>
-        <div>
+       <header className="text-center mb-6 md:mb-8 animate-in fade-in duration-500 flex justify-between items-start md:items-center">
+        <div className="w-1/3"></div>
+        <div className="w-1/3">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-headline font-bold text-primary">
             The Sword & Pen
             </h1>
-            <p className="text-base md:text-lg text-muted-foreground mt-2 font-headline">
+            <p className="text-sm md:text-lg text-muted-foreground mt-2 font-headline">
             Deepen your biblical understanding with AI-powered insights.
             </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-1/3 justify-end">
             <QrCodeGenerator />
             <AuthManager />
         </div>
       </header>
-
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm -mx-4 px-4 pt-2 pb-4">
+      
+      <div className="sticky top-2 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm -mx-4 px-4 pb-4">
         <VerseSelector 
           defaultValues={{ book, chapter, translation }}
           books={books}
           translations={TRANSLATIONS}
         />
+        <Suspense fallback={<AnnotationSkeleton />}>
+          <ChapterLoader book={book} chapter={chapter} translation={translation} />
+        </Suspense>
       </div>
-
-
-      <Suspense fallback={<BibleDisplaySkeleton />}>
-        <ChapterLoader book={book} chapter={chapter} translation={translation} />
-      </Suspense>
     </main>
   );
 }
 
+function AnnotationSkeleton() {
+    return (
+        <Card>
+            <CardContent className="pt-6">
+                 <p className="text-sm text-muted-foreground">Loading annotations...</p>
+            </CardContent>
+        </Card>
+    )
+}
+
 function BibleDisplaySkeleton() {
   return (
-    <Card className="mt-6">
+    <Card className="mt-4">
       <CardContent className="pt-6 space-y-6">
         <div className="space-y-2">
           <Skeleton className="h-4 w-1/4" />
