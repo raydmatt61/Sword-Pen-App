@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -296,7 +297,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
             )}
             
             <div className="md:col-span-1">
-                <div className="sticky top-[100px] md:top-6 z-10 flex flex-col gap-6">
+                <div className="sticky top-[100px] z-10 flex flex-col gap-6">
                      <Card>
                         <CardHeader>
                             <CardTitle className="font-headline text-xl">
@@ -366,3 +367,5 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         </div>
     );
 }
+
+    
