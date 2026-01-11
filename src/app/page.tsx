@@ -4,7 +4,7 @@ import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book } from '@/lib/bible';
 import { BIBLE_BOOKS_ABBR, TRANSLATIONS } from '@/lib/bible';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
 import { QrCodeGenerator } from '@/components/qr-code-generator';
@@ -58,32 +58,24 @@ async function getChapter(
 }
 
 
-async function ChapterLoader({
+function ChapterLoader({
   book,
   chapter,
   translation,
+  children
 }: {
   book: string;
   chapter: string;
   translation: string;
+  children: (chapterData: BibleChapterResponse) => React.ReactNode;
 }) {
-  const chapterData = await getChapter(book, chapter, translation);
+  const chapterData = getChapter(book, chapter, translation);
 
-  if (!chapterData) {
-    const translationName = TRANSLATIONS.find(t => t.id === translation)?.englishName || translation;
-    return (
-      <Card className="mt-6 animate-in fade-in duration-500">
-        <CardContent className="pt-6">
-          <p className="text-center text-muted-foreground">
-            Could not load chapter <span className="font-bold">{book} {chapter}</span> in the <span className="font-bold">{translationName}</span> translation.
-            This may be due to a network issue or the translation not being available for this book. Please try a different selection.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return <BibleDisplay chapterData={chapterData} />;
+  return (
+    <Suspense fallback={<BibleDisplaySkeleton />}>
+        {children(chapterData)}
+    </Suspense>
+  )
 }
 
 async function getBooks(translation: string): Promise<Book[]> {
@@ -122,19 +114,18 @@ export default async function Home({
   const chapter = searchParams?.chapter || '1';
 
   const books = await getBooks(translation);
-
   const chapterData = await getChapter(book, chapter, translation);
 
   return (
-    <main className="container mx-auto px-4 py-8 md:py-12">
-       <header className="text-center mb-6 md:mb-8 animate-in fade-in duration-500 flex justify-between items-start md:items-center">
+    <main className="flex flex-col h-screen">
+       <header className="text-center py-4 px-4 animate-in fade-in duration-500 flex justify-between items-center border-b">
         <div className="w-1/3"></div>
         <div className="w-1/3">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-headline font-bold text-primary">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-bold text-primary">
             The Sword & Pen
             </h1>
-            <p className="text-sm md:text-lg text-muted-foreground mt-2 font-headline">
-            Deepen your biblical understanding with AI-powered insights.
+            <p className="text-xs md:text-sm text-muted-foreground mt-1 font-headline">
+            Deepen your Bible study with annotations, notes and AI-powered insights.
             </p>
         </div>
         <div className="flex items-center gap-2 w-1/3 justify-end">
@@ -143,7 +134,7 @@ export default async function Home({
         </div>
       </header>
       
-      <div className="sticky top-2 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm -mx-4 px-4 pb-4">
+      <div className="sticky top-0 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
         <VerseSelector 
           defaultValues={{ book, chapter, translation }}
           books={books}
@@ -151,9 +142,27 @@ export default async function Home({
         />
         {chapterData && <AnnotationWrapper chapterData={chapterData} />}
       </div>
-      <div className="mt-4">
+
+      <div className="flex-grow overflow-y-auto p-4">
         <Suspense fallback={<BibleDisplaySkeleton />}>
-          <ChapterLoader book={book} chapter={chapter} translation={translation} />
+          <ChapterLoader book={book} chapter={chapter} translation={translation}>
+            {(chapterData) => {
+              if (!chapterData) {
+                const translationName = TRANSLATIONS.find(t => t.id === translation)?.englishName || translation;
+                return (
+                  <Card className="mt-6 animate-in fade-in duration-500">
+                    <CardContent className="pt-6">
+                      <p className="text-center text-muted-foreground">
+                        Could not load chapter <span className="font-bold">{book} {chapter}</span> in the <span className="font-bold">{translationName}</span> translation.
+                        This may be due to a network issue or the translation not being available for this book. Please try a different selection.
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return <BibleDisplay chapterData={chapterData} />;
+            }}
+          </ChapterLoader>
         </Suspense>
       </div>
     </main>
