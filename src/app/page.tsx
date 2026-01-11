@@ -21,7 +21,6 @@ async function getChapter(
 
   while (attempts < maxRetries) {
     try {
-      // CRITICAL FIX: Ensure we use the abbreviation for the API call.
       const bookId = BIBLE_BOOKS_ABBR[book] || book;
       const response = await fetch(
         `https://bible.helloao.org/api/${translation}/${bookId}/${chapter}.json`
@@ -31,20 +30,19 @@ async function getChapter(
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
             const data = await response.json();
-            // Add a check to ensure the response is valid JSON with expected structure
             if (data && data.chapter && data.chapter.content) {
                 return data;
             }
         } else {
              console.error(`API Error: Expected JSON but received ${contentType} for ${translation}/${bookId}/${chapter}`);
+             // If we get HTML, it's likely a 404 or other error page, so we should stop retrying for this specific case.
+             break;
         }
       } else {
         console.error(`API Error for ${translation}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
       }
-      // If not ok or not JSON, fall through to retry
     } catch (error) {
       console.error('Failed to fetch chapter (attempt ' + (attempts + 1) + '):', error);
-      // Fall through to retry
     }
     
     attempts++;
@@ -85,13 +83,12 @@ async function getBooks(translation: string): Promise<Book[]> {
       console.error(`Failed to fetch books for ${translation}: ${booksRes.status}`);
       return [];
     }
-    // Check content type before parsing as JSON
     const contentType = booksRes.headers.get("content-type");
     if (contentType && contentType.indexOf("application/json") !== -1) {
         const booksData = await booksRes.json();
         return booksData.books || [];
     } else {
-        console.error(`Expected JSON but received ${contentType} for ${translation}`);
+        console.error(`Expected JSON for books list but received ${contentType} for ${translation}`);
         return [];
     }
   } catch (error) {
