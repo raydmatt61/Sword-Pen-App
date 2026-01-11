@@ -45,7 +45,7 @@ service cloud.firestore {
     }
 
     // Checks if the requesting user is the owner of an existing document.
-    // CRITICAL: Used for all update and delete operations to prevent writes to non-existent paths.
+    // CRITICAL: Used for all update operations to prevent writes to non-existent paths.
     function isExistingOwner(userId) {
       return isOwner(userId) && exists(path);
     }
@@ -99,7 +99,7 @@ service cloud.firestore {
       allow list: if false;
       allow create: if isOwner(userId) && hasValidIdOnCreate(userId);
       allow update: if isExistingOwner(userId) && isIdImmutable();
-      allow delete: if isExistingOwner(userId);
+      allow delete: if isOwner(userId);
 
       /**
        * @description Manages a user's private annotations for specific Bible verses.
@@ -113,7 +113,7 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create: if isCreatingOwner(userId) && hasValidUserIdOnCreate(userId) && isValidAnnotation();
         allow update: if isExistingOwner(userId) && isUserIdImmutable() && isValidAnnotation();
-        allow delete: if isExistingOwner(userId);
+        allow delete: if isOwner(userId);
       }
     }
   }
