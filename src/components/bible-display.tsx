@@ -1,69 +1,126 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, deleteField } from 'firebase/firestore';
-import type { Annotation, BibleChapterResponse, ChapterContentItem } from '@/lib/bible';
+import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { type Annotation, type BibleChapterResponse, type ChapterContentItem } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { BookText, Save } from 'lucide-react';
+import { BookText, Save, Trash2, StickyNote, Highlighter, Underline, Palette, X } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
 import { cn } from '@/lib/utils';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import Balancer from 'react-wrap-balancer';
+import { useToast } from '@/hooks/use-toast';
 
-function AnnotationControls({ onHighlight, onUnderline, onClear, onSaveNote, onCopy, isDirty }: { onHighlight: (style: string) => void, onUnderline: (style: string) => void, onClear: () => void, onSaveNote: () => void, onCopy: () => void, isDirty: boolean }) {
-    const highlightColors = [
-        { class: 'hl-yellow', color: '#fff59d' },
-        { class: 'hl-green', color: '#c8e6c9' },
-        { class: 'hl-blue', color: '#bbdefb' },
-        { class: 'hl-pink', color: '#f8bbd0' },
-    ];
-    const underlineColors = [
-        { class: 'ul-red', color: '#e53935' },
-        { class: 'ul-purple', color: '#8e24aa' },
-        { class: 'ul-orange', color: '#fb8c00' },
-    ];
+const highlightColors = [
+    { class: 'hl-yellow', color: '#fff59d' },
+    { class: 'hl-green', color: '#c8e6c9' },
+    { class: 'hl-blue', color: '#bbdefb' },
+    { class: 'hl-pink', color: '#f8bbd0' },
+];
+const underlineColors = [
+    { class: 'ul-red', color: '#e53935' },
+    { class: 'ul-purple', color: '#8e24aa' },
+    { class: 'ul-orange', color: '#fb8c00' },
+];
 
+function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete }) {
     return (
-        <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-4 gap-2">
-                {highlightColors.map(h => <button key={h.class} onClick={() => onHighlight(h.class)} className="h-6 w-full rounded" style={{ backgroundColor: h.color }} title={`Highlight ${h.class.split('-')[1]}`}></button>)}
-                {underlineColors.map(u => <button key={u.class} onClick={() => onUnderline(u.class)} className="h-6 w-full rounded text-white" style={{ backgroundColor: u.color }} title={`Underline ${u.class.split('-')[1]}`}>{u.class.split('-')[1]}</button>)}
-                <Button variant="outline" size="sm" onClick={onClear} className="h-6">Clear</Button>
-            </div>
-             <Button onClick={onSaveNote} size="sm" disabled={!isDirty}><Save className="mr-2"/>Save Note</Button>
-             <Button onClick={onCopy} variant="secondary" size="sm">Copy Verse Text</Button>
+        <div className="flex items-center gap-1 p-1 bg-background border rounded-lg shadow-md">
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8"><Highlighter /></Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-1">
+                     <div className="flex gap-1">
+                        {highlightColors.map(h => <button key={h.class} onClick={() => onHighlight(h.class)} className="h-6 w-6 rounded" style={{ backgroundColor: h.color }} title={`Highlight ${h.class.split('-')[1]}`}></button>)}
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onHighlight(null)}><X className="h-4 w-4"/></Button>
+                     </div>
+                </PopoverContent>
+            </Popover>
+             <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8"><Underline /></Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-1">
+                    <div className="flex gap-1 items-center">
+                        {underlineColors.map(u => <button key={u.class} onClick={() => onUnderline(u.class)} className="h-6 w-6 rounded flex items-center justify-center" style={{ backgroundColor: u.color }} title={`Underline ${u.class.split('-')[1]}`}><div className="w-4 h-0.5 bg-white"></div></button>)}
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUnderline(null)}><X className="h-4 w-4"/></Button>
+                    </div>
+                </PopoverContent>
+            </Popover>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNote}><StickyNote /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 /></Button>
         </div>
     )
 }
 
-function VerseComponent({ verse, fullReference, annotation, onSelectVerse }: { verse: Extract<ChapterContentItem, { type: 'verse' }>, fullReference: string, annotation: Annotation | undefined, onSelectVerse: () => void }) {
+function VerseComponent({
+    verse,
+    annotations,
+    onTextSelect,
+    onAnnotationClick,
+}: {
+    verse: Extract<ChapterContentItem, { type: 'verse' }>;
+    annotations: Annotation[];
+    onTextSelect: (e: React.MouseEvent<HTMLParagraphElement>) => void;
+    onAnnotationClick: (annotation: Annotation) => void;
+}) {
     const verseText = useMemo(() => verse.content.map(c => typeof c === 'string' ? c : (c.text || '')).join(''), [verse.content]);
-    const hasNote = !!annotation?.note;
+    
+    const renderedContent = useMemo(() => {
+        const sortedAnnotations = [...annotations].sort((a, b) => a.start - b.start);
+        let lastIndex = 0;
+        const parts: React.ReactNode[] = [];
+
+        sortedAnnotations.forEach((annotation, i) => {
+            if (annotation.start > lastIndex) {
+                parts.push(verseText.substring(lastIndex, annotation.start));
+            }
+            parts.push(
+                <span
+                    key={annotation.id}
+                    className={cn("annotated-text", annotation.highlight, annotation.underline, annotation.note && "border-b-2 border-dashed border-primary")}
+                    onClick={(e) => { e.stopPropagation(); onAnnotationClick(annotation); }}
+                >
+                    {verseText.substring(annotation.start, annotation.end)}
+                </span>
+            );
+            lastIndex = annotation.end;
+        });
+
+        if (lastIndex < verseText.length) {
+            parts.push(verseText.substring(lastIndex));
+        }
+
+        return parts;
+    }, [verseText, annotations, onAnnotationClick]);
 
     return (
-         <p className="text-lg leading-relaxed font-body" onClick={onSelectVerse}>
-            <sup className="font-headline font-bold text-primary mr-2">{verse.number}</sup>
-            <span className={cn(
-                "cursor-pointer p-1 rounded transition-colors hover:bg-primary/10",
-                hasNote && "border-l-4 border-accent bg-accent/10",
-                annotation?.highlight,
-                annotation?.underline
-            )}>
-                {verseText}
-            </span>
+        <p className="text-lg leading-relaxed font-body" data-verse-number={verse.number} onMouseUp={onTextSelect}>
+            <sup className="font-headline font-bold text-primary mr-2 select-none">{verse.number}</sup>
+            {renderedContent}
         </p>
     );
 }
 
+
 export function BibleDisplay({ chapterData }: { chapterData: BibleChapterResponse }) {
     const { user } = useUser();
     const firestore = useFirestore();
+    const { toast } = useToast();
 
-    const [selectedVerse, setSelectedVerse] = useState<string | null>(null);
-    const [selectedVerseText, setSelectedVerseText] = useState<string>('');
-    const [verseNote, setVerseNote] = useState('');
+    const [selection, setSelection] = useState<{ range: Range, verseNum: string } | null>(null);
+    const [toolbarCoords, setToolbarCoords] = useState<{ x: number, y: number } | null>(null);
+    const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
+    const [note, setNote] = useState('');
+    const noteDirty = useMemo(() => activeAnnotation && note !== (activeAnnotation.note || ''), [activeAnnotation, note]);
+
+    const displayRef = useRef<HTMLDivElement>(null);
+    const toolbarRef = useRef<HTMLDivElement>(null);
 
     const bookId = chapterData.book.id;
     const chapterNum = chapterData.chapter.number;
@@ -81,114 +138,195 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
 
     const chapterAnnotations = useMemo(() => {
         if (!annotations) return {};
-        const annotationMap: Record<string, Annotation> = {};
+        const annotationMap: Record<string, Annotation[]> = {};
         annotations.filter(a => a.book === bookId && a.chapter === chapterNum && a.translation === translationId)
         .forEach(a => {
-            annotationMap[a.verse] = a;
+            if (!annotationMap[a.verse]) {
+                annotationMap[a.verse] = [];
+            }
+            annotationMap[a.verse].push(a);
         });
         return annotationMap;
     }, [annotations, bookId, chapterNum, translationId]);
 
-
-    const handleSelectVerse = useCallback((verse: Extract<ChapterContentItem, { type: 'verse' }>) => {
-        setSelectedVerse(verse.number);
-        const verseText = verse.content.map(c => typeof c === 'string' ? c : (c.text || '')).join('');
-        setSelectedVerseText(verseText);
-        const existingAnnotation = chapterAnnotations[verse.number as any];
-        setVerseNote(existingAnnotation?.note || '');
-    }, [chapterAnnotations]);
-
-
-    const currentAnnotation = selectedVerse ? chapterAnnotations[selectedVerse] : undefined;
-    const isVerseNoteDirty = selectedVerse ? verseNote !== (currentAnnotation?.note || '') : false;
-
-    const getAnnotationRef = useCallback((verseNum: string) => {
-        if (!user || !firestore) return null;
-        const annotationId = `${translationId}-${bookId}-${chapterNum}-${verseNum}`;
-        return doc(firestore, `users/${user.uid}/annotations`, annotationId);
-    }, [user, firestore, translationId, bookId, chapterNum]);
+    const getVerseTextNode = (element: Node | null): { textNode: Node, verseNum: string } | null => {
+        while (element) {
+            if (element.nodeType === Node.ELEMENT_NODE) {
+                const verseNum = (element as HTMLElement).getAttribute('data-verse-number');
+                if (verseNum) {
+                    // Find the text node within the verse paragraph, skipping the <sup> tag
+                    const childNodes = Array.from(element.childNodes);
+                    const textNode = childNodes.find(n => n.nodeType === Node.TEXT_NODE || (n.nodeName === 'SPAN' && (n as HTMLSpanElement).classList.contains('annotated-text')));
+                    return textNode ? { textNode: element, verseNum } : null;
+                }
+            }
+            element = element.parentElement;
+        }
+        return null;
+    };
     
-    const handleAnnotationUpdate = (verseNum: string, data: Partial<Annotation>) => {
+    const handleTextSelect = useCallback((e) => {
         if (!user) return;
-        const ref = getAnnotationRef(verseNum);
-        if(ref) {
-            const payload: Annotation = {
-                id: ref.id,
+        const sel = window.getSelection();
+
+        if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+            const range = sel.getRangeAt(0);
+
+            // Find the parent paragraph with data-verse-number
+            let verseEl = range.startContainer.parentElement;
+            while(verseEl && !verseEl.hasAttribute('data-verse-number')) {
+                verseEl = verseEl.parentElement;
+            }
+
+            if (!verseEl || !displayRef.current?.contains(verseEl)) {
+                 setSelection(null);
+                 setToolbarCoords(null);
+                 return;
+            };
+            const verseNum = verseEl.getAttribute('data-verse-number');
+
+            if (verseNum) {
+                setSelection({ range, verseNum });
+                const rect = range.getBoundingClientRect();
+                const displayRect = displayRef.current.getBoundingClientRect();
+                setToolbarCoords({
+                    x: rect.left + rect.width / 2 - displayRect.left,
+                    y: rect.top - displayRect.top - 40,
+                });
+                setActiveAnnotation(null);
+            }
+        } else {
+            // This timeout prevents the toolbar from disappearing when clicking on it
+             if (toolbarRef.current && !toolbarRef.current.contains(e.target)) {
+                setSelection(null);
+                setToolbarCoords(null);
+            }
+        }
+    }, [user]);
+
+    const createOrUpdateAnnotation = async (data: Partial<Omit<Annotation, 'id' | 'userId' | 'createdAt'>>) => {
+        if (!user || !firestore) return;
+        
+        let annotationToUpdate: Annotation | null = activeAnnotation;
+
+        // If no active annotation, create a new one from selection
+        if (!annotationToUpdate && selection) {
+            const { range, verseNum } = selection;
+            
+            // Calculate offsets relative to the start of the verse's text content
+            const verseElement = range.startContainer.parentElement?.closest('[data-verse-number]');
+            if (!verseElement) return;
+
+            const allText = Array.from(verseElement.childNodes).map(node => node.textContent).join('');
+            const supLength = verseElement.querySelector('sup')?.textContent?.length || 0;
+            const preSelectionRange = document.createRange();
+            preSelectionRange.selectNodeContents(verseElement);
+            preSelectionRange.setEnd(range.startContainer, range.startOffset);
+            const start = preSelectionRange.toString().length - supLength;
+            
+            const text = range.toString();
+            const end = start + text.length;
+
+            const newAnnotation: Omit<Annotation, 'id'> = {
                 userId: user.uid,
                 translation: translationId,
                 book: bookId,
                 chapter: chapterNum,
                 verse: parseInt(verseNum),
-                ...data,
-            }
-            setDocumentNonBlocking(ref, payload, { merge: true });
+                start,
+                end,
+                text,
+                ...data
+            };
+
+            const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
+            annotationToUpdate = { ...newAnnotation, id: newDocRef.id };
+            setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() }, { merge: true });
+            setActiveAnnotation(annotationToUpdate);
         }
+        // If there is an active annotation, update it
+        else if (annotationToUpdate) {
+             const docRef = doc(firestore, `users/${user.uid}/annotations`, annotationToUpdate.id);
+             setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+        }
+        
+        setSelection(null);
+        setToolbarCoords(null);
     };
+
+    const handleDeleteAnnotation = () => {
+        if (activeAnnotation && firestore && user) {
+            const docRef = doc(firestore, `users/${user.uid}/annotations`, activeAnnotation.id);
+            deleteDocumentNonBlocking(docRef);
+            setActiveAnnotation(null);
+        }
+    }
     
-    const handleSaveVerseNote = () => {
-        if (!selectedVerse || !isVerseNoteDirty) return;
-        handleAnnotationUpdate(selectedVerse, { note: verseNote });
-    };
+    const handleSaveNote = () => {
+        if (!activeAnnotation || !noteDirty) return;
+        createOrUpdateAnnotation({ note });
+        toast({ title: "Note Saved", description: "Your annotation note has been saved." });
+    }
 
-    const handleHighlight = (style: string) => {
-        if (!selectedVerse) return;
-        const newStyle = currentAnnotation?.highlight === style ? undefined : style;
-        handleAnnotationUpdate(selectedVerse, { highlight: newStyle || (deleteField() as any) });
-    };
-
-    const handleUnderline = (style: string) => {
-        if (!selectedVerse) return;
-        const newStyle = currentAnnotation?.underline === style ? undefined : style;
-        handleAnnotationUpdate(selectedVerse, { underline: newStyle || (deleteField() as any) });
-    };
-
-    const handleClearMarkup = () => {
-        if (!selectedVerse) return;
-        handleAnnotationUpdate(selectedVerse, { highlight: deleteField() as any, underline: deleteField() as any });
-    };
-
-    const handleCopyVerse = () => {
-        if (!selectedVerse || !selectedVerseText) return;
-        navigator.clipboard.writeText(`${fullReference}:${selectedVerse}: ${selectedVerseText}`);
+    const handleAnnotationClick = (annotation: Annotation) => {
+        setActiveAnnotation(annotation);
+        setNote(annotation.note || '');
+        setSelection(null);
+        setToolbarCoords(null);
     };
 
     const verses = chapterData.chapter.content.filter(item => item.type === 'verse') as Extract<ChapterContentItem, { type: 'verse' }>[];
 
     return (
-        <div className="mt-6 grid md:grid-cols-3 gap-6 animate-in fade-in duration-500">
+        <div className="mt-6 grid md:grid-cols-3 gap-6 animate-in fade-in duration-500" ref={displayRef}>
+            {toolbarCoords && selection && (
+                <div
+                    ref={toolbarRef}
+                    className="absolute z-20"
+                    style={{ top: `${toolbarCoords.y}px`, left: `${toolbarCoords.x}px`, transform: 'translateX(-50%)' }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <AnnotationToolbar 
+                        onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
+                        onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined })}
+                        onNote={() => createOrUpdateAnnotation({note: ''})}
+                        onDelete={() => { /* can't delete from selection */ }}
+                    />
+                </div>
+            )}
+            
             <div className="md:col-span-1">
                 <div className="sticky top-6 z-10 flex flex-col gap-6">
                      <Card>
                         <CardHeader>
                             <CardTitle className="font-headline text-xl">
-                                Verse Annotation
+                                Annotation
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                              {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
-                             !selectedVerse ? <p className="text-sm text-muted-foreground">Select a verse to begin.</p> :
+                             !activeAnnotation ? <p className="text-sm text-muted-foreground">Select text or an annotation to see details.</p> :
                              (
                                 <div className="flex flex-col gap-4">
-                                     <p className="font-bold font-headline text-primary">{fullReference}:{selectedVerse}</p>
+                                    <p className="font-bold font-headline text-primary">{fullReference}:{activeAnnotation.verse}</p>
+                                    <blockquote className="p-2 border-l-4 border-muted bg-muted/20 rounded-r-lg">
+                                        <Balancer>{activeAnnotation.text}</Balancer>
+                                    </blockquote>
                                     <Textarea
-                                        placeholder="Your thoughts on this verse..."
-                                        value={verseNote}
-                                        onChange={(e) => setVerseNote(e.target.value)}
+                                        placeholder="Your thoughts on this selection..."
+                                        value={note}
+                                        onChange={(e) => setNote(e.target.value)}
                                         className="font-body text-base"
                                         rows={5}
                                     />
-                                    <AnnotationControls 
-                                        onHighlight={handleHighlight}
-                                        onUnderline={handleUnderline}
-                                        onClear={handleClearMarkup}
-                                        onSaveNote={handleSaveVerseNote}
-                                        onCopy={handleCopyVerse}
-                                        isDirty={isVerseNoteDirty}
-                                    />
-                                    {verseNote && (
+                                    <div className="flex flex-col gap-2">
+                                        <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}><Save className="mr-2"/>Save Note</Button>
+                                         <Button onClick={handleDeleteAnnotation} size="sm" variant="destructive"><Trash2 className="mr-2"/>Delete Annotation</Button>
+                                    </div>
+                                    {note && (
                                         <AiInsightGenerator
-                                            verse={`${fullReference}:${selectedVerse} - ${selectedVerseText}`}
-                                            annotation={verseNote}
+                                            verse={`${fullReference}:${activeAnnotation.verse} ("${activeAnnotation.text}")`}
+                                            annotation={note}
                                         />
                                     )}
                                 </div>
@@ -204,19 +342,19 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                         <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
                          <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
                     </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
+                    <CardContent onMouseUp={handleTextSelect}>
+                        <div className="space-y-2 select-text">
                              {chapterData.chapter.content.map((item, index) => {
                                 if (item.type === 'heading') {
-                                    return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4">{item.content.join(' ')}</h4>
+                                    return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 select-none"><Balancer>{item.content.join(' ')}</Balancer></h4>
                                 }
                                 if (item.type === 'verse') {
                                     return <VerseComponent 
                                                 key={item.number} 
                                                 verse={item} 
-                                                fullReference={fullReference} 
-                                                annotation={chapterAnnotations[item.number as any]}
-                                                onSelectVerse={() => handleSelectVerse(item)}
+                                                annotations={chapterAnnotations[item.number] || []}
+                                                onTextSelect={handleTextSelect}
+                                                onAnnotationClick={handleAnnotationClick}
                                             />
                                 }
                                 return null;
@@ -227,22 +365,4 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
             </div>
         </div>
     );
-}
-
-// Add CSS for highlights and underlines
-const styles = `
-.hl-yellow { background-color: #fff59d !important; }
-.hl-green { background-color: #c8e6c9 !important; }
-.hl-blue { background-color: #bbdefb !important; }
-.hl-pink { background-color: #f8bbd0 !important; }
-.ul-red { border-bottom: 3px solid #e53935; padding-bottom: 1px; }
-.ul-purple { border-bottom: 3px solid #8e24aa; padding-bottom: 1px; }
-.ul-orange { border-bottom: 3px solid #fb8c00; padding-bottom: 1px; }
-`;
-
-if (typeof window !== 'undefined') {
-    const styleSheet = document.createElement("style");
-    styleSheet.type = "text/css";
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
 }

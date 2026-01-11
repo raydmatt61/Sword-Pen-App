@@ -47,7 +47,12 @@ service cloud.firestore {
     // Checks if the requesting user is the owner of an existing document.
     // CRITICAL: Used for all update and delete operations to prevent writes to non-existent paths.
     function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+      return isOwner(userId) && exists(path);
+    }
+    
+    // Checks if the user trying to create a document is the owner
+    function isCreatingOwner(userId) {
+      return isOwner(userId);
     }
 
     // On create, validates that the document's internal `id` field matches the user's UID.
@@ -68,6 +73,17 @@ service cloud.firestore {
     // On update, ensures the document's internal `userId` field cannot be changed.
     function isUserIdImmutable() {
       return request.resource.data.userId == resource.data.userId;
+    }
+    
+    function isValidAnnotation() {
+        let data = request.resource.data;
+        return data.start >= 0 &&
+               data.end > data.start &&
+               data.text.size() > 0 &&
+               data.book.size() > 0 &&
+               data.translation.size() > 0 &&
+               data.chapter > 0 &&
+               data.verse > 0;
     }
 
     /**
@@ -94,10 +110,9 @@ service cloud.firestore {
        * @principle Enforces document ownership for all operations on a user's private subcollection.
        */
       match /annotations/{annotationId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId);
-        allow update: if isExistingOwner(userId) && isUserIdImmutable();
+        allow read: if isOwner(userId);
+        allow create: if isCreatingOwner(userId) && hasValidUserIdOnCreate(userId) && isValidAnnotation();
+        allow update: if isExistingOwner(userId) && isUserIdImmutable() && isValidAnnotation();
         allow delete: if isExistingOwner(userId);
       }
     }

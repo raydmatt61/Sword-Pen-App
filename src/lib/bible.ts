@@ -48,13 +48,18 @@ export type BibleChapterResponse = {
 };
 
 export type Annotation = {
-  id?: string;
+  id: string;
   userId: string;
   translation: string;
   book: string;
   chapter: number;
   verse: number;
+  start: number;
+  end: number;
+  text: string;
   note?: string;
   highlight?: string;
   underline?: string;
+  createdAt?: any;
+  updatedAt?: any;
 };
