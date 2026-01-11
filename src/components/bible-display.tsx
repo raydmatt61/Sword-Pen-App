@@ -196,6 +196,12 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         }
     }, [user]);
 
+    const resetAnnotationState = () => {
+        setActiveAnnotation(null);
+        setSelection(null);
+        setNote('');
+    };
+
     const createOrUpdateAnnotation = async (data: Partial<Omit<Annotation, 'id' | 'userId' | 'createdAt'>>) => {
         if (!user || !firestore) return;
         
@@ -234,14 +240,13 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
             const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
             annotationToUpdate = { ...newAnnotation, id: newDocRef.id };
             setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() }, { merge: true });
-            setActiveAnnotation(null); // Reset after creation
-            setSelection(null);
+            resetAnnotationState(); // Reset after creation
         }
         // If there is an active annotation, update it
         else if (annotationToUpdate) {
              const docRef = doc(firestore, `users/${user.uid}/annotations`, annotationToUpdate.id);
              setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
-             setActiveAnnotation(null); // Reset after update
+             resetAnnotationState(); // Reset after update
         }
         
         setSelection(null);
@@ -260,8 +265,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         if (!activeAnnotation || !noteDirty) return;
         createOrUpdateAnnotation({ note });
         toast({ title: "Note Saved", description: "Your annotation note has been saved." });
-        setActiveAnnotation(null);
-        setSelection(null);
+        resetAnnotationState(); // Reset after saving note
     }
 
     const handleAnnotationClick = (annotation: Annotation) => {
@@ -273,10 +277,10 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     const verses = chapterData.chapter.content.filter(item => item.type === 'verse') as Extract<ChapterContentItem, { type: 'verse' }>[];
 
     return (
-        <div className="mt-6 grid md:grid-cols-3 gap-6 animate-in fade-in duration-500" ref={displayRef}>
+        <div className="grid md:grid-cols-3 gap-6 animate-in fade-in duration-500" ref={displayRef}>
             
             <div className="md:col-span-1">
-                <div className="sticky top-[116px] z-10 flex flex-col gap-6">
+                <div className="sticky top-[110px] z-10 flex flex-col gap-6">
                      <Card>
                         <CardHeader>
                             <CardTitle className="font-headline text-xl">
@@ -359,5 +363,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         </div>
     );
 }
+
+    
 
     
