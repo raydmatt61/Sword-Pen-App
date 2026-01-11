@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { type Annotation, type BibleChapterResponse } from '@/lib/bible';
@@ -154,7 +154,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
     }
 
     // Effect to update local note state when active annotation changes
-    useMemo(() => {
+    useEffect(() => {
         if (activeAnnotation) {
             setNote(activeAnnotation.note || '');
             setIsEditingNote(false);
