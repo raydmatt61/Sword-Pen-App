@@ -126,7 +126,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     const fullReference = `${chapterData.book.name} ${chapterData.chapter.number}`;
 
     return (
-        <div className="mt-4 md:mt-0">
+        <div>
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
