@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { type Annotation, type BibleChapterResponse, type ChapterContentItem } from '@/lib/bible';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { BookText, Save, Trash2, StickyNote, Highlighter, Underline, Palette, X } from 'lucide-react';
@@ -30,7 +30,7 @@ const underlineColors = [
 
 function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete }) {
     return (
-        <div className="flex items-center gap-1 p-1 bg-background border rounded-lg shadow-md">
+        <div className="flex items-center justify-center gap-1 p-1 bg-background border rounded-lg shadow-md w-full">
             <Popover>
                 <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8"><Highlighter /></Button>
@@ -54,7 +54,7 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete }) {
                 </PopoverContent>
             </Popover>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNote}><StickyNote /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete} disabled><Trash2 /></Button>
         </div>
     )
 }
@@ -115,7 +115,6 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     const { toast } = useToast();
 
     const [selection, setSelection] = useState<{ range: Range, verseNum: string } | null>(null);
-    const [toolbarCoords, setToolbarCoords] = useState<{ x: number, y: number } | null>(null);
     const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
     const [note, setNote] = useState('');
     const noteDirty = useMemo(() => activeAnnotation && note !== (activeAnnotation.note || ''), [activeAnnotation, note]);
@@ -181,26 +180,18 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
 
             if (!verseEl || !displayRef.current?.contains(verseEl)) {
                  setSelection(null);
-                 setToolbarCoords(null);
                  return;
             };
             const verseNum = verseEl.getAttribute('data-verse-number');
 
             if (verseNum) {
                 setSelection({ range, verseNum });
-                const rect = range.getBoundingClientRect();
-                const displayRect = displayRef.current.getBoundingClientRect();
-                setToolbarCoords({
-                    x: rect.left + rect.width / 2 - displayRect.left,
-                    y: rect.top - displayRect.top - 40,
-                });
                 setActiveAnnotation(null);
             }
         } else {
-            // This timeout prevents the toolbar from disappearing when clicking on it
-             if (toolbarRef.current && !toolbarRef.current.contains(e.target)) {
+            // This logic allows clicking away to deselect.
+            if (!toolbarRef.current?.contains(e.target as Node)) {
                 setSelection(null);
-                setToolbarCoords(null);
             }
         }
     }, [user]);
@@ -252,7 +243,6 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         }
         
         setSelection(null);
-        setToolbarCoords(null);
     };
 
     const handleDeleteAnnotation = () => {
@@ -273,28 +263,12 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         setActiveAnnotation(annotation);
         setNote(annotation.note || '');
         setSelection(null);
-        setToolbarCoords(null);
     };
 
     const verses = chapterData.chapter.content.filter(item => item.type === 'verse') as Extract<ChapterContentItem, { type: 'verse' }>[];
 
     return (
         <div className="mt-6 grid md:grid-cols-3 gap-6 animate-in fade-in duration-500" ref={displayRef}>
-            {toolbarCoords && selection && (
-                <div
-                    ref={toolbarRef}
-                    className="absolute z-20"
-                    style={{ top: `${toolbarCoords.y}px`, left: `${toolbarCoords.x}px`, transform: 'translateX(-50%)' }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <AnnotationToolbar 
-                        onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
-                        onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined })}
-                        onNote={() => createOrUpdateAnnotation({note: ''})}
-                        onDelete={() => { /* can't delete from selection */ }}
-                    />
-                </div>
-            )}
             
             <div className="md:col-span-1">
                 <div className="sticky top-[100px] z-10 flex flex-col gap-6">
@@ -306,7 +280,9 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                         </CardHeader>
                         <CardContent>
                              {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
-                             !activeAnnotation ? <p className="text-sm text-muted-foreground">Select text or an annotation to see details.</p> :
+                             !activeAnnotation && !selection ? <p className="text-sm text-muted-foreground">Select text or an annotation to see details.</p> :
+                             !activeAnnotation && selection ? <p className="font-bold font-headline text-primary">New selection in v. {selection.verseNum}</p> :
+                             activeAnnotation ?
                              (
                                 <div className="flex flex-col gap-4">
                                     <p className="font-bold font-headline text-primary">{fullReference}:{activeAnnotation.verse}</p>
@@ -332,8 +308,19 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                                     )}
                                 </div>
                              )
+                             : null
                              }
                         </CardContent>
+                        {selection && (
+                           <CardFooter ref={toolbarRef}>
+                               <AnnotationToolbar 
+                                   onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
+                                   onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined })}
+                                   onNote={() => createOrUpdateAnnotation({note: ''})}
+                                   onDelete={() => { /* can't delete from selection */ }}
+                               />
+                           </CardFooter>
+                        )}
                     </Card>
                 </div>
             </div>
@@ -367,5 +354,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         </div>
     );
 }
+
+    
 
     
