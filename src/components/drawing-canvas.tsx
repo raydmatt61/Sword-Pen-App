@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { type Annotation } from '@/lib/bible';
 
