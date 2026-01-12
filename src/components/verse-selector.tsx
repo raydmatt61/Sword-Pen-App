@@ -6,7 +6,6 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from '@/components/ui/label';
 import type { Book, Translation } from '@/lib/bible';
 import { Search, ChevronLeft, ChevronRight, Rewind, BookOpenCheck } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
@@ -116,33 +115,33 @@ export function VerseSelector({
   
   const renderControls = (isMobileLayout = false) => (
      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className={`grid gap-2 ${isMobileLayout ? 'grid-cols-2' : 'grid-cols-[1fr_auto_auto]'}`}>
-            <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
-              <SelectTrigger id="book" aria-label="Book">
-                  <SelectValue placeholder="Select book" />
-              </SelectTrigger>
-              <SelectContent>
-                  {books.map(b => (
-                  <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <Select value={chapter} onValueChange={(newChapter) => setChapter(newChapter)} disabled={books.length === 0}>
-                <SelectTrigger id="chapter" aria-label="Chapter">
-                  <SelectValue placeholder="Ch." />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: maxChapters }, (_, i) => i + 1).map(chapNum => (
-                    <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>
-                  ))}
-                </SelectContent>
-            </Select>
-             {!isMobileLayout && (
-                 <Button type="submit" className="px-6" disabled={books.length === 0}>
-                    <Search className="h-4 w-4" />
-                    <span className="sr-only">Load</span>
-                </Button>
-             )}
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+            <div className="grid grid-cols-[3fr_1fr] gap-2">
+                <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
+                    <SelectTrigger id="book" aria-label="Book">
+                        <SelectValue placeholder="Select book" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {books.map(b => (
+                        <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Select value={chapter} onValueChange={(newChapter) => setChapter(newChapter)} disabled={books.length === 0}>
+                    <SelectTrigger id="chapter" aria-label="Chapter">
+                    <SelectValue placeholder="Ch." />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {Array.from({ length: maxChapters }, (_, i) => i + 1).map(chapNum => (
+                        <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <Button type="submit" className="px-6" disabled={books.length === 0}>
+                <Search className="h-4 w-4" />
+                <span className="sr-only">Load</span>
+            </Button>
         </div>
         <div className="flex gap-2 w-full">
             <Sheet>
