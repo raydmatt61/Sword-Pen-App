@@ -9,7 +9,6 @@ import Balancer from 'react-wrap-balancer';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { DrawingCanvas } from './drawing-canvas';
 
 
 function VerseComponent({
@@ -21,7 +20,7 @@ function VerseComponent({
     annotations: Annotation[];
     onAnnotationClick: (annotation: Annotation) => void;
 }) {
-    const { fontSize, isDrawingMode } = useAnnotationContext();
+    const { fontSize } = useAnnotationContext();
     const verseText = useMemo(() => verse.content.map(c => typeof c === 'string' ? c : (c.text || '')).join(''), [verse.content]);
     
     const renderedContent = useMemo(() => {
@@ -30,9 +29,6 @@ function VerseComponent({
         const parts: React.ReactNode[] = [];
 
         sortedAnnotations.forEach((annotation) => {
-            // Don't render drawing annotations inline
-            if(annotation.drawingDataUrl) return;
-
             const start = annotation.start ?? 0;
             const end = annotation.end ?? 0;
 
@@ -59,8 +55,6 @@ function VerseComponent({
     }, [verseText, annotations, onAnnotationClick]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
-        if(isDrawingMode) return;
-        
         const supElement = event.currentTarget;
         const pElement = supElement.parentElement;
         if (!pElement) return;
@@ -108,7 +102,6 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     const { 
         setSelection,
         setActiveAnnotation,
-        isDrawingMode,
     } = useAnnotationContext();
     const { user } = useUser();
     const firestore = useFirestore();
@@ -131,7 +124,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         const annotationMap: Record<string, Annotation[]> = {};
         annotations.filter(a => a.book === bookId && a.chapter === chapterNum && a.translation === translationId)
         .forEach(a => {
-            const key = a.verse === 0 ? 'chapter' : String(a.verse);
+            const key = String(a.verse);
             if (!annotationMap[key]) {
                 annotationMap[key] = [];
             }
@@ -140,14 +133,9 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         return annotationMap;
     }, [annotations, bookId, chapterNum, translationId]);
 
-    const drawingAnnotations = useMemo(() => {
-        if (!annotations) return [];
-        return annotations.filter(a => a.book === bookId && a.chapter === chapterNum && a.translation === translationId && a.drawingDataUrl)
-    }, [annotations, bookId, chapterNum, translationId]);
-
 
     const handleTextSelect = () => {
-        if (!user || isDrawingMode) {
+        if (!user) {
              if (window.getSelection()) window.getSelection()?.removeAllRanges();
              setSelection(null);
              return;
@@ -191,10 +179,9 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         return () => {
             document.removeEventListener('selectionchange', handleTextSelect);
         };
-    }, [user, setSelection, setActiveAnnotation, isDrawingMode]); // Rerun if user changes
+    }, [user, setSelection, setActiveAnnotation]); // Rerun if user changes
     
     const handleAnnotationClick = (annotation: Annotation) => {
-        if(isDrawingMode) return;
         setActiveAnnotation(annotation);
     };
     
@@ -202,18 +189,13 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
 
     return (
         <div className="pt-4 relative">
-            <DrawingCanvas 
-                containerRef={bibleContentRef}
-                existingDrawings={drawingAnnotations}
-                chapterData={chapterData}
-            />
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
                         <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
                 </CardHeader>
                 <CardContent>
-                    <div ref={bibleContentRef} className={cn("space-y-2 select-text bible-content", isDrawingMode && 'select-none')}>
+                    <div ref={bibleContentRef} className={cn("space-y-2 select-text bible-content")}>
                             {chapterData.chapter.content.map((item, index) => {
                             if (item.type === 'heading') {
                                 return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 select-none"><Balancer>{item.content.join(' ')}</Balancer></h4>

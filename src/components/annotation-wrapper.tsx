@@ -7,7 +7,7 @@ import { type BibleChapterResponse } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Save, Trash2, StickyNote, Highlighter, Underline, X, Pencil, Ban, Eraser } from 'lucide-react';
+import { Save, Trash2, StickyNote, Highlighter, Underline, X, Pencil, Ban } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import Balancer from 'react-wrap-balancer';
@@ -26,25 +26,9 @@ const underlineColors = [
     { class: 'ul-purple', color: '#8e24aa' },
     { class: 'ul-orange', color: '#fb8c00' },
 ];
-const drawingColors = [
-    { name: 'Black', color: '#000000' },
-    { name: 'Red', color: '#e53935' },
-    { name: 'Blue', color: '#1E88E5' },
-];
 
-function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw }) {
-    const { isDrawingMode, drawingColor, setDrawingColor, isErasing, setIsErasing } = useAnnotationContext();
-    
-    const handleDrawClick = () => {
-        setIsErasing(false);
-        onDraw();
-    }
-    const handleEraserClick = () => {
-        setIsErasing(true);
-        if (!isDrawingMode) {
-             onDraw();
-        }
-    }
+
+function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete }) {
 
     return (
         <div className="flex items-center justify-center gap-1 p-1 bg-background border rounded-lg shadow-md w-full">
@@ -71,17 +55,6 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw 
                 </PopoverContent>
             </Popover>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNote}><StickyNote /></Button>
-             <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDrawClick} data-active={isDrawingMode && !isErasing}><Pencil style={{ color: (isDrawingMode && !isErasing) ? drawingColor : 'inherit' }} /></Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-1">
-                    <div className="flex gap-1">
-                        {drawingColors.map(c => <button key={c.name} onClick={() => setDrawingColor(c.color)} className="h-6 w-6 rounded" style={{ backgroundColor: c.color }} title={c.name}></button>)}
-                    </div>
-                </PopoverContent>
-            </Popover>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleEraserClick} data-active={isDrawingMode && isErasing}><Eraser /></Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 /></Button>
         </div>
     )
@@ -89,7 +62,6 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw 
 
 export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterResponse }) {
     const { user } = useUser();
-    const firestore = useFirestore();
     const { toast } = useToast();
 
     const {
@@ -97,13 +69,9 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         setSelection,
         activeAnnotation,
         setActiveAnnotation,
-        isDrawingMode,
-        setIsDrawingMode,
-        triggerSaveDrawing,
         createOrUpdateAnnotation,
         deleteAnnotation,
         resetAnnotationState,
-        isErasing,
     } = useAnnotationContext();
 
     const [isEditingNote, setIsEditingNote] = useState(false);
@@ -132,74 +100,22 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         setIsEditingNote(false);
     }
     
-    const handleDrawingMode = () => {
-        setSelection(null);
-        // Don't reset active annotation if in eraser mode
-        if (!isErasing) {
-            setActiveAnnotation(null);
-        }
-        setIsDrawingMode(!isDrawingMode);
-    }
-
-    const handleDeleteAllDrawings = async () => {
-        if (!user || !firestore) {
-            toast({ variant: 'destructive', title: "Error", description: "You must be logged in to do that."});
-            return;
-        }
-
-        const confirmed = window.confirm("Are you sure you want to delete ALL of your drawings? This cannot be undone.");
-        if (!confirmed) return;
-
-        try {
-            const annotationsRef = collection(firestore, `users/${user.uid}/annotations`);
-            const q = query(annotationsRef, where("drawingDataUrl", "!=", null));
-            const querySnapshot = await getDocs(q);
-            
-            if (querySnapshot.empty) {
-                toast({ title: "No Drawings Found", description: "You don't have any drawings to delete."});
-                return;
-            }
-
-            const deletePromises: Promise<void>[] = [];
-            querySnapshot.forEach((doc) => {
-                deleteDocumentNonBlocking(doc.ref);
-            });
-
-            toast({ title: "Success", description: "All your drawings have been deleted."});
-            resetAnnotationState();
-        } catch (error) {
-            console.error("Error deleting all drawings:", error);
-            toast({ variant: 'destructive', title: "Deletion Failed", description: "Could not delete drawings. Please try again."});
-        }
-    };
-
     // Effect to update local note state when active annotation changes
     useEffect(() => {
         if (activeAnnotation) {
             setNote(activeAnnotation.note || '');
             setIsEditingNote(false);
             setSelection(null);
-            setIsDrawingMode(false); // Turn off drawing mode when an annotation is clicked
         }
-    }, [activeAnnotation, setSelection, setIsDrawingMode]);
+    }, [activeAnnotation, setSelection]);
     
-    const getDrawingModeDescription = () => {
-        if (isErasing) {
-            if (activeAnnotation) {
-                return "Eraser Mode: Erase parts of the selected drawing. Click 'Save Changes' to confirm.";
-            }
-            return "Eraser Mode: Click on a drawing to select it for erasing.";
-        }
-        return "Drawing Mode: Draw directly on the text. Your drawing will be saved as a new annotation.";
-    }
-
     return (
         <Card>
             <CardHeader className="py-2 px-4 flex-row items-center justify-between">
                 <CardTitle className="font-headline text-xl">
                     Annotation
                 </CardTitle>
-                {(activeAnnotation || selection || isDrawingMode) && (
+                {(activeAnnotation || selection) && (
                     <Button variant="ghost" size="icon" onClick={resetAnnotationState} className="h-6 w-6">
                         <X className="h-4 w-4" />
                         <span className="sr-only">Close annotation</span>
@@ -208,26 +124,16 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
             </CardHeader>
             <CardContent className="p-2 md:p-4">
                  {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
-                 isDrawingMode ? (
-                     <div className="flex flex-col gap-2">
-                        <p className="text-sm text-primary font-bold font-headline">{isErasing ? "Eraser Mode" : "Drawing Mode"}</p>
-                        <p className="text-xs text-muted-foreground">{getDrawingModeDescription()}</p>
-                        <Button onClick={triggerSaveDrawing} size="sm"><Save className="mr-2"/>Save Changes</Button>
-                    </div>
-                 ) :
                  !activeAnnotation && !selection ? (
                     <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground">Select text, an annotation, or enter drawing mode.</p>
-                        <Button variant="destructive" onClick={handleDeleteAllDrawings} size="sm">Delete All My Drawings</Button>
+                        <p className="text-sm text-muted-foreground">Select text or an annotation to get started.</p>
                     </div>
                  ):
                  !activeAnnotation && selection ? <p className="font-bold font-headline text-primary">New selection in v. {selection.verseNum}</p> :
                  activeAnnotation ?
                  (
                     <div className="flex flex-col gap-2">
-                        {activeAnnotation.drawingDataUrl ? (
-                            <p className="font-bold font-headline text-primary text-sm">Handwritten note in {fullReference}</p>
-                        ) : activeAnnotation.text ? (
+                        {activeAnnotation.text ? (
                             <>
                                 <p className="font-bold font-headline text-primary text-sm">{fullReference}:{activeAnnotation.verse}</p>
                                 <blockquote className="p-2 border-l-4 border-muted bg-muted/20 rounded-r-lg text-sm">
@@ -255,14 +161,14 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                                 {activeAnnotation.note ? (
                                     <p className="font-body text-sm p-2 whitespace-pre-wrap">{activeAnnotation.note}</p>
                                 ) : (
-                                   !activeAnnotation.drawingDataUrl && <p className="text-xs text-muted-foreground p-2">No note for this annotation.</p>
+                                   <p className="text-xs text-muted-foreground p-2">No note for this annotation.</p>
                                 )}
                                 <div className="flex flex-col gap-2">
-                                    {!activeAnnotation.drawingDataUrl && <Button onClick={() => setIsEditingNote(true)} size="sm" variant="outline"><Pencil className="mr-2"/>{activeAnnotation.note ? 'Edit Note' : 'Add Note'}</Button>}
+                                    <Button onClick={() => setIsEditingNote(true)} size="sm" variant="outline"><Pencil className="mr-2"/>{activeAnnotation.note ? 'Edit Note' : 'Add Note'}</Button>
                                 </div>
                             </>
                         )}
-                         {(activeAnnotation.note && !isEditingNote && !activeAnnotation.drawingDataUrl) && (
+                         {(activeAnnotation.note && !isEditingNote) && (
                             <AiInsightGenerator
                                 verse={`${fullReference}:${activeAnnotation.verse} ("${activeAnnotation.text}")`}
                                 annotation={activeAnnotation.note}
@@ -273,19 +179,18 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                  : null
                  }
             </CardContent>
-             {(selection || activeAnnotation || isDrawingMode) && user && (
+             {(selection || activeAnnotation) && user && (
                <CardFooter ref={toolbarRef} className="p-2">
                    <AnnotationToolbar 
                        onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined }, chapterData)}
                        onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined }, chapterData)}
                        onNote={() => {
-                            if (activeAnnotation && !activeAnnotation.drawingDataUrl) {
+                            if (activeAnnotation) {
                                 setIsEditingNote(true);
                             } else if (selection) {
                                createOrUpdateAnnotation({note: ''}, chapterData);
                             }
                        }}
-                       onDraw={handleDrawingMode}
                        onDelete={handleDelete}
                    />
                </CardFooter>

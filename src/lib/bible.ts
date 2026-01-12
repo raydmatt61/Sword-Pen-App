@@ -61,7 +61,6 @@ export type Annotation = {
   note?: string;
   highlight?: string;
   underline?: string;
-  drawingDataUrl?: string;
   createdAt?: any;
   updatedAt?: any;
 };

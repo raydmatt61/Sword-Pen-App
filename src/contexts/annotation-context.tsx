@@ -15,18 +15,9 @@ interface AnnotationContextType {
     setActiveAnnotation: Dispatch<SetStateAction<Annotation | null>>;
     fontSize: FontSize;
     setFontSize: Dispatch<SetStateAction<FontSize>>;
-    isDrawingMode: boolean;
-    setIsDrawingMode: Dispatch<SetStateAction<boolean>>;
-    drawingColor: string;
-    setDrawingColor: Dispatch<SetStateAction<string>>;
-    saveDrawing: boolean;
-    setSaveDrawing: Dispatch<SetStateAction<boolean>>;
-    triggerSaveDrawing: () => void;
     createOrUpdateAnnotation: (data: Partial<Omit<Annotation, 'id' | 'userId'>>, chapterData: BibleChapterResponse) => void;
     deleteAnnotation: (annotation: Annotation) => void;
     resetAnnotationState: () => void;
-    isErasing: boolean;
-    setIsErasing: Dispatch<SetStateAction<boolean>>;
 }
 
 const AnnotationContext = createContext<AnnotationContextType | undefined>(undefined);
@@ -41,21 +32,11 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
     const [selection, setSelection] = useState<{ range: Range, verseNum: string } | null>(null);
     const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
     const [fontSize, setFontSize] = useState<FontSize>('md');
-    const [isDrawingMode, setIsDrawingMode] = useState(false);
-    const [drawingColor, setDrawingColor] = useState('#000000'); // Default to black
-    const [saveDrawing, setSaveDrawing] = useState(false);
-    const [isErasing, setIsErasing] = useState(false);
 
     const resetAnnotationState = useCallback(() => {
         setActiveAnnotation(null);
         setSelection(null);
-        setIsDrawingMode(false);
-        setIsErasing(false);
         if (window.getSelection) window.getSelection()?.removeAllRanges();
-    }, []);
-
-    const triggerSaveDrawing = useCallback(() => {
-        setSaveDrawing(true);
     }, []);
 
     const createOrUpdateAnnotation = useCallback((data: Partial<Omit<Annotation, 'id' | 'userId'>>, chapterData: BibleChapterResponse) => {
@@ -63,16 +44,13 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
 
         const { book: { id: bookId }, chapter: { number: chapterNum }, translation: { id: translationId } } = chapterData;
 
-        // SCENARIO 1: UPDATE existing annotation (text or drawing)
+        // SCENARIO 1: UPDATE existing annotation
         if (activeAnnotation) {
              const docRef = doc(firestore, `users/${user.uid}/annotations`, activeAnnotation.id);
              setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
              // After update, if it was a text annotation, we might want to refresh its state
              if (data.note !== undefined || data.highlight || data.underline) {
                  setActiveAnnotation(prev => prev ? { ...prev, ...data } : null);
-             } else if (data.drawingDataUrl) {
-                // If we updated a drawing, it stays active
-                setActiveAnnotation(prev => prev ? { ...prev, ...data } : null);
              }
         
         // SCENARIO 2: CREATE new TEXT annotation from a selection
@@ -108,23 +86,6 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
             const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
             setDocumentNonBlocking(newDocRef, newAnnotation);
             resetAnnotationState();
-        
-        // SCENARIO 3: CREATE new DRAWING annotation
-        } else if (data.drawingDataUrl) {
-            const newAnnotation: Omit<Annotation, 'id'> = {
-                userId: user.uid,
-                translation: translationId,
-                book: bookId,
-                chapter: chapterNum,
-                verse: 0, // Chapter-level drawing
-                text: 'Handwritten Note',
-                ...data,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-            };
-            const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
-            setDocumentNonBlocking(newDocRef, newAnnotation);
-            // Don't reset state here, since save is triggered from canvas
         }
 
     }, [user, firestore, activeAnnotation, selection, resetAnnotationState]);
@@ -144,18 +105,9 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
         setActiveAnnotation,
         fontSize,
         setFontSize,
-        isDrawingMode,
-        setIsDrawingMode,
-        drawingColor,
-        setDrawingColor,
-        saveDrawing,
-        setSaveDrawing,
-        triggerSaveDrawing,
         createOrUpdateAnnotation,
         deleteAnnotation,
         resetAnnotationState,
-        isErasing,
-        setIsErasing,
     };
 
     return <AnnotationContext.Provider value={value}>{children}</AnnotationContext.Provider>;
