@@ -16,7 +16,8 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
     const { 
         isDrawingMode, 
         drawingColor, 
-        setSaveDrawing, 
+        triggerSaveDrawing, 
+        setSaveDrawing,
         createOrUpdateAnnotation, 
         saveDrawing,
         isErasing,
@@ -157,32 +158,29 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
     
     // Effect to handle saving
     useEffect(() => {
-        if (saveDrawing && canvasRef.current && hasDrawingContent) {
+        if (saveDrawing && canvasRef.current) {
             const dataUrl = canvasRef.current.toDataURL('image/png');
             
-            if (isErasing && activeAnnotation) {
-                // If we were erasing an existing drawing, update it.
-                createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
-            } else if (!isErasing) {
-                // If we were drawing something new, create a new annotation.
-                // We clear activeAnnotation to signal creation of a new one.
-                setActiveAnnotation(null); 
-                createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
+            if (hasDrawingContent) {
+                if (isErasing && activeAnnotation) {
+                    // If we were erasing an existing drawing, update it.
+                    createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
+                } else if (!isErasing) {
+                    // If we were drawing something new, create a new annotation.
+                    createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
+                }
             }
             
             // Reset state
             setHasDrawingContent(false);
             setSaveDrawing(false);
             if (ctx) {
-                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-                drawExisting();
+                // We don't clear here to allow multiple drawing strokes before saving.
+                // It will be cleared when the component re-renders with new existingDrawings.
             }
             setDrawingBuffer(null);
-            setIsErasing(false);
-            setActiveAnnotation(null);
-
         } else if (saveDrawing) {
-            // If save was triggered but there's no new content, just reset the trigger
+            // If save was triggered but there's no new content (e.g., just toggling mode)
             if (isErasing && drawingBuffer && ctx) {
                  ctx.putImageData(drawingBuffer, 0, 0); // Restore if canceled
             }
@@ -233,9 +231,9 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
             onTouchEnd={stopDrawing}
             className="absolute top-0 left-0"
             style={{ 
-                pointerEvents: isDrawingMode ? 'auto' : 'auto',
+                pointerEvents: isDrawingMode ? 'auto' : 'none',
                 zIndex: isDrawingMode ? 10 : 1,
-                touchAction: 'none'
+                touchAction: isDrawingMode ? 'none' : 'auto'
             }}
         />
     );
