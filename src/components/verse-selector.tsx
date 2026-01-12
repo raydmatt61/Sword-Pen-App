@@ -67,7 +67,7 @@ export function VerseSelector({
     const currentLocation = {
         book: searchParams.get('book') || defaultValues.book,
         chapter: searchParams.get('chapter') || defaultValues.chapter,
-        translation: searchParams.get('translation') || 'BSB-Notes',
+        translation: searchParams.get('translation') || 'BSB',
     };
     sessionStorage.setItem(PREVIOUS_LOCATION_KEY, JSON.stringify(currentLocation));
     setPreviousLocation(currentLocation);
