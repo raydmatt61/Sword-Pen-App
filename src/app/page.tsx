@@ -61,6 +61,7 @@ async function getChapter(
 
 async function fetchBooksForTranslation(): Promise<Book[] | null> {
     try {
+        // Always fetch from BSB as it's the most reliable source for the book list
         const booksRes = await fetch(`https://bible.helloao.org/api/BSB/books.json`);
         if (!booksRes.ok) {
             console.error(`Failed to fetch books for BSB: ${booksRes.status}`);
@@ -229,3 +230,5 @@ function BibleDisplaySkeleton() {
     </Card>
   );
 }
+
+    

@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from '@/components/ui/label';
 import type { Book, Translation } from '@/lib/bible';
@@ -116,7 +115,7 @@ export function VerseSelector({
   };
   
   const renderControls = () => (
-     <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 items-end">
+     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <div className="grid grid-cols-2 gap-2 w-full">
             <div className="space-y-2">
                 <Label htmlFor="book" className="font-headline">Book</Label>
@@ -145,7 +144,20 @@ export function VerseSelector({
                 </Select>
             </div>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="space-y-2">
+            <Label htmlFor="translation" className="font-headline">Translation</Label>
+            <Select value={translation} onValueChange={setTranslation}>
+                <SelectTrigger id="translation">
+                    <SelectValue placeholder="Select translation" />
+                </SelectTrigger>
+                <SelectContent>
+                    {translations.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="flex gap-2 w-full pt-2">
             <Sheet>
               <SheetTrigger asChild>
                 <Button
@@ -221,7 +233,7 @@ export function VerseSelector({
     return (
         <Card className="animate-in fade-in duration-500">
             <CardContent className="pt-6">
-                 <Skeleton className="h-10 w-full" />
+                 <Skeleton className="h-24 w-full" />
             </CardContent>
         </Card>
     );
@@ -232,14 +244,14 @@ export function VerseSelector({
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
                 <Button variant="outline" className="w-full">
-                    {defaultValues.book} {defaultValues.chapter}
+                    {defaultValues.book} {defaultValues.chapter} ({defaultValues.translation})
                 </Button>
             </SheetTrigger>
             <SheetContent side="bottom">
                 <SheetHeader>
                     <SheetTitle>Select a Verse</SheetTitle>
                     <SheetDescription>
-                        Choose a book and chapter to read.
+                        Choose a book, chapter, and translation to read.
                     </SheetDescription>
                 </SheetHeader>
                 <div className="py-4">
@@ -258,3 +270,5 @@ export function VerseSelector({
     </Card>
   );
 }
+
+    
