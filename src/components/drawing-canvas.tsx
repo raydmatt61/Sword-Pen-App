@@ -13,30 +13,25 @@ interface DrawingCanvasProps {
 
 export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: DrawingCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const { isDrawingMode, drawingColor, setSaveDrawing, createOrUpdateAnnotation, saveDrawing } = useAnnotationContext();
+    const { 
+        isDrawingMode, 
+        drawingColor, 
+        setSaveDrawing, 
+        createOrUpdateAnnotation, 
+        saveDrawing,
+        isErasing,
+        setIsErasing,
+        activeAnnotation,
+        setActiveAnnotation,
+    } = useAnnotationContext();
     const [isDrawing, setIsDrawing] = useState(false);
     const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
     const [hasDrawingContent, setHasDrawingContent] = useState(false);
-
-    useEffect(() => {
-        if (canvasRef.current) {
-            const canvas = canvasRef.current;
-            const context = canvas.getContext('2d');
-            if (context) {
-                 context.strokeStyle = drawingColor;
-                 context.lineWidth = 2;
-                 context.lineCap = 'round';
-                 context.lineJoin = 'round';
-                 setCtx(context);
-            }
-        }
-    }, [drawingColor]);
+    const [drawingBuffer, setDrawingBuffer] = useState<ImageData | null>(null);
 
     const drawExisting = useCallback(() => {
         if (!ctx || !canvasRef.current) return;
-        const canvas = canvasRef.current;
-        // Don't clear here, rely on resize observer to clear and redraw everything
-        // ctx.clearRect(0,0, canvas.width, canvas.height); 
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); 
 
         existingDrawings.forEach(d => {
             if (d.drawingDataUrl) {
@@ -58,25 +53,19 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
         const resizeObserver = new ResizeObserver(() => {
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            if (tempCtx) {
-                tempCtx.drawImage(canvas, 0, 0);
+            if (tempCtx && canvas.width > 0 && canvas.height > 0) {
+                 tempCanvas.width = canvas.width;
+                 tempCanvas.height = canvas.height;
+                 tempCtx.drawImage(canvas, 0, 0);
             }
 
             canvas.width = container.offsetWidth;
             canvas.height = container.offsetHeight;
             
             if (ctx) {
-                ctx.strokeStyle = drawingColor;
-                ctx.lineWidth = 2;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                // Redraw previous content
                 ctx.drawImage(tempCanvas, 0, 0);
+                drawExisting();
             }
-             // Redraw existing drawings after resize
-            drawExisting();
         });
 
         resizeObserver.observe(container);
@@ -88,31 +77,62 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
 
 
         return () => resizeObserver.disconnect();
-    }, [containerRef, ctx, drawExisting, drawingColor]);
+    }, [containerRef, ctx, drawExisting]);
 
-    // Redraw when existing drawings change
      useEffect(() => {
-        if (ctx && canvasRef.current) {
-             ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-             drawExisting();
+        if (ctx) {
+            ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+            drawExisting();
         }
     }, [existingDrawings, ctx, drawExisting]);
+
+    // Setup canvas context and properties
+    useEffect(() => {
+        if (canvasRef.current) {
+            const context = canvasRef.current.getContext('2d');
+            if (context) {
+                setCtx(context);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (ctx) {
+            if (isErasing) {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.lineWidth = 20; // Eraser size
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = drawingColor;
+                ctx.lineWidth = 2; // Pen size
+            }
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+    }, [isErasing, drawingColor, ctx]);
+
 
     const getCoords = (event: MouseEvent | TouchEvent): { x: number; y: number } => {
         const canvas = canvasRef.current;
         if (!canvas) return { x: 0, y: 0 };
         const rect = canvas.getBoundingClientRect();
 
-        if (event instanceof MouseEvent) {
-            return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-        } else {
-            return { x: event.touches[0].clientX - rect.left, y: event.touches[0].clientY - rect.top };
-        }
+        const clientX = (event instanceof MouseEvent) ? event.clientX : event.touches[0].clientX;
+        const clientY = (event instanceof MouseEvent) ? event.clientY : event.touches[0].clientY;
+
+        return { x: clientX - rect.left, y: clientY - rect.top };
     };
 
     const startDrawing = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!isDrawingMode || !ctx) return;
         event.preventDefault();
+
+        // If eraser is active and there's a selected drawing, start a buffer
+        if (isErasing && activeAnnotation && activeAnnotation.drawingDataUrl) {
+            const buffer = ctx.getImageData(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+            setDrawingBuffer(buffer);
+        }
+
         setIsDrawing(true);
         const { x, y } = getCoords(event.nativeEvent);
         ctx.beginPath();
@@ -129,7 +149,7 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
     };
 
     const stopDrawing = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-        if (!ctx) return;
+        if (!ctx || !isDrawing) return;
         event.preventDefault();
         ctx.closePath();
         setIsDrawing(false);
@@ -139,7 +159,16 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
     useEffect(() => {
         if (saveDrawing && canvasRef.current && hasDrawingContent) {
             const dataUrl = canvasRef.current.toDataURL('image/png');
-            createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
+            
+            if (isErasing && activeAnnotation) {
+                // If we were erasing an existing drawing, update it.
+                createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
+            } else if (!isErasing) {
+                // If we were drawing something new, create a new annotation.
+                // We clear activeAnnotation to signal creation of a new one.
+                setActiveAnnotation(null); 
+                createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
+            }
             
             // Reset state
             setHasDrawingContent(false);
@@ -148,30 +177,53 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
                 ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
                 drawExisting();
             }
+            setDrawingBuffer(null);
+            setIsErasing(false);
+            setActiveAnnotation(null);
 
         } else if (saveDrawing) {
             // If save was triggered but there's no new content, just reset the trigger
+            if (isErasing && drawingBuffer && ctx) {
+                 ctx.putImageData(drawingBuffer, 0, 0); // Restore if canceled
+            }
             setSaveDrawing(false);
+            setDrawingBuffer(null);
         }
-    }, [saveDrawing, setSaveDrawing, createOrUpdateAnnotation, chapterData, hasDrawingContent, ctx, drawExisting]);
+    }, [saveDrawing, setSaveDrawing, createOrUpdateAnnotation, chapterData, hasDrawingContent, ctx, drawExisting, isErasing, activeAnnotation, setActiveAnnotation, drawingBuffer, setIsErasing]);
+    
+     // Handle clicking on a drawing to select it for erasing
+    const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+        if (isDrawingMode || !ctx) return;
+        const { x, y } = getCoords(event.nativeEvent);
 
-    // Clear canvas when entering drawing mode
-    useEffect(() => {
-        if (isDrawingMode && ctx && canvasRef.current) {
-            // This is just to ensure settings are correct when mode is enabled.
-             ctx.strokeStyle = drawingColor;
-             ctx.lineWidth = 2;
+        // Find which drawing was clicked by checking pixel data
+        let clickedAnnotation = null;
+        for (let i = existingDrawings.length - 1; i >= 0; i--) {
+            const d = existingDrawings[i];
+            if (!d.drawingDataUrl) continue;
+            
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            if(!tempCtx) continue;
+            const img = new Image();
+            img.src = d.drawingDataUrl;
+            tempCanvas.width = canvasRef.current!.width;
+            tempCanvas.height = canvasRef.current!.height;
+            tempCtx.drawImage(img, 0, 0);
+
+            const pixel = tempCtx.getImageData(x, y, 1, 1).data;
+            if (pixel[3] > 0) { // Check alpha channel
+                clickedAnnotation = d;
+                break;
+            }
         }
-    }, [isDrawingMode, ctx, drawingColor]);
-
-
-    if (!isDrawingMode && existingDrawings.length === 0) {
-        return null; // Don't render anything if not in drawing mode and no drawings exist
-    }
+        setActiveAnnotation(clickedAnnotation);
+    };
 
     return (
         <canvas
             ref={canvasRef}
+            onClick={handleCanvasClick}
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
@@ -179,10 +231,10 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
             onTouchStart={startDrawing}
             onTouchMove={draw}
             onTouchEnd={stopDrawing}
-            className="absolute top-0 left-0 w-full h-full"
+            className="absolute top-0 left-0"
             style={{ 
-                pointerEvents: isDrawingMode ? 'auto' : 'none',
-                zIndex: 10,
+                pointerEvents: isDrawingMode ? 'auto' : 'auto',
+                zIndex: isDrawingMode ? 10 : 1,
                 touchAction: 'none'
             }}
         />

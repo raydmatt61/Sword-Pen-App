@@ -25,6 +25,8 @@ interface AnnotationContextType {
     createOrUpdateAnnotation: (data: Partial<Omit<Annotation, 'id' | 'userId'>>, chapterData: BibleChapterResponse) => void;
     deleteAnnotation: (annotation: Annotation) => void;
     resetAnnotationState: () => void;
+    isErasing: boolean;
+    setIsErasing: Dispatch<SetStateAction<boolean>>;
 }
 
 const AnnotationContext = createContext<AnnotationContextType | undefined>(undefined);
@@ -42,11 +44,13 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
     const [isDrawingMode, setIsDrawingMode] = useState(false);
     const [drawingColor, setDrawingColor] = useState('#000000'); // Default to black
     const [saveDrawing, setSaveDrawing] = useState(false);
+    const [isErasing, setIsErasing] = useState(false);
 
     const resetAnnotationState = useCallback(() => {
         setActiveAnnotation(null);
         setSelection(null);
         setIsDrawingMode(false);
+        setIsErasing(false);
         if (window.getSelection) window.getSelection()?.removeAllRanges();
     }, []);
 
@@ -66,6 +70,9 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
              // After update, if it was a text annotation, we might want to refresh its state
              if (data.note !== undefined || data.highlight || data.underline) {
                  setActiveAnnotation(prev => prev ? { ...prev, ...data } : null);
+             } else if (data.drawingDataUrl) {
+                // If we updated a drawing, it stays active
+                setActiveAnnotation(prev => prev ? { ...prev, ...data } : null);
              }
         
         // SCENARIO 2: CREATE new TEXT annotation from a selection
@@ -146,7 +153,9 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
         triggerSaveDrawing,
         createOrUpdateAnnotation,
         deleteAnnotation,
-        resetAnnotationState
+        resetAnnotationState,
+        isErasing,
+        setIsErasing,
     };
 
     return <AnnotationContext.Provider value={value}>{children}</AnnotationContext.Provider>;

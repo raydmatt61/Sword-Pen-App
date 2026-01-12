@@ -7,7 +7,7 @@ import { type BibleChapterResponse } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Save, Trash2, StickyNote, Highlighter, Underline, X, Pencil, Ban } from 'lucide-react';
+import { Save, Trash2, StickyNote, Highlighter, Underline, X, Pencil, Ban, Eraser } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import Balancer from 'react-wrap-balancer';
@@ -32,7 +32,19 @@ const drawingColors = [
 ];
 
 function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw }) {
-    const { isDrawingMode, drawingColor, setDrawingColor } = useAnnotationContext();
+    const { isDrawingMode, drawingColor, setDrawingColor, isErasing, setIsErasing } = useAnnotationContext();
+    
+    const handleDrawClick = () => {
+        setIsErasing(false);
+        onDraw();
+    }
+    const handleEraserClick = () => {
+        setIsErasing(true);
+        if (!isDrawingMode) {
+             onDraw();
+        }
+    }
+
     return (
         <div className="flex items-center justify-center gap-1 p-1 bg-background border rounded-lg shadow-md w-full">
             <Popover>
@@ -60,7 +72,7 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw 
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNote}><StickyNote /></Button>
              <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDraw} data-active={isDrawingMode}><Pencil style={{ color: isDrawingMode ? drawingColor : 'inherit' }} /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDrawClick} data-active={isDrawingMode && !isErasing}><Pencil style={{ color: (isDrawingMode && !isErasing) ? drawingColor : 'inherit' }} /></Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-1">
                     <div className="flex gap-1">
@@ -68,6 +80,7 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw 
                     </div>
                 </PopoverContent>
             </Popover>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleEraserClick} data-active={isDrawingMode && isErasing}><Eraser /></Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 /></Button>
         </div>
     )
@@ -88,6 +101,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         createOrUpdateAnnotation,
         deleteAnnotation,
         resetAnnotationState,
+        isErasing,
     } = useAnnotationContext();
 
     const [isEditingNote, setIsEditingNote] = useState(false);
@@ -149,9 +163,9 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                  {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
                  isDrawingMode ? (
                      <div className="flex flex-col gap-2">
-                        <p className="text-sm text-primary font-bold font-headline">Drawing Mode</p>
-                        <p className="text-xs text-muted-foreground">Draw directly on the text. Your drawing will be saved as a new annotation for this chapter.</p>
-                        <Button onClick={triggerSaveDrawing} size="sm"><Save className="mr-2"/>Save Drawing</Button>
+                        <p className="text-sm text-primary font-bold font-headline">{isErasing ? "Eraser Mode" : "Drawing Mode"}</p>
+                        <p className="text-xs text-muted-foreground">{isErasing ? "Erase parts of any drawing on the text." : "Draw directly on the text. Your drawing will be saved as a new annotation for this chapter."}</p>
+                        <Button onClick={triggerSaveDrawing} size="sm"><Save className="mr-2"/>Save Changes</Button>
                     </div>
                  ) :
                  !activeAnnotation && !selection ? <p className="text-sm text-muted-foreground">Select text, an annotation, or enter drawing mode.</p> :
