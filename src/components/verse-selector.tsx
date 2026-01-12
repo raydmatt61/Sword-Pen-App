@@ -37,6 +37,7 @@ export function VerseSelector({
   
   const [book, setBook] = useState(defaultValues.book);
   const [chapter, setChapter] = useState(defaultValues.chapter);
+  const [translation, setTranslation] = useState(defaultValues.translation);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   
   const isMobile = useIsMobile();
@@ -55,15 +56,10 @@ export function VerseSelector({
     // This effect ensures the component's state is synchronized with the props from the server.
     setBook(defaultValues.book);
     setChapter(defaultValues.chapter);
+    setTranslation(defaultValues.translation);
   }, [defaultValues]);
   
   const maxChapters = books.find(b => b.commonName === book)?.numberOfChapters || 1;
-
-  useEffect(() => {
-    if (parseInt(chapter) > maxChapters) {
-      setChapter('1');
-    }
-  }, [book, chapter, maxChapters]);
 
   const saveCurrentLocationAsPrevious = () => {
     const currentLocation = {
@@ -83,7 +79,8 @@ export function VerseSelector({
             current.set(key, value);
         }
     }
-    router.push(`${pathname}?${current.toString()}`);
+    const newSearch = current.toString();
+    router.push(`${pathname}?${newSearch}`);
   }, [router, pathname, searchParams]);
 
   const handleBookChange = (newBook: string) => {
@@ -112,7 +109,7 @@ export function VerseSelector({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate({ book, chapter, translation: defaultValues.translation });
+    navigate({ book, chapter, translation });
     setIsSheetOpen(false);
   };
   
@@ -134,16 +131,16 @@ export function VerseSelector({
             </div>
             <div className="space-y-2">
                 <Label htmlFor="chapter" className="font-headline">Chapter</Label>
-                <Input
-                    id="chapter"
-                    type="number"
-                    value={chapter}
-                    onChange={(e) => setChapter(e.target.value)}
-                    min="1"
-                    max={maxChapters}
-                    required
-                    disabled={books.length === 0}
-                />
+                <Select value={chapter} onValueChange={(newChapter) => setChapter(newChapter)} disabled={books.length === 0}>
+                  <SelectTrigger id="chapter">
+                    <SelectValue placeholder="Select chapter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: maxChapters }, (_, i) => i + 1).map(chapNum => (
+                      <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
             </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
