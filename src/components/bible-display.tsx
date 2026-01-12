@@ -20,6 +20,7 @@ function VerseComponent({
     annotations: Annotation[];
     onAnnotationClick: (annotation: Annotation) => void;
 }) {
+    const { fontSize } = useAnnotationContext();
     const verseText = useMemo(() => verse.content.map(c => typeof c === 'string' ? c : (c.text || '')).join(''), [verse.content]);
     
     const renderedContent = useMemo(() => {
@@ -75,7 +76,14 @@ function VerseComponent({
 
 
     return (
-        <p className="text-lg leading-relaxed font-body" data-verse-number={verse.number}>
+        <p className={cn(
+            "font-body",
+            fontSize === 'sm' && 'text-sm leading-relaxed',
+            fontSize === 'md' && 'text-base leading-relaxed',
+            fontSize === 'lg' && 'text-lg leading-relaxed',
+            fontSize === 'xl' && 'text-xl leading-relaxed',
+            fontSize === '2xl' && 'text-2xl leading-relaxed',
+        )} data-verse-number={verse.number}>
             <sup 
                 className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
                 onClick={handleVerseNumberClick}
@@ -197,5 +205,3 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         </div>
     );
 }
-
-

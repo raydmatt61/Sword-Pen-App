@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -75,3 +76,10 @@
 .ul-red { border-bottom: 3px solid #e53935; padding-bottom: 1px; }
 .ul-purple { border-bottom: 3px solid #8e24aa; padding-bottom: 1px; }
 .ul-orange { border-bottom: 3px solid #fb8c00; padding-bottom: 1px; }
+
+/* Font size utilities */
+.text-size-sm p { font-size: 0.875rem; line-height: 1.25rem; }
+.text-size-md p { font-size: 1rem; line-height: 1.5rem; }
+.text-size-lg p { font-size: 1.125rem; line-height: 1.75rem; }
+.text-size-xl p { font-size: 1.25rem; line-height: 1.75rem; }
+.text-size-2xl p { font-size: 1.5rem; line-height: 2rem; }

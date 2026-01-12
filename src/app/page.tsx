@@ -12,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
 import { QrCodeGenerator } from '@/components/qr-code-generator';
 import { AnnotationWrapper } from '@/components/annotation-wrapper';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 
 async function getChapter(
   book: string,
@@ -88,6 +90,7 @@ async function getBooks(): Promise<Book[]> {
 
 function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslation }) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     // Scroll to top when book or chapter changes
@@ -108,6 +111,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {isMobile && <FontSizeAdjuster />}
           <QrCodeGenerator />
           <AuthManager />
         </div>
@@ -230,5 +234,3 @@ function BibleDisplaySkeleton() {
     </Card>
   );
 }
-
-    
