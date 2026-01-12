@@ -19,19 +19,17 @@ import { AnnotationProvider } from '@/contexts/annotation-context';
 async function getChapter(
   book: string,
   chapter: string,
-  translation: string,
+  translationApiId: string,
 ): Promise<BibleChapterResponse | null> {
   let attempts = 0;
   const maxRetries = 3;
   const delay = 1000; // 1 second
   
-  const effectiveTranslation = TRANSLATIONS.find(t => t.id === translation)?.id || 'BSB';
-
   while (attempts < maxRetries) {
     try {
       const bookId = BIBLE_BOOKS_ABBR[book] || book;
       const response = await fetch(
-        `https://bible.helloao.org/api/${effectiveTranslation}/${bookId}/${chapter}.json`
+        `https://bible.helloao.org/api/${translationApiId}/${bookId}/${chapter}.json`
       );
 
       if (response.ok) {
@@ -42,11 +40,11 @@ async function getChapter(
                 return data;
             }
         } else {
-             console.error(`API Error: Expected JSON but received ${contentType} for ${effectiveTranslation}/${bookId}/${chapter}`);
+             console.error(`API Error: Expected JSON but received ${contentType} for ${translationApiId}/${bookId}/${chapter}`);
              break;
         }
       } else {
-        console.error(`API Error for ${effectiveTranslation}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
+        console.error(`API Error for ${translationApiId}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error('Failed to fetch chapter (attempt ' + (attempts + 1) + '):', error);
@@ -62,11 +60,11 @@ async function getChapter(
   return null;
 }
 
-async function fetchBooksForTranslation(translation: string): Promise<Book[] | null> {
+async function fetchBooksForTranslation(translationApiId: string): Promise<Book[] | null> {
     try {
-        const booksRes = await fetch(`https://bible.helloao.org/api/${translation}/books.json`);
+        const booksRes = await fetch(`https://bible.helloao.org/api/${translationApiId}/books.json`);
         if (!booksRes.ok) {
-            console.error(`Failed to fetch books for ${translation}: ${booksRes.status}`);
+            console.error(`Failed to fetch books for ${translationApiId}: ${booksRes.status}`);
             return null;
         }
         const contentType = booksRes.headers.get("content-type");
@@ -74,31 +72,31 @@ async function fetchBooksForTranslation(translation: string): Promise<Book[] | n
             const booksData = await booksRes.json();
             return booksData.books || null;
         } else {
-            console.error(`Expected JSON for books list but received ${contentType} for ${translation}`);
+            console.error(`Expected JSON for books list but received ${contentType} for ${translationApiId}`);
             return null;
         }
     } catch (error) {
-        console.error(`Error fetching books for ${translation}:`, error);
+        console.error(`Error fetching books for ${translationApiId}:`, error);
         return null;
     }
 }
 
-async function getBooks(translation: string): Promise<Book[]> {
-    const books = await fetchBooksForTranslation(translation);
+async function getBooks(translationApiId: string): Promise<Book[]> {
+    const books = await fetchBooksForTranslation(translationApiId);
     return books || [];
 }
 
-function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslation }) {
+function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslationId }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const providerKey = `${initialBook}-${initialChapter}-${initialTranslation}`;
+  const providerKey = `${initialBook}-${initialChapter}-${initialTranslationId}`;
   
   useEffect(() => {
     // Scroll to top when book or chapter changes
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
-  }, [initialBook, initialChapter, initialTranslation]);
+  }, [initialBook, initialChapter, initialTranslationId]);
 
   return (
     <AnnotationProvider key={providerKey}>
@@ -123,7 +121,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
 
         <div className="sticky top-0 z-20 grid grid-cols-1 md:grid-cols-2 gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
           <VerseSelector
-              defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslation }}
+              defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslationId }}
               books={books}
               translations={TRANSLATIONS}
           />
@@ -135,7 +133,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
             <Card className="mt-6 animate-in fade-in duration-500">
               <CardContent className="pt-6">
                 <p className="text-center text-muted-foreground">
-                  Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span> ({initialTranslation}).
+                  Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span> ({initialTranslationId}).
                   This may be due to a network issue or the chapter not being available in this translation. Please try a different selection.
                 </p>
               </CardContent>
@@ -149,7 +147,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
   );
 }
 
-function ChapterLoader({ book, chapter, translation }) {
+function ChapterLoader({ book, chapter, translationId }) {
   const [books, setBooks] = useState<Book[]>([]);
   const [chapterData, setChapterData] = useState<BibleChapterResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -157,14 +155,14 @@ function ChapterLoader({ book, chapter, translation }) {
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const booksData = await getBooks(translation);
-      const chapterContent = await getChapter(book, chapter, translation);
+      const booksData = await getBooks(translationId);
+      const chapterContent = await getChapter(book, chapter, translationId);
       setBooks(booksData);
       setChapterData(chapterContent);
       setIsLoading(false);
     }
     loadData();
-  }, [book, chapter, translation]);
+  }, [book, chapter, translationId]);
 
   if (isLoading) {
     return (
@@ -198,16 +196,18 @@ function ChapterLoader({ book, chapter, translation }) {
     );
   }
 
-  return <PageContent books={books} chapterData={chapterData} initialBook={book} initialChapter={chapter} initialTranslation={translation} />;
+  return <PageContent books={books} chapterData={chapterData} initialBook={book} initialChapter={chapter} initialTranslationId={translationId} />;
 }
 
 function PageWithSearchParams() {
   const searchParams = useSearchParams();
   const book = searchParams.get('book') || 'John';
   const chapter = searchParams.get('chapter') || '1';
-  const translationId = searchParams.get('translation') || 'BSB';
+  const translationUrlParam = searchParams.get('translation') || 'BSB';
 
-  return <ChapterLoader book={book} chapter={chapter} translation={translationId} />
+  const translation = TRANSLATIONS.find(t => t.id === translationUrlParam) || TRANSLATIONS[0];
+  
+  return <ChapterLoader book={book} chapter={chapter} translationId={translation.id} />
 }
 
 export default function Home() {
