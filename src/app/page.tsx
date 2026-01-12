@@ -205,9 +205,9 @@ function PageWithSearchParams() {
   const searchParams = useSearchParams();
   const book = searchParams.get('book') || 'John';
   const chapter = searchParams.get('chapter') || '1';
-  const translation = searchParams.get('translation') || 'BSB';
+  const translationId = searchParams.get('translation') || 'BSB';
 
-  return <ChapterLoader book={book} chapter={chapter} translation={translation} />
+  return <ChapterLoader book={book} chapter={chapter} translation={translationId} />
 }
 
 export default function Home() {

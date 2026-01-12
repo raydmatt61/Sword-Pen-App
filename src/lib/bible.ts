@@ -1,5 +1,4 @@
 
-
 export type Translation = {
     id: string;
     name: string;
@@ -8,7 +7,7 @@ export type Translation = {
 export const TRANSLATIONS: Translation[] = [
     { id: 'BSB', name: 'Berean Standard Bible' },
     { id: 'ENGWEBP', name: 'World English Bible' },
-    { id: 'engnet', name: 'New English Translation (NET)' },
+    { id: 'engnet', name: 'New English Translation' },
 ];
 
 export type Book = {
@@ -65,5 +64,3 @@ export type Annotation = {
   createdAt?: any;
   updatedAt?: any;
 };
-
-    
