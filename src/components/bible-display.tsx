@@ -21,7 +21,19 @@ function VerseComponent({
     onAnnotationClick: (annotation: Annotation) => void;
 }) {
     const { fontSize } = useAnnotationContext();
-    const verseText = useMemo(() => verse.content.map(c => typeof c === 'string' ? c : (c.text || '')).join(''), [verse.content]);
+    
+    // Recursively extracts text content, ignoring notes.
+    const getVerseText = (content: any[]): string => {
+        return content.map(item => {
+            if (typeof item === 'string') return item;
+            if (item.type === 'note') return ''; // Ignore notes
+            if (item.text) return item.text;
+            if (Array.isArray(item.content)) return getVerseText(item.content); // Recurse for nested content
+            return '';
+        }).join('');
+    };
+
+    const verseText = useMemo(() => getVerseText(verse.content as any[]), [verse.content]);
     
     const renderedContent = useMemo(() => {
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
