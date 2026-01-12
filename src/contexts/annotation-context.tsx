@@ -17,6 +17,8 @@ interface AnnotationContextType {
     setFontSize: Dispatch<SetStateAction<FontSize>>;
     isDrawingMode: boolean;
     setIsDrawingMode: Dispatch<SetStateAction<boolean>>;
+    drawingColor: string;
+    setDrawingColor: Dispatch<SetStateAction<string>>;
     saveDrawing: boolean;
     setSaveDrawing: Dispatch<SetStateAction<boolean>>;
     triggerSaveDrawing: () => void;
@@ -38,6 +40,7 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
     const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
     const [fontSize, setFontSize] = useState<FontSize>('md');
     const [isDrawingMode, setIsDrawingMode] = useState(false);
+    const [drawingColor, setDrawingColor] = useState('#000000'); // Default to black
     const [saveDrawing, setSaveDrawing] = useState(false);
 
     const resetAnnotationState = useCallback(() => {
@@ -60,6 +63,10 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
         if (activeAnnotation) {
              const docRef = doc(firestore, `users/${user.uid}/annotations`, activeAnnotation.id);
              setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+             // After update, if it was a text annotation, we might want to refresh its state
+             if (data.note !== undefined || data.highlight || data.underline) {
+                 setActiveAnnotation(prev => prev ? { ...prev, ...data } : null);
+             }
         
         // SCENARIO 2: CREATE new TEXT annotation from a selection
         } else if (selection) {
@@ -67,7 +74,6 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
             const verseElement = range.startContainer.parentElement?.closest('[data-verse-number]');
             if (!verseElement) return;
             
-            // This logic calculates the start/end offsets relative to the verse text content, excluding the verse number
             const supLength = verseElement.querySelector('sup')?.textContent?.length || 0;
             const preSelectionRange = document.createRange();
             preSelectionRange.selectNodeContents(verseElement);
@@ -75,7 +81,6 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
             const start = preSelectionRange.toString().length - supLength;
             
             const text = range.toString();
-             // Prevent creating empty annotations unless a note is being added
             if (!text.trim() && data.note === undefined) return;
 
             const end = start + text.length;
@@ -89,10 +94,13 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
                 start: start >= 0 ? start : 0,
                 end: end,
                 text: text,
-                ...data
+                ...data,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
             };
             const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
-            setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() });
+            setDocumentNonBlocking(newDocRef, newAnnotation);
+            resetAnnotationState();
         
         // SCENARIO 3: CREATE new DRAWING annotation
         } else if (data.drawingDataUrl) {
@@ -103,13 +111,14 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
                 chapter: chapterNum,
                 verse: 0, // Chapter-level drawing
                 text: 'Handwritten Note',
-                ...data
+                ...data,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
             };
             const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
-            setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() });
+            setDocumentNonBlocking(newDocRef, newAnnotation);
+            // Don't reset state here, since save is triggered from canvas
         }
-        
-        resetAnnotationState();
 
     }, [user, firestore, activeAnnotation, selection, resetAnnotationState]);
 
@@ -130,6 +139,8 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
         setFontSize,
         isDrawingMode,
         setIsDrawingMode,
+        drawingColor,
+        setDrawingColor,
         saveDrawing,
         setSaveDrawing,
         triggerSaveDrawing,

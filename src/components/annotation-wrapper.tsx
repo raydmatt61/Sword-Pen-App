@@ -25,9 +25,14 @@ const underlineColors = [
     { class: 'ul-purple', color: '#8e24aa' },
     { class: 'ul-orange', color: '#fb8c00' },
 ];
+const drawingColors = [
+    { name: 'Black', color: '#000000' },
+    { name: 'Red', color: '#e53935' },
+    { name: 'Blue', color: '#1E88E5' },
+];
 
 function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw }) {
-    const { isDrawingMode } = useAnnotationContext();
+    const { isDrawingMode, drawingColor, setDrawingColor } = useAnnotationContext();
     return (
         <div className="flex items-center justify-center gap-1 p-1 bg-background border rounded-lg shadow-md w-full">
             <Popover>
@@ -53,7 +58,16 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw 
                 </PopoverContent>
             </Popover>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNote}><StickyNote /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDraw} data-active={isDrawingMode}><Pencil /></Button>
+             <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDraw} data-active={isDrawingMode}><Pencil style={{ color: isDrawingMode ? drawingColor : 'inherit' }} /></Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-1">
+                    <div className="flex gap-1">
+                        {drawingColors.map(c => <button key={c.name} onClick={() => setDrawingColor(c.color)} className="h-6 w-6 rounded" style={{ backgroundColor: c.color }} title={c.name}></button>)}
+                    </div>
+                </PopoverContent>
+            </Popover>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 /></Button>
         </div>
     )

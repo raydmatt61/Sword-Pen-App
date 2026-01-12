@@ -13,7 +13,7 @@ interface DrawingCanvasProps {
 
 export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: DrawingCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const { isDrawingMode, setSaveDrawing, createOrUpdateAnnotation, saveDrawing } = useAnnotationContext();
+    const { isDrawingMode, drawingColor, setSaveDrawing, createOrUpdateAnnotation, saveDrawing } = useAnnotationContext();
     const [isDrawing, setIsDrawing] = useState(false);
     const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
     const [hasDrawingContent, setHasDrawingContent] = useState(false);
@@ -23,19 +23,20 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
             const canvas = canvasRef.current;
             const context = canvas.getContext('2d');
             if (context) {
-                 context.strokeStyle = '#8e24aa'; // ul-purple
+                 context.strokeStyle = drawingColor;
                  context.lineWidth = 2;
                  context.lineCap = 'round';
                  context.lineJoin = 'round';
                  setCtx(context);
             }
         }
-    }, []);
+    }, [drawingColor]);
 
     const drawExisting = useCallback(() => {
         if (!ctx || !canvasRef.current) return;
         const canvas = canvasRef.current;
-        ctx.clearRect(0,0, canvas.width, canvas.height); // Clear before redraw
+        // Don't clear here, rely on resize observer to clear and redraw everything
+        // ctx.clearRect(0,0, canvas.width, canvas.height); 
 
         existingDrawings.forEach(d => {
             if (d.drawingDataUrl) {
@@ -55,9 +56,26 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
         if (!canvas || !container) return;
 
         const resizeObserver = new ResizeObserver(() => {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            if (tempCtx) {
+                tempCtx.drawImage(canvas, 0, 0);
+            }
+
             canvas.width = container.offsetWidth;
             canvas.height = container.offsetHeight;
-            // Redraw existing drawings after resize
+            
+            if (ctx) {
+                ctx.strokeStyle = drawingColor;
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                // Redraw previous content
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+             // Redraw existing drawings after resize
             drawExisting();
         });
 
@@ -70,11 +88,14 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
 
 
         return () => resizeObserver.disconnect();
-    }, [containerRef, ctx, drawExisting]);
+    }, [containerRef, ctx, drawExisting, drawingColor]);
 
     // Redraw when existing drawings change
      useEffect(() => {
-        drawExisting();
+        if (ctx && canvasRef.current) {
+             ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+             drawExisting();
+        }
     }, [existingDrawings, ctx, drawExisting]);
 
     const getCoords = (event: MouseEvent | TouchEvent): { x: number; y: number } => {
@@ -123,22 +144,25 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
             // Reset state
             setHasDrawingContent(false);
             setSaveDrawing(false);
+            if (ctx) {
+                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                drawExisting();
+            }
+
         } else if (saveDrawing) {
             // If save was triggered but there's no new content, just reset the trigger
             setSaveDrawing(false);
         }
-    }, [saveDrawing, setSaveDrawing, createOrUpdateAnnotation, ctx, chapterData, hasDrawingContent]);
+    }, [saveDrawing, setSaveDrawing, createOrUpdateAnnotation, chapterData, hasDrawingContent, ctx, drawExisting]);
 
     // Clear canvas when entering drawing mode
     useEffect(() => {
         if (isDrawingMode && ctx && canvasRef.current) {
-            // Do not clear if there's existing content, only new user strokes
-            // This happens on mode toggle, which should reset temp drawings
-            if (!hasDrawingContent) {
-                // We keep existing drawings visible, just clear the temp state
-            }
+            // This is just to ensure settings are correct when mode is enabled.
+             ctx.strokeStyle = drawingColor;
+             ctx.lineWidth = 2;
         }
-    }, [isDrawingMode, ctx, hasDrawingContent]);
+    }, [isDrawingMode, ctx, drawingColor]);
 
 
     if (!isDrawingMode && existingDrawings.length === 0) {
