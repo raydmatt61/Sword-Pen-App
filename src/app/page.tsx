@@ -58,25 +58,35 @@ async function getChapter(
   return null;
 }
 
+async function fetchBooksForTranslation(translation: string): Promise<Book[] | null> {
+    try {
+        const booksRes = await fetch(`https://bible.helloao.org/api/${translation}/books.json`);
+        if (!booksRes.ok) {
+            console.error(`Failed to fetch books for ${translation}: ${booksRes.status}`);
+            return null;
+        }
+        const contentType = booksRes.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const booksData = await booksRes.json();
+            return booksData.books || null;
+        } else {
+            console.error(`Expected JSON for books list but received ${contentType} for ${translation}`);
+            return null;
+        }
+    } catch (error) {
+        console.error(`Error fetching books for ${translation}:`, error);
+        return null;
+    }
+}
+
 async function getBooks(translation: string): Promise<Book[]> {
-  try {
-    const booksRes = await fetch(`https://bible.helloao.org/api/${translation}/books.json`);
-    if (!booksRes.ok) {
-      console.error(`Failed to fetch books for ${translation}: ${booksRes.status}`);
-      return [];
+    let books = await fetchBooksForTranslation(translation);
+    // Fallback to BSB if the primary fetch fails
+    if (!books) {
+        console.log(`Could not fetch book list for ${translation}, falling back to BSB.`);
+        books = await fetchBooksForTranslation('BSB');
     }
-    const contentType = booksRes.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") !== -1) {
-        const booksData = await booksRes.json();
-        return booksData.books || [];
-    } else {
-        console.error(`Expected JSON for books list but received ${contentType} for ${translation}`);
-        return [];
-    }
-  } catch (error) {
-    console.error(`Error fetching books for ${translation}:`, error);
-    return [];
-  }
+    return books || [];
 }
 
 function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslation }) {
