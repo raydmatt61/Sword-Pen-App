@@ -3,18 +3,20 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useAnnotationContext } from '@/contexts/annotation-context';
-import { type Annotation } from '@/lib/bible';
+import { type Annotation, type BibleChapterResponse } from '@/lib/bible';
 
 interface DrawingCanvasProps {
     containerRef: React.RefObject<HTMLDivElement>;
     existingDrawings: Annotation[];
+    chapterData: BibleChapterResponse;
 }
 
-export function DrawingCanvas({ containerRef, existingDrawings }: DrawingCanvasProps) {
+export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: DrawingCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { isDrawingMode, setSaveDrawing, createOrUpdateAnnotation, saveDrawing } = useAnnotationContext();
     const [isDrawing, setIsDrawing] = useState(false);
     const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
+    const [hasDrawingContent, setHasDrawingContent] = useState(false);
 
     useEffect(() => {
         if (canvasRef.current) {
@@ -99,6 +101,7 @@ export function DrawingCanvas({ containerRef, existingDrawings }: DrawingCanvasP
     const draw = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!isDrawing || !isDrawingMode || !ctx) return;
         event.preventDefault();
+        setHasDrawingContent(true);
         const { x, y } = getCoords(event.nativeEvent);
         ctx.lineTo(x, y);
         ctx.stroke();
@@ -113,15 +116,30 @@ export function DrawingCanvas({ containerRef, existingDrawings }: DrawingCanvasP
     
     // Effect to handle saving
     useEffect(() => {
-        if (saveDrawing && canvasRef.current && ctx) {
+        if (saveDrawing && canvasRef.current && hasDrawingContent) {
             const dataUrl = canvasRef.current.toDataURL('image/png');
-
-            createOrUpdateAnnotation({ drawingDataUrl: dataUrl });
+            createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
             
-            // Reset save trigger
+            // Reset state
+            setHasDrawingContent(false);
+            setSaveDrawing(false);
+        } else if (saveDrawing) {
+            // If save was triggered but there's no new content, just reset the trigger
             setSaveDrawing(false);
         }
-    }, [saveDrawing, setSaveDrawing, createOrUpdateAnnotation, ctx]);
+    }, [saveDrawing, setSaveDrawing, createOrUpdateAnnotation, ctx, chapterData, hasDrawingContent]);
+
+    // Clear canvas when entering drawing mode
+    useEffect(() => {
+        if (isDrawingMode && ctx && canvasRef.current) {
+            // Do not clear if there's existing content, only new user strokes
+            // This happens on mode toggle, which should reset temp drawings
+            if (!hasDrawingContent) {
+                // We keep existing drawings visible, just clear the temp state
+            }
+        }
+    }, [isDrawingMode, ctx, hasDrawingContent]);
+
 
     if (!isDrawingMode && existingDrawings.length === 0) {
         return null; // Don't render anything if not in drawing mode and no drawings exist

@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useUser } from '@/firebase';
-import { type Annotation, type BibleChapterResponse } from '@/lib/bible';
+import { type BibleChapterResponse } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -70,7 +70,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         setActiveAnnotation,
         isDrawingMode,
         setIsDrawingMode,
-        setSaveDrawing,
+        triggerSaveDrawing,
         createOrUpdateAnnotation,
         deleteAnnotation,
         resetAnnotationState,
@@ -92,7 +92,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
     
     const handleSaveNote = () => {
         if (!activeAnnotation || !noteDirty) return;
-        createOrUpdateAnnotation({ note });
+        createOrUpdateAnnotation({ note }, chapterData);
         toast({ title: "Note Saved", description: "Your annotation note has been saved." });
         setIsEditingNote(false);
         resetAnnotationState();
@@ -107,10 +107,6 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         setSelection(null);
         setActiveAnnotation(null);
         setIsDrawingMode(!isDrawingMode);
-    }
-
-    const handleSaveDrawing = () => {
-        setSaveDrawing(true); // This will trigger the canvas to save
     }
 
     // Effect to update local note state when active annotation changes
@@ -142,7 +138,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                      <div className="flex flex-col gap-2">
                         <p className="text-sm text-primary font-bold font-headline">Drawing Mode</p>
                         <p className="text-xs text-muted-foreground">Draw directly on the text. Your drawing will be saved as a new annotation for this chapter.</p>
-                        <Button onClick={handleSaveDrawing} size="sm"><Save className="mr-2"/>Save Drawing</Button>
+                        <Button onClick={triggerSaveDrawing} size="sm"><Save className="mr-2"/>Save Drawing</Button>
                     </div>
                  ) :
                  !activeAnnotation && !selection ? <p className="text-sm text-muted-foreground">Select text, an annotation, or enter drawing mode.</p> :
@@ -198,13 +194,13 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
              {(selection || activeAnnotation || isDrawingMode) && user && (
                <CardFooter ref={toolbarRef} className="p-2">
                    <AnnotationToolbar 
-                       onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
-                       onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined })}
+                       onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined }, chapterData)}
+                       onUnderline={(style) => createOrUpdateAnnotation({ underline: style || undefined }, chapterData)}
                        onNote={() => {
                             if (activeAnnotation) {
                                 setIsEditingNote(true);
                             } else {
-                               createOrUpdateAnnotation({note: ''});
+                               createOrUpdateAnnotation({note: ''}, chapterData);
                             }
                        }}
                        onDraw={handleDrawingMode}

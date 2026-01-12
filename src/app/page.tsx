@@ -101,7 +101,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
   }, [initialBook, initialChapter]);
 
   return (
-    <AnnotationProvider chapterData={chapterData}>
+    <AnnotationProvider>
       <main className="flex flex-col h-screen">
         <header className="flex items-center justify-between border-b p-2 md:p-4">
           <div>

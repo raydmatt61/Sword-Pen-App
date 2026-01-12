@@ -25,7 +25,7 @@ function VerseComponent({
     const verseText = useMemo(() => verse.content.map(c => typeof c === 'string' ? c : (c.text || '')).join(''), [verse.content]);
     
     const renderedContent = useMemo(() => {
-        const sortedAnnotations = [...annotations].sort((a, b) => a.start - b.start);
+        const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
         let lastIndex = 0;
         const parts: React.ReactNode[] = [];
 
@@ -33,8 +33,11 @@ function VerseComponent({
             // Don't render drawing annotations inline
             if(annotation.drawingDataUrl) return;
 
-            if (annotation.start > lastIndex) {
-                parts.push(verseText.substring(lastIndex, annotation.start));
+            const start = annotation.start ?? 0;
+            const end = annotation.end ?? 0;
+
+            if (start > lastIndex) {
+                parts.push(verseText.substring(lastIndex, start));
             }
             parts.push(
                 <span
@@ -42,10 +45,10 @@ function VerseComponent({
                     className={cn("annotated-text", annotation.highlight, annotation.underline, annotation.note && "border-b-2 border-dashed border-primary")}
                     onClick={(e) => { e.stopPropagation(); onAnnotationClick(annotation); }}
                 >
-                    {verseText.substring(annotation.start, annotation.end)}
+                    {verseText.substring(start, end)}
                 </span>
             );
-            lastIndex = annotation.end;
+            lastIndex = end;
         });
 
         if (lastIndex < verseText.length) {
@@ -202,6 +205,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
             <DrawingCanvas 
                 containerRef={bibleContentRef}
                 existingDrawings={drawingAnnotations}
+                chapterData={chapterData}
             />
             <Card>
                 <CardHeader>
