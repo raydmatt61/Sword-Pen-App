@@ -1,5 +1,16 @@
 
 
+export type Translation = {
+    id: string;
+    name: string;
+};
+
+export const TRANSLATIONS: Translation[] = [
+    { id: 'BSB', name: 'Berean Standard Bible' },
+    { id: 'ENGWEBP', name: 'World English Bible' },
+    { id: 'engnet', name: 'New English Translation (NET)' },
+];
+
 export type Book = {
     id: string;
     commonName: string;
