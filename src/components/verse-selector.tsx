@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from '@/components/ui/label';
-import type { Book } from '@/lib/bible';
+import type { Book, Translation } from '@/lib/bible';
 import { Search, ChevronLeft, ChevronRight, Rewind, BookOpenCheck } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
@@ -27,9 +27,11 @@ type BibleLocation = {
 export function VerseSelector({ 
     defaultValues, 
     books,
+    translations
 }: { 
     defaultValues: { book: string; chapter: string; translation: string }, 
     books: Book[],
+    translations: Translation[]
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -65,7 +67,7 @@ export function VerseSelector({
     const currentLocation = {
         book: searchParams.get('book') || defaultValues.book,
         chapter: searchParams.get('chapter') || defaultValues.chapter,
-        translation: searchParams.get('translation') || defaultValues.translation,
+        translation: searchParams.get('translation') || 'BSB-Notes',
     };
     sessionStorage.setItem(PREVIOUS_LOCATION_KEY, JSON.stringify(currentLocation));
     setPreviousLocation(currentLocation);

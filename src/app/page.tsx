@@ -21,7 +21,7 @@ async function getChapter(
   let attempts = 0;
   const maxRetries = 3;
   const delay = 1000; // 1 second
-  const effectiveTranslation = TRANSLATIONS.find(t => t.id === translation) ? translation : 'BSB';
+  const effectiveTranslation = TRANSLATIONS.find(t => t.id === translation) ? translation : 'BSB-Notes';
 
   while (attempts < maxRetries) {
     try {
@@ -193,7 +193,7 @@ function PageWithSearchParams() {
   const searchParams = useSearchParams();
   const book = searchParams.get('book') || 'John';
   const chapter = searchParams.get('chapter') || '1';
-  const translation = searchParams.get('translation') || 'BSB';
+  const translation = searchParams.get('translation') || 'BSB-Notes';
 
   return <ChapterLoader book={book} chapter={chapter} translation={translation} />
 }
