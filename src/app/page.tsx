@@ -14,6 +14,7 @@ import { QrCodeGenerator } from '@/components/qr-code-generator';
 import { AnnotationWrapper } from '@/components/annotation-wrapper';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
+import { AnnotationProvider } from '@/contexts/annotation-context';
 
 async function getChapter(
   book: string,
@@ -100,47 +101,49 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
   }, [initialBook, initialChapter]);
 
   return (
-    <main className="flex flex-col h-screen">
-      <header className="flex items-center justify-between border-b p-2 md:p-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
-            The Sword & Pen
-          </h1>
-          <p className="text-xs text-muted-foreground mt-1 font-headline">
-            Deepen your Bible study with annotations, notes and AI-powered insights.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {isMobile && <FontSizeAdjuster />}
-          <QrCodeGenerator />
-          <AuthManager />
-        </div>
-      </header>
+    <AnnotationProvider chapterData={chapterData}>
+      <main className="flex flex-col h-screen">
+        <header className="flex items-center justify-between border-b p-2 md:p-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
+              The Sword & Pen
+            </h1>
+            <p className="text-xs text-muted-foreground mt-1 font-headline">
+              Deepen your Bible study with annotations, notes and AI-powered insights.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {isMobile && <FontSizeAdjuster />}
+            <QrCodeGenerator />
+            <AuthManager />
+          </div>
+        </header>
 
-      <div className="sticky top-0 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
-        <VerseSelector
-          defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslation }}
-          books={books}
-          translations={TRANSLATIONS}
-        />
-        {chapterData && <AnnotationWrapper chapterData={chapterData} />}
-      </div>
+        <div className="sticky top-0 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
+          <VerseSelector
+            defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslation }}
+            books={books}
+            translations={TRANSLATIONS}
+          />
+          {chapterData && <AnnotationWrapper chapterData={chapterData} />}
+        </div>
 
-      <div ref={contentRef} className="flex-grow overflow-y-auto p-4">
-        {!chapterData ? (
-          <Card className="mt-6 animate-in fade-in duration-500">
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">
-                Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span> in the <span className="font-bold">{initialTranslation}</span> translation.
-                This may be due to a network issue or the translation not being available for this book. Please try a different selection.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <BibleDisplay chapterData={chapterData} />
-        )}
-      </div>
-    </main>
+        <div ref={contentRef} className="flex-grow overflow-y-auto p-4">
+          {!chapterData ? (
+            <Card className="mt-6 animate-in fade-in duration-500">
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span> in the <span className="font-bold">{initialTranslation}</span> translation.
+                  This may be due to a network issue or the translation not being available for this book. Please try a different selection.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <BibleDisplay chapterData={chapterData} />
+          )}
+        </div>
+      </main>
+    </AnnotationProvider>
   );
 }
 

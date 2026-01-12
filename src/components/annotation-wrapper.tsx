@@ -2,16 +2,13 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 import { type Annotation, type BibleChapterResponse } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Save, Trash2, StickyNote, Highlighter, Underline, X, Pencil, Ban } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
-import { cn } from '@/lib/utils';
-import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import Balancer from 'react-wrap-balancer';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +27,7 @@ const underlineColors = [
 ];
 
 function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw }) {
-    const { isDrawingMode, setIsDrawingMode } = useAnnotationContext();
+    const { isDrawingMode } = useAnnotationContext();
     return (
         <div className="flex items-center justify-center gap-1 p-1 bg-background border rounded-lg shadow-md w-full">
             <Popover>
@@ -64,14 +61,19 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw 
 
 export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterResponse }) {
     const { user } = useUser();
-    const firestore = useFirestore();
     const { toast } = useToast();
 
     const {
-        selection, setSelection,
-        activeAnnotation, setActiveAnnotation,
-        isDrawingMode, setIsDrawingMode,
+        selection,
+        setSelection,
+        activeAnnotation,
+        setActiveAnnotation,
+        isDrawingMode,
+        setIsDrawingMode,
         setSaveDrawing,
+        createOrUpdateAnnotation,
+        deleteAnnotation,
+        resetAnnotationState,
     } = useAnnotationContext();
 
     const [isEditingNote, setIsEditingNote] = useState(false);
@@ -79,95 +81,13 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
     const noteDirty = useMemo(() => activeAnnotation && note !== (activeAnnotation.note || ''), [activeAnnotation, note]);
 
     const toolbarRef = useRef<HTMLDivElement>(null);
+    const fullReference = `${chapterData.book.name} ${chapterData.chapter.number}`;
 
-    const bookId = chapterData.book.id;
-    const chapterNum = chapterData.chapter.number;
-    const translationId = chapterData.translation.id;
-    const fullReference = `${chapterData.book.name} ${chapterNum}`;
-
-    const resetAnnotationState = () => {
-        setActiveAnnotation(null);
-        setSelection(null);
-        setNote('');
-        setIsEditingNote(false);
-        setIsDrawingMode(false);
-    };
-
-    const createOrUpdateAnnotation = async (data: Partial<Omit<Annotation, 'id' | 'userId'>>) => {
-        if (!user || !firestore) return;
-        
-        // Disallow updates if in drawing mode but not saving a drawing
-        if (isDrawingMode && !data.drawingDataUrl) return;
-
-        let annotationToUpdate: Annotation | null = activeAnnotation;
-
-        // If there's no active annotation, but we have a selection, create a new one.
-        if (!annotationToUpdate && selection) {
-            const { range, verseNum } = selection;
-            const verseElement = range.startContainer.parentElement?.closest('[data-verse-number]');
-            if (!verseElement) return;
-            
-            // This is a new annotation based on text selection
-            const allText = Array.from(verseElement.childNodes).map(node => node.textContent).join('');
-            const supLength = verseElement.querySelector('sup')?.textContent?.length || 0;
-            const preSelectionRange = document.createRange();
-            preSelectionRange.selectNodeContents(verseElement);
-            preSelectionRange.setEnd(range.startContainer, range.startOffset);
-            const start = preSelectionRange.toString().length - supLength;
-            
-            const text = range.toString();
-            if (!text && !data.drawingDataUrl) return; // Don't create empty annotations
-            const end = start + text.length;
-
-            const newAnnotation: Omit<Annotation, 'id' | 'userId'> = {
-                userId: user.uid,
-                translation: translationId,
-                book: bookId,
-                chapter: chapterNum,
-                verse: parseInt(verseNum),
-                start: start || 0,
-                end: end || 0,
-                text: text || '',
-                ...data
-            };
-
-            const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
-            setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() });
-
-        } else if (annotationToUpdate) {
-            // We're updating an existing annotation
-             const docRef = doc(firestore, `users/${user.uid}/annotations`, annotationToUpdate.id);
-             setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
-        } else if (data.drawingDataUrl && !annotationToUpdate && !selection) {
-            // This is a new drawing annotation without a text selection, attached to the whole chapter
-            const newAnnotation: Omit<Annotation, 'id' | 'userId'> = {
-                userId: user.uid,
-                translation: translationId,
-                book: bookId,
-                chapter: chapterNum,
-                verse: 0, // Indicates chapter-level drawing
-                start: 0,
-                end: 0,
-                text: 'Handwritten Note',
-                ...data
-            };
-            const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
-            setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() });
-        } else {
-            return; // No valid condition to create or update
+    const handleDelete = () => {
+        if (activeAnnotation) {
+            deleteAnnotation(activeAnnotation);
         }
-
         resetAnnotationState();
-    };
-
-    const handleDeleteAnnotation = () => {
-        if (activeAnnotation && firestore && user) {
-            const docRef = doc(firestore, `users/${user.uid}/annotations`, activeAnnotation.id);
-            deleteDocumentNonBlocking(docRef);
-            resetAnnotationState();
-        } else if (selection) {
-            resetAnnotationState();
-        }
     }
     
     const handleSaveNote = () => {
@@ -288,7 +208,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                             }
                        }}
                        onDraw={handleDrawingMode}
-                       onDelete={handleDeleteAnnotation}
+                       onDelete={handleDelete}
                    />
                </CardFooter>
             )}

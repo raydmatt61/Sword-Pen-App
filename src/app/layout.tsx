@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
-import { AnnotationProvider } from '@/contexts/annotation-context';
 
 export const metadata: Metadata = {
   title: 'The Sword & Pen',
@@ -31,10 +30,8 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>
-          <AnnotationProvider>
-            {children}
-            <Toaster />
-          </AnnotationProvider>
+          {children}
+          <Toaster />
         </FirebaseClientProvider>
       </body>
     </html>

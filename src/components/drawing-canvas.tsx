@@ -30,7 +30,7 @@ export function DrawingCanvas({ containerRef, existingDrawings }: DrawingCanvasP
         }
     }, []);
 
-    const drawExisting = () => {
+    const drawExisting = useCallback(() => {
         if (!ctx || !canvasRef.current) return;
         const canvas = canvasRef.current;
         ctx.clearRect(0,0, canvas.width, canvas.height); // Clear before redraw
@@ -44,7 +44,7 @@ export function DrawingCanvas({ containerRef, existingDrawings }: DrawingCanvasP
                 img.src = d.drawingDataUrl;
             }
         });
-    }
+    }, [ctx, existingDrawings]);
 
     // Effect to handle resizing of the canvas to match container
     useEffect(() => {
@@ -68,12 +68,12 @@ export function DrawingCanvas({ containerRef, existingDrawings }: DrawingCanvasP
 
 
         return () => resizeObserver.disconnect();
-    }, [containerRef, ctx, existingDrawings]);
+    }, [containerRef, ctx, drawExisting]);
 
     // Redraw when existing drawings change
      useEffect(() => {
         drawExisting();
-    }, [existingDrawings, ctx]);
+    }, [existingDrawings, ctx, drawExisting]);
 
     const getCoords = (event: MouseEvent | TouchEvent): { x: number; y: number } => {
         const canvas = canvasRef.current;
@@ -89,6 +89,7 @@ export function DrawingCanvas({ containerRef, existingDrawings }: DrawingCanvasP
 
     const startDrawing = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!isDrawingMode || !ctx) return;
+        event.preventDefault();
         setIsDrawing(true);
         const { x, y } = getCoords(event.nativeEvent);
         ctx.beginPath();
@@ -97,13 +98,15 @@ export function DrawingCanvas({ containerRef, existingDrawings }: DrawingCanvasP
 
     const draw = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!isDrawing || !isDrawingMode || !ctx) return;
+        event.preventDefault();
         const { x, y } = getCoords(event.nativeEvent);
         ctx.lineTo(x, y);
         ctx.stroke();
     };
 
-    const stopDrawing = () => {
+    const stopDrawing = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!ctx) return;
+        event.preventDefault();
         ctx.closePath();
         setIsDrawing(false);
     };
@@ -113,15 +116,12 @@ export function DrawingCanvas({ containerRef, existingDrawings }: DrawingCanvasP
         if (saveDrawing && canvasRef.current && ctx) {
             const dataUrl = canvasRef.current.toDataURL('image/png');
 
-            // Find if there's an existing drawing to "update" (we replace it)
-            const chapterDrawing = existingDrawings.find(d => d.verse === 0);
-
             createOrUpdateAnnotation({ drawingDataUrl: dataUrl });
             
             // Reset save trigger
             setSaveDrawing(false);
         }
-    }, [saveDrawing, setSaveDrawing, createOrUpdateAnnotation, ctx, existingDrawings]);
+    }, [saveDrawing, setSaveDrawing, createOrUpdateAnnotation, ctx]);
 
     if (!isDrawingMode && existingDrawings.length === 0) {
         return null; // Don't render anything if not in drawing mode and no drawings exist
@@ -140,7 +140,8 @@ export function DrawingCanvas({ containerRef, existingDrawings }: DrawingCanvasP
             className="absolute top-0 left-0 w-full h-full"
             style={{ 
                 pointerEvents: isDrawingMode ? 'auto' : 'none',
-                zIndex: 10
+                zIndex: 10,
+                touchAction: 'none'
             }}
         />
     );
