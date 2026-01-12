@@ -8,9 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from '@/components/ui/label';
-import type { Book, Translation } from '@/lib/bible';
+import type { Book } from '@/lib/bible';
 import { Search, ChevronLeft, ChevronRight, Rewind } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const PREVIOUS_LOCATION_KEY = 'previousBibleLocation';
 
@@ -23,11 +25,9 @@ type BibleLocation = {
 export function VerseSelector({ 
     defaultValues, 
     books,
-    translations
 }: { 
     defaultValues: { book: string; chapter: string; translation: string }, 
     books: Book[],
-    translations: Translation[]
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -36,7 +36,9 @@ export function VerseSelector({
   const [translation, setTranslation] = useState(defaultValues.translation);
   const [book, setBook] = useState(defaultValues.book);
   const [chapter, setChapter] = useState(defaultValues.chapter);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   
+  const isMobile = useIsMobile();
   const [isClient, setIsClient] = useState(false);
   const [previousLocation, setPreviousLocation] = useState<BibleLocation | null>(null);
 
@@ -115,102 +117,116 @@ export function VerseSelector({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     navigate({ book, chapter, translation });
+    setIsSheetOpen(false);
   };
+  
+  const renderControls = () => (
+     <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 items-end">
+        <div className="grid grid-cols-2 gap-2 w-full">
+            <div className="space-y-2">
+                <Label htmlFor="book" className="font-headline">Book</Label>
+                <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
+                <SelectTrigger id="book">
+                    <SelectValue placeholder="Select book" />
+                </SelectTrigger>
+                <SelectContent>
+                    {books.map(b => (
+                    <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>
+                    ))}
+                </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="chapter" className="font-headline">Chapter</Label>
+                <Input
+                    id="chapter"
+                    type="number"
+                    value={chapter}
+                    onChange={(e) => setChapter(e.target.value)}
+                    min="1"
+                    max={maxChapters}
+                    required
+                    disabled={books.length === 0}
+                />
+            </div>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+                variant="outline"
+                size="icon"
+                type="button"
+                onClick={handleGoBack}
+                disabled={!previousLocation}
+                aria-label="Previous Location"
+                title="Go to previous location"
+            >
+                <Rewind className="h-4 w-4" />
+            </Button>
+            <Button 
+                variant="outline" 
+                size="icon" 
+                type="button" 
+                onClick={() => handleChapterNav('prev')}
+                disabled={parseInt(chapter) <= 1}
+                aria-label="Previous Chapter"
+            >
+                <ChevronLeft className="h-4 w-4" />
+            </Button>
+             <Button 
+                variant="outline" 
+                size="icon" 
+                type="button" 
+                onClick={() => handleChapterNav('next')}
+                disabled={parseInt(chapter) >= maxChapters}
+                aria-label="Next Chapter"
+            >
+                <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button type="submit" className="flex-grow" disabled={books.length === 0}>
+                <Search className="mr-2 h-4 w-4" />
+                Load
+            </Button>
+        </div>
+    </form>
+  );
 
   if (!isClient) {
     return (
         <Card className="animate-in fade-in duration-500">
-            <CardContent className="pt-2">
-                <div className="flex flex-col sm:flex-row gap-2 items-end">
-                    <div className="grid grid-cols-2 gap-2 w-full">
-                        <div className="space-y-2">
-                            <Label htmlFor="book" className="font-headline">Book</Label>
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="chapter" className="font-headline">Chapter</Label>
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                    </div>
-                    <div className="w-full sm:w-auto">
-                        <Skeleton className="h-10 w-full sm:w-auto sm:px-12" />
-                    </div>
-                </div>
+            <CardContent className="pt-6">
+                 <Skeleton className="h-10 w-full" />
             </CardContent>
         </Card>
     );
   }
 
+  if (isMobile) {
+    return (
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+                <Button variant="outline" className="w-full">
+                    {defaultValues.book} {defaultValues.chapter}
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom">
+                <SheetHeader>
+                    <SheetTitle>Select a Verse</SheetTitle>
+                    <SheetDescription>
+                        Choose a book and chapter to read.
+                    </SheetDescription>
+                </SheetHeader>
+                <div className="py-4">
+                    {renderControls()}
+                </div>
+            </SheetContent>
+        </Sheet>
+    )
+  }
+
   return (
     <Card className="animate-in fade-in duration-500">
       <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 items-end">
-            <div className="grid grid-cols-2 gap-2 w-full">
-                <div className="space-y-2">
-                    <Label htmlFor="book" className="font-headline">Book</Label>
-                    <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
-                    <SelectTrigger id="book">
-                        <SelectValue placeholder="Select book" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {books.map(b => (
-                        <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="chapter" className="font-headline">Chapter</Label>
-                    <Input
-                        id="chapter"
-                        type="number"
-                        value={chapter}
-                        onChange={(e) => setChapter(e.target.value)}
-                        min="1"
-                        max={maxChapters}
-                        required
-                        disabled={books.length === 0}
-                    />
-                </div>
-            </div>
-            <div className="flex gap-2 w-full sm:w-auto">
-                <Button
-                    variant="outline"
-                    size="icon"
-                    type="button"
-                    onClick={handleGoBack}
-                    disabled={!previousLocation}
-                    aria-label="Previous Location"
-                    title="Go to previous location"
-                >
-                    <Rewind className="h-4 w-4" />
-                </Button>
-                <Button 
-                    variant="outline" 
-                    size="icon" 
-                    type="button" 
-                    onClick={() => handleChapterNav('prev')}
-                    disabled={parseInt(chapter) <= 1}
-                    aria-label="Previous Chapter"
-                >
-                    <ChevronLeft className="h-4 w-4" />
-                </Button>
-                 <Button 
-                    variant="outline" 
-                    size="icon" 
-                    type="button" 
-                    onClick={() => handleChapterNav('next')}
-                    disabled={parseInt(chapter) >= maxChapters}
-                    aria-label="Next Chapter"
-                >
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button type="submit" className="flex-grow" disabled={books.length === 0}>
-                    <Search className="mr-2 h-4 w-4" />
-                    Load
-                </Button>
-            </div>
-        </form>
+        {renderControls()}
       </CardContent>
     </Card>
   );
