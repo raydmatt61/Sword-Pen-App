@@ -78,13 +78,24 @@ service cloud.firestore {
     
     function isValidAnnotation() {
         let data = request.resource.data;
-        return data.start >= 0 &&
-               data.end > data.start &&
-               data.text.size() > 0 &&
-               data.book.size() > 0 &&
-               data.translation.size() > 0 &&
-               data.chapter > 0 &&
-               data.verse > 0;
+
+        // Common validations for all annotations
+        let commonValidations = data.book.size() > 0 &&
+                                data.translation.size() > 0 &&
+                                data.chapter > 0;
+        
+        // Validation for a standard text-based annotation
+        let isTextAnnotation = data.verse > 0 &&
+                               data.start >= 0 &&
+                               data.end > data.start &&
+                               data.text.size() > 0;
+                               
+        // Validation for a drawing-based annotation
+        let isDrawingAnnotation = data.verse == 0 &&
+                                  'drawingDataUrl' in data &&
+                                  data.drawingDataUrl.size() > 0;
+
+        return commonValidations && (isTextAnnotation || isDrawingAnnotation);
     }
 
     /**
