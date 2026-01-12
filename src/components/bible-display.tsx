@@ -21,197 +21,95 @@ function VerseComponent({
     onAnnotationClick: (annotation: Annotation) => void;
 }) {
     const { fontSize } = useAnnotationContext();
-    
-    // Recursively extracts text content, handling "words of Jesus" and ignoring notes.
-    const getVerseText = (content: any[]): (string | JSX.Element)[] => {
-        return content.flatMap(item => {
-            if (typeof item === 'string') return item;
-            if (item.type === 'note') return []; // Ignore notes
 
-            // Handle "words of Jesus"
-            if (item.type === 'woj' || (Array.isArray(item.class) && item.class.includes('w-of-j'))) {
-                const text = Array.isArray(item.content) ? getVerseText(item.content) : item.content;
-                return <span className="words-of-jesus">{text}</span>;
-            }
-            
-            if (item.text) return item.text;
-            if (Array.isArray(item.content)) return getVerseText(item.content); // Recurse for nested content
-            return [];
-        });
-    };
-
-    const verseText = useMemo(() => {
-        const flattenedContent = getVerseText(verse.content as any[]).join('');
-        return flattenedContent;
-    }, [verse.content]);
-    
     const renderedContent = useMemo(() => {
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
-        let lastIndex = 0;
-        const parts: React.ReactNode[] = [];
-
-        // This function processes the raw verse content and applies red-letter styling.
-        const processRawContent = (content: any[]): React.ReactNode[] => {
-            return content.flatMap((item: any) => {
-                if (typeof item === 'string') {
-                    return item;
-                }
-                if (item.type === 'note') {
-                    return []; // Skip notes
-                }
-                // Check for Words of Jesus
-                if (item.type === 'woj' || (Array.isArray(item.class) && item.class.includes('w-of-j'))) {
-                    const textContent = Array.isArray(item.content) ? processRawContent(item.content) : item.content;
-                    return <span className="words-of-jesus">{textContent}</span>;
-                }
-                if (item.text) {
-                    return item.text;
-                }
-                if (Array.isArray(item.content)) {
-                    return processRawContent(item.content); // Recurse
-                }
-                return [];
-            });
-        };
         
-        // This function takes a flat string and applies annotation spans to it.
-        const applyAnnotations = (text: string, annotations: Annotation[]) => {
-            let lastIndex = 0;
-            const parts: React.ReactNode[] = [];
-            const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
-
-            sortedAnnotations.forEach((annotation) => {
-                const start = annotation.start ?? 0;
-                const end = annotation.end ?? 0;
-
-                if (start > lastIndex) {
-                    parts.push(text.substring(lastIndex, start));
-                }
-                 parts.push(
-                    <span
-                        key={annotation.id}
-                        className={cn("annotated-text", annotation.highlight, annotation.underline, annotation.note && "border-b-2 border-dashed border-primary")}
-                        onClick={(e) => { e.stopPropagation(); onAnnotationClick(annotation); }}
-                    >
-                        {text.substring(start, end)}
-                    </span>
-                );
-                lastIndex = end;
-            });
-
-             if (lastIndex < text.length) {
-                parts.push(text.substring(lastIndex));
-            }
-            return parts;
-        };
-        
-        // First, get the raw text content without annotations but with red-letter spans
-        const rawContentWithWoj = processRawContent(verse.content as any[]);
-
-        // To apply character-offset annotations correctly, we need a flat string version.
-        const flatText = (verse.content as any[])
-            .flat(Infinity)
-            .map((item: any) => {
+        // This function recursively processes the raw verse content (which can be nested)
+        // and returns a flat string for calculating annotation offsets.
+        const getFlatText = (content: any[]): string => {
+            return content.flat(Infinity).map((item: any) => {
                 if (typeof item === 'string') return item;
                 if (item.text) return item.text;
                 if (item.content && typeof item.content === 'string') return item.content;
-                 // Grossly simplify nested content for flat text length calculation
                 if (item.content && Array.isArray(item.content)) {
-                   return item.content.map(c => c.text || (typeof c === 'string' ? c : '')).join('')
-                }
-                return '';
-            })
-            .join('');
-
-        const annotatedText = applyAnnotations(flatText, annotations);
-
-        // Now, we need to reconcile the two. This is complex.
-        // A simpler approach for now is to render red letters and annotations separately.
-        // This means annotations won't correctly wrap red-letter text.
-        // For a true fix, a more sophisticated parser is needed.
-        // Let's re-implement getVerseText and combine annotation logic inside it.
-
-        const renderAnnotatedAndStyledText = (content: any[]) => {
-            const flatText = content.flat(Infinity).map((item: any) => {
-                 if (typeof item === 'string') return item;
-                 if (item.text) return item.text;
-                 if (item.content && typeof item.content === 'string') return item.content;
-                 if (item.content && Array.isArray(item.content)) {
-                   return item.content.map(c => c.text || (typeof c === 'string' ? c : '')).join('')
+                    return getFlatText(item.content);
                 }
                 return '';
             }).join('');
-            
-            const chars = flatText.split('').map((char, index) => ({
-                char,
-                isWoj: false,
-                annotations: [] as Annotation[],
-            }));
+        };
+        
+        const flatText = getFlatText(verse.content as any[]);
 
-            // Mark characters that are Words of Jesus
-            let currentIndex = 0;
-            const markWoj = (items: any[]) => {
-                items.forEach(item => {
-                    if (typeof item === 'string') {
-                        currentIndex += item.length;
-                    } else if (item.type === 'note') {
-                       // do nothing
-                    } else if (item.type === 'woj' || (Array.isArray(item.class) && item.class.includes('w-of-j'))) {
-                        const subContent = (Array.isArray(item.content) ? item.content : [item.content]);
-                        const textLength = subContent.map(sub => (sub.text || (typeof sub === 'string' ? sub : '')).length).reduce((a,b) => a+b, 0);
+        // Create a character map to hold styling info for each character
+        const chars = flatText.split('').map(char => ({
+            char,
+            isWoj: false,
+            annotations: [] as Annotation[],
+        }));
 
-                        for(let i=0; i<textLength; i++) {
-                            if(chars[currentIndex + i]) chars[currentIndex + i].isWoj = true;
+        // This function traverses the original content structure to mark "Words of Jesus"
+        let currentIndex = 0;
+        const markWoj = (items: any[]) => {
+            items.forEach(item => {
+                if (typeof item === 'string') {
+                    currentIndex += item.length;
+                } else if (item.type === 'note') {
+                   // Ignore notes completely
+                } else if (item.type === 'woj' || (Array.isArray(item.class) && item.class.includes('w-of-j'))) {
+                    const subContentText = getFlatText(Array.isArray(item.content) ? item.content : [item.content]);
+                    for (let i = 0; i < subContentText.length; i++) {
+                        if (chars[currentIndex + i]) {
+                            chars[currentIndex + i].isWoj = true;
                         }
-                        currentIndex += textLength;
-                    } else if (item.text) {
-                        currentIndex += item.text.length;
-                    } else if (Array.isArray(item.content)) {
-                        markWoj(item.content);
                     }
-                });
-            }
-            markWoj(content);
-
-            // Mark characters covered by annotations
-            sortedAnnotations.forEach(ann => {
-                for (let i = ann.start; i < ann.end; i++) {
-                    if(chars[i]) chars[i].annotations.push(ann);
+                    currentIndex += subContentText.length;
+                } else if (item.text) {
+                    currentIndex += item.text.length;
+                } else if (Array.isArray(item.content)) {
+                    markWoj(item.content);
                 }
             });
+        }
+        markWoj(verse.content as any[]);
 
-            // Build the final render output
-            const finalRender: React.ReactNode[] = [];
-            let i = 0;
-            while(i < chars.length) {
-                const charInfo = chars[i];
-                const currentAnnotationClasses = charInfo.annotations.map(a => cn(a.highlight, a.underline, a.note && "border-b-2 border-dashed border-primary")).join(' ');
-                const isCurrentWoj = charInfo.isWoj;
-
-                let j = i;
-                // Find end of current segment (same annotations and same WoJ status)
-                while(j < chars.length && chars[j].isWoj === isCurrentWoj && chars[j].annotations.map(a => a.id).join(',') === charInfo.annotations.map(a => a.id).join(',')) {
-                    j++;
-                }
-
-                const segmentText = chars.slice(i, j).map(c => c.char).join('');
-                const mainAnnotation = charInfo.annotations[0];
-
-                finalRender.push(
-                    <span 
-                        key={i} 
-                        className={cn(currentAnnotationClasses, isCurrentWoj && 'words-of-jesus')}
-                        onClick={mainAnnotation ? (e) => { e.stopPropagation(); onAnnotationClick(mainAnnotation); } : undefined}
-                    >
-                        {segmentText}
-                    </span>
-                );
-                i = j;
+        // Mark characters covered by annotations
+        sortedAnnotations.forEach(ann => {
+            for (let i = ann.start; i < ann.end; i++) {
+                // Also, don't apply annotations to notes
+                if(chars[i]) chars[i].annotations.push(ann);
             }
-            return finalRender;
-        };
+        });
 
-        return renderAnnotatedAndStyledText(verse.content as any[]);
+        // Build the final render output by grouping characters with the same styling
+        const finalRender: React.ReactNode[] = [];
+        let i = 0;
+        while (i < chars.length) {
+            const charInfo = chars[i];
+            const currentAnnotationClasses = charInfo.annotations.map(a => cn(a.highlight, a.underline, a.note && "border-b-2 border-dashed border-primary")).join(' ');
+            const isCurrentWoj = charInfo.isWoj;
+
+            let j = i;
+            // Find end of current segment (same annotations and same WoJ status)
+            while (j < chars.length && chars[j].isWoj === isCurrentWoj && chars[j].annotations.map(a => a.id).join(',') === charInfo.annotations.map(a => a.id).join(',')) {
+                j++;
+            }
+
+            const segmentText = chars.slice(i, j).map(c => c.char).join('');
+            const mainAnnotation = charInfo.annotations[0];
+
+            finalRender.push(
+                <span 
+                    key={i} 
+                    className={cn(currentAnnotationClasses, isCurrentWoj && 'words-of-jesus')}
+                    onClick={mainAnnotation ? (e) => { e.stopPropagation(); onAnnotationClick(mainAnnotation); } : undefined}
+                >
+                    {segmentText}
+                </span>
+            );
+            i = j;
+        }
+        return finalRender;
 
     }, [verse.content, annotations, onAnnotationClick]);
     
@@ -348,6 +246,26 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     
     const fullReference = `${chapterData.book.name} ${chapterData.chapter.number}`;
 
+    const renderContentItem = (item, index) => {
+        if (item.type === 'heading') {
+            return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 select-none"><Balancer>{item.content.join(' ')}</Balancer></h4>;
+        }
+        if (item.type === 'verse') {
+            return <VerseComponent 
+                        key={item.number} 
+                        verse={item} 
+                        annotations={chapterAnnotations[item.number] || []}
+                        onAnnotationClick={handleAnnotationClick}
+                    />;
+        }
+        // The API sometimes includes paragraph breaks as their own items
+        if (item.type === 'para-break' || item['para-break']) {
+            return <div key={`p-br-${index}`} className="h-4" />;
+        }
+        return null;
+    };
+
+
     return (
         <div className="pt-4 relative">
             <Card>
@@ -357,20 +275,7 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
                 </CardHeader>
                 <CardContent>
                     <div ref={bibleContentRef} className={cn("space-y-2 select-text bible-content")}>
-                            {chapterData.chapter.content.map((item, index) => {
-                            if (item.type === 'heading') {
-                                return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 select-none"><Balancer>{item.content.join(' ')}</Balancer></h4>
-                            }
-                            if (item.type === 'verse') {
-                                return <VerseComponent 
-                                            key={item.number} 
-                                            verse={item} 
-                                            annotations={chapterAnnotations[item.number] || []}
-                                            onAnnotationClick={handleAnnotationClick}
-                                        />
-                            }
-                            return null;
-                        })}
+                        {chapterData.chapter.content.map(renderContentItem)}
                     </div>
                 </CardContent>
             </Card>

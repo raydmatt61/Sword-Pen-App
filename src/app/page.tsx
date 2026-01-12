@@ -12,14 +12,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
 import { QrCodeGenerator } from '@/components/qr-code-generator';
 import { AnnotationWrapper } from '@/components/annotation-wrapper';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 
 async function getChapter(
   book: string,
   chapter: string,
-  translationApiId: string,
+  translationId: string,
 ): Promise<BibleChapterResponse | null> {
   let attempts = 0;
   const maxRetries = 3;
@@ -29,7 +28,7 @@ async function getChapter(
     try {
       const bookId = BIBLE_BOOKS_ABBR[book] || book;
       const response = await fetch(
-        `https://bible.helloao.org/api/${translationApiId}/${bookId}/${chapter}.json`
+        `https://bible.helloao.org/api/${translationId}/${bookId}/${chapter}.json`
       );
 
       if (response.ok) {
@@ -40,11 +39,11 @@ async function getChapter(
                 return data;
             }
         } else {
-             console.error(`API Error: Expected JSON but received ${contentType} for ${translationApiId}/${bookId}/${chapter}`);
+             console.error(`API Error: Expected JSON but received ${contentType} for ${translationId}/${bookId}/${chapter}`);
              break;
         }
       } else {
-        console.error(`API Error for ${translationApiId}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
+        console.error(`API Error for ${translationId}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error('Failed to fetch chapter (attempt ' + (attempts + 1) + '):', error);
@@ -60,11 +59,11 @@ async function getChapter(
   return null;
 }
 
-async function fetchBooksForTranslation(translationApiId: string): Promise<Book[] | null> {
+async function fetchBooksForTranslation(translationId: string): Promise<Book[] | null> {
     try {
-        const booksRes = await fetch(`https://bible.helloao.org/api/${translationApiId}/books.json`);
+        const booksRes = await fetch(`https://bible.helloao.org/api/${translationId}/books.json`);
         if (!booksRes.ok) {
-            console.error(`Failed to fetch books for ${translationApiId}: ${booksRes.status}`);
+            console.error(`Failed to fetch books for ${translationId}: ${booksRes.status}`);
             return null;
         }
         const contentType = booksRes.headers.get("content-type");
@@ -72,23 +71,22 @@ async function fetchBooksForTranslation(translationApiId: string): Promise<Book[
             const booksData = await booksRes.json();
             return booksData.books || null;
         } else {
-            console.error(`Expected JSON for books list but received ${contentType} for ${translationApiId}`);
+            console.error(`Expected JSON for books list but received ${contentType} for ${translationId}`);
             return null;
         }
     } catch (error) {
-        console.error(`Error fetching books for ${translationApiId}:`, error);
+        console.error(`Error fetching books for ${translationId}:`, error);
         return null;
     }
 }
 
-async function getBooks(translationApiId: string): Promise<Book[]> {
-    const books = await fetchBooksForTranslation(translationApiId);
+async function getBooks(translationId: string): Promise<Book[]> {
+    const books = await fetchBooksForTranslation(translationId);
     return books || [];
 }
 
 function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslationId }) {
   const contentRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
   const providerKey = `${initialBook}-${initialChapter}-${initialTranslationId}`;
   
   useEffect(() => {
@@ -113,7 +111,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!isMobile && <FontSizeAdjuster />}
+            <FontSizeAdjuster />
             <QrCodeGenerator />
             <AuthManager />
           </div>
