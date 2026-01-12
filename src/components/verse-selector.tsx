@@ -48,18 +48,18 @@ export function VerseSelector({
     }
   }, []);
   
-  const maxChapters = useMemo(() => {
-      // Find book by commonName or id, as the value might be either depending on the context
-      const selectedBook = books.find(b => b.commonName === book || b.id === book);
-      return selectedBook?.numberOfChapters || 1;
-  }, [books, book]);
-
   useEffect(() => {
     // This effect ensures the component's state is synchronized with the props from the server.
     setTranslation(defaultValues.translation);
     setBook(defaultValues.book);
     setChapter(defaultValues.chapter);
   }, [defaultValues]);
+  
+  const maxChapters = useMemo(() => {
+      // Find book by commonName or id, as the value might be either depending on the context
+      const selectedBook = books.find(b => b.commonName === book || b.id === book);
+      return selectedBook?.numberOfChapters || 1;
+  }, [books, book]);
 
   useEffect(() => {
     if (parseInt(chapter) > maxChapters) {
@@ -145,20 +145,7 @@ export function VerseSelector({
     <Card className="animate-in fade-in duration-500">
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 items-end">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 w-full">
-                 <div className="space-y-2">
-                    <Label htmlFor="translation" className="font-headline">Translation</Label>
-                    <Select value={translation} onValueChange={setTranslation} disabled={translations.length === 0}>
-                    <SelectTrigger id="translation">
-                        <SelectValue placeholder="Select translation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {translations.map(t => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                </div>
+            <div className="grid grid-cols-2 gap-2 w-full">
                 <div className="space-y-2">
                     <Label htmlFor="book" className="font-headline">Book</Label>
                     <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
