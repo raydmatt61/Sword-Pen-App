@@ -95,7 +95,6 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         createOrUpdateAnnotation({ note }, chapterData);
         toast({ title: "Note Saved", description: "Your annotation note has been saved." });
         setIsEditingNote(false);
-        resetAnnotationState();
     }
 
     const handleCancelEdit = () => {

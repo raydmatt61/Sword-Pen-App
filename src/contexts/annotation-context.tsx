@@ -44,7 +44,7 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
         setActiveAnnotation(null);
         setSelection(null);
         setIsDrawingMode(false);
-        setSaveDrawing(false);
+        if (window.getSelection) window.getSelection()?.removeAllRanges();
     }, []);
 
     const triggerSaveDrawing = useCallback(() => {
@@ -54,14 +54,20 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
     const createOrUpdateAnnotation = useCallback((data: Partial<Omit<Annotation, 'id' | 'userId'>>, chapterData: BibleChapterResponse) => {
         if (!user || !firestore) return;
 
-        let annotationToUpdate: Annotation | null = activeAnnotation;
         const { book: { id: bookId }, chapter: { number: chapterNum }, translation: { id: translationId } } = chapterData;
 
-        if (!annotationToUpdate && selection) { // Create new text annotation
+        // SCENARIO 1: UPDATE existing annotation (text or drawing)
+        if (activeAnnotation) {
+             const docRef = doc(firestore, `users/${user.uid}/annotations`, activeAnnotation.id);
+             setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+        
+        // SCENARIO 2: CREATE new TEXT annotation from a selection
+        } else if (selection) {
             const { range, verseNum } = selection;
             const verseElement = range.startContainer.parentElement?.closest('[data-verse-number]');
             if (!verseElement) return;
-
+            
+            // This logic calculates the start/end offsets relative to the verse text content, excluding the verse number
             const supLength = verseElement.querySelector('sup')?.textContent?.length || 0;
             const preSelectionRange = document.createRange();
             preSelectionRange.selectNodeContents(verseElement);
@@ -69,7 +75,9 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
             const start = preSelectionRange.toString().length - supLength;
             
             const text = range.toString();
-            if (!text.trim() && !data.note) return;
+             // Prevent creating empty annotations unless a note is being added
+            if (!text.trim() && data.note === undefined) return;
+
             const end = start + text.length;
 
             const newAnnotation: Omit<Annotation, 'id'> = {
@@ -78,19 +86,16 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
                 book: bookId,
                 chapter: chapterNum,
                 verse: parseInt(verseNum),
-                start: start || 0,
-                end: end || 0,
-                text: text || '',
+                start: start >= 0 ? start : 0,
+                end: end,
+                text: text,
                 ...data
             };
             const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
             setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() });
         
-        } else if (annotationToUpdate) { // Update existing annotation
-             const docRef = doc(firestore, `users/${user.uid}/annotations`, annotationToUpdate.id);
-             setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
-        
-        } else if (data.drawingDataUrl) { // Create new drawing annotation
+        // SCENARIO 3: CREATE new DRAWING annotation
+        } else if (data.drawingDataUrl) {
             const newAnnotation: Omit<Annotation, 'id'> = {
                 userId: user.uid,
                 translation: translationId,
@@ -98,23 +103,6 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
                 chapter: chapterNum,
                 verse: 0, // Chapter-level drawing
                 text: 'Handwritten Note',
-                ...data
-            };
-            const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
-            setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() });
-        } else if (!activeAnnotation && selection && data.note === '') { // creating a note from scratch
-             const { range, verseNum } = selection;
-             const text = range.toString();
-             const end = (selection.range.startOffset || 0) + text.length;
-              const newAnnotation: Omit<Annotation, 'id'> = {
-                userId: user.uid,
-                translation: translationId,
-                book: bookId,
-                chapter: chapterNum,
-                verse: parseInt(verseNum),
-                start: selection.range.startOffset || 0,
-                end: end || 0,
-                text: text || '',
                 ...data
             };
             const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
