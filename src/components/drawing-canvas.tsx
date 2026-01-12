@@ -21,30 +21,31 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
         createOrUpdateAnnotation, 
         saveDrawing,
         isErasing,
-        setIsErasing,
         activeAnnotation,
         setActiveAnnotation,
     } = useAnnotationContext();
     const [isDrawing, setIsDrawing] = useState(false);
     const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
-    const [hasDrawingContent, setHasDrawingContent] = useState(false);
-    const [drawingBuffer, setDrawingBuffer] = useState<ImageData | null>(null);
 
-    const drawExisting = useCallback(() => {
-        if (!ctx || !canvasRef.current) return;
-        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); 
+    const drawExisting = useCallback((context: CanvasRenderingContext2D | null = ctx) => {
+        if (!context || !canvasRef.current) return;
+        context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); 
 
-        existingDrawings.forEach(d => {
+        const drawingsToRender = isErasing && activeAnnotation
+            ? existingDrawings.filter(d => d.id === activeAnnotation.id)
+            : existingDrawings;
+
+        drawingsToRender.forEach(d => {
             if (d.drawingDataUrl) {
                 const img = new Image();
                 img.onload = () => {
-                    ctx.drawImage(img, 0, 0);
+                    context.drawImage(img, 0, 0);
                 }
                 img.src = d.drawingDataUrl;
             }
         });
-    }, [ctx, existingDrawings]);
-
+    }, [ctx, existingDrawings, isErasing, activeAnnotation]);
+    
     // Effect to handle resizing of the canvas to match container
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -63,9 +64,12 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
             canvas.width = container.offsetWidth;
             canvas.height = container.offsetHeight;
             
-            if (ctx) {
-                ctx.drawImage(tempCanvas, 0, 0);
-                drawExisting();
+            // We must re-get the context after resizing
+            const newCtx = canvas.getContext('2d');
+            if (newCtx) {
+                setCtx(newCtx); // Update the state with the new context
+                newCtx.drawImage(tempCanvas, 0, 0); // Restore previous drawing
+                drawExisting(newCtx); // Redraw existing annotations with the new context
             }
         });
 
@@ -74,28 +78,29 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
         // Initial size set
         canvas.width = container.offsetWidth;
         canvas.height = container.offsetHeight;
-        drawExisting();
-
+        const initialCtx = canvas.getContext('2d');
+        if (initialCtx) {
+          setCtx(initialCtx);
+          drawExisting(initialCtx);
+        }
 
         return () => resizeObserver.disconnect();
-    }, [containerRef, ctx, drawExisting]);
+    }, [containerRef, drawExisting]);
+
 
      useEffect(() => {
-        if (ctx) {
-            ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
-            drawExisting();
-        }
-    }, [existingDrawings, ctx, drawExisting]);
+        drawExisting();
+    }, [existingDrawings, drawExisting, isErasing, activeAnnotation]);
 
     // Setup canvas context and properties
     useEffect(() => {
-        if (canvasRef.current) {
+        if (canvasRef.current && !ctx) {
             const context = canvasRef.current.getContext('2d');
             if (context) {
                 setCtx(context);
             }
         }
-    }, []);
+    }, [ctx]);
 
     useEffect(() => {
         if (ctx) {
@@ -126,13 +131,13 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
 
     const startDrawing = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!isDrawingMode || !ctx) return;
-        event.preventDefault();
-
-        // If eraser is active and there's a selected drawing, start a buffer
-        if (isErasing && activeAnnotation && activeAnnotation.drawingDataUrl) {
-            const buffer = ctx.getImageData(0, 0, canvasRef.current!.width, canvasRef.current!.height);
-            setDrawingBuffer(buffer);
+        
+        // Prevent drawing if eraser is active but no drawing is selected
+        if (isErasing && !activeAnnotation) {
+            return;
         }
+
+        event.preventDefault();
 
         setIsDrawing(true);
         const { x, y } = getCoords(event.nativeEvent);
@@ -143,7 +148,6 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
     const draw = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!isDrawing || !isDrawingMode || !ctx) return;
         event.preventDefault();
-        setHasDrawingContent(true);
         const { x, y } = getCoords(event.nativeEvent);
         ctx.lineTo(x, y);
         ctx.stroke();
@@ -158,44 +162,43 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
     
     // Effect to handle saving
     useEffect(() => {
-        if (saveDrawing && canvasRef.current) {
+        if (saveDrawing && canvasRef.current && ctx) {
             const dataUrl = canvasRef.current.toDataURL('image/png');
             
-            if (hasDrawingContent) {
-                if (isErasing && activeAnnotation) {
-                    // If we were erasing an existing drawing, update it.
-                    createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
-                } else if (!isErasing) {
+            if (isErasing && activeAnnotation) {
+                // If we were erasing an existing drawing, update it.
+                createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
+            } else if (!isErasing) {
+                // Clear the canvas except for existing drawings
+                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                drawExisting();
+
+                // Draw the new content on a temporary canvas
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvasRef.current.width;
+                tempCanvas.height = canvasRef.current.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                if (tempCtx) {
+                    tempCtx.drawImage(canvasRef.current, 0, 0);
+                    const newDrawingUrl = tempCanvas.toDataURL('image/png');
                     // If we were drawing something new, create a new annotation.
-                    createOrUpdateAnnotation({ drawingDataUrl: dataUrl }, chapterData);
+                    createOrUpdateAnnotation({ drawingDataUrl: newDrawingUrl }, chapterData);
                 }
             }
             
-            // Reset state
-            setHasDrawingContent(false);
             setSaveDrawing(false);
-            if (ctx) {
-                // We don't clear here to allow multiple drawing strokes before saving.
-                // It will be cleared when the component re-renders with new existingDrawings.
-            }
-            setDrawingBuffer(null);
         } else if (saveDrawing) {
-            // If save was triggered but there's no new content (e.g., just toggling mode)
-            if (isErasing && drawingBuffer && ctx) {
-                 ctx.putImageData(drawingBuffer, 0, 0); // Restore if canceled
-            }
             setSaveDrawing(false);
-            setDrawingBuffer(null);
         }
-    }, [saveDrawing, setSaveDrawing, createOrUpdateAnnotation, chapterData, hasDrawingContent, ctx, drawExisting, isErasing, activeAnnotation, setActiveAnnotation, drawingBuffer, setIsErasing]);
+    }, [saveDrawing, setSaveDrawing, createOrUpdateAnnotation, chapterData, ctx, isErasing, activeAnnotation, drawExisting]);
     
      // Handle clicking on a drawing to select it for erasing
     const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-        if (isDrawingMode || !ctx) return;
+        if (!isErasing || !ctx || !canvasRef.current) return;
         const { x, y } = getCoords(event.nativeEvent);
 
-        // Find which drawing was clicked by checking pixel data
-        let clickedAnnotation = null;
+        let clickedAnnotation: Annotation | null = null;
+        // Iterate backwards to select the top-most drawing
         for (let i = existingDrawings.length - 1; i >= 0; i--) {
             const d = existingDrawings[i];
             if (!d.drawingDataUrl) continue;
@@ -205,8 +208,8 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
             if(!tempCtx) continue;
             const img = new Image();
             img.src = d.drawingDataUrl;
-            tempCanvas.width = canvasRef.current!.width;
-            tempCanvas.height = canvasRef.current!.height;
+            tempCanvas.width = canvasRef.current.width;
+            tempCanvas.height = canvasRef.current.height;
             tempCtx.drawImage(img, 0, 0);
 
             const pixel = tempCtx.getImageData(x, y, 1, 1).data;
@@ -215,6 +218,7 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
                 break;
             }
         }
+        
         setActiveAnnotation(clickedAnnotation);
     };
 
@@ -238,3 +242,5 @@ export function DrawingCanvas({ containerRef, existingDrawings, chapterData }: D
         />
     );
 }
+
+    
