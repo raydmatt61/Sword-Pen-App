@@ -1,11 +1,5 @@
 
 
-export type Translation = {
-    id: string;
-    name: string;
-    englishName: string;
-};
-
 export type Book = {
     id: string;
     commonName: string;
@@ -23,11 +17,6 @@ export const BIBLE_BOOKS_ABBR: Record<string, string> = {
 };
 
 export const BIBLE_BOOKS = Object.keys(BIBLE_BOOKS_ABBR);
-
-export const TRANSLATIONS: Translation[] = [
-  { id: 'BSB', name: 'Berean Standard Bible', englishName: 'Berean Standard Bible' },
-  { id: 'WEB', name: 'World English Bible', englishName: 'World English Bible' },
-];
 
 export type VerseContent = string | { type: 'word'; text: string };
 export type ChapterContentItem = 

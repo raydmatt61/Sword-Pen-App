@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book } from '@/lib/bible';
-import { BIBLE_BOOKS_ABBR, TRANSLATIONS } from '@/lib/bible';
+import { BIBLE_BOOKS_ABBR } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
@@ -19,18 +19,17 @@ import { AnnotationProvider } from '@/contexts/annotation-context';
 async function getChapter(
   book: string,
   chapter: string,
-  translation: string
 ): Promise<BibleChapterResponse | null> {
   let attempts = 0;
   const maxRetries = 3;
   const delay = 1000; // 1 second
-  const effectiveTranslation = TRANSLATIONS.find(t => t.id === translation) ? translation : 'BSB';
+  const translation = 'BSB';
 
   while (attempts < maxRetries) {
     try {
       const bookId = BIBLE_BOOKS_ABBR[book] || book;
       const response = await fetch(
-        `https://bible.helloao.org/api/${effectiveTranslation}/${bookId}/${chapter}.json`
+        `https://bible.helloao.org/api/${translation}/${bookId}/${chapter}.json`
       );
 
       if (response.ok) {
@@ -41,12 +40,11 @@ async function getChapter(
                 return data;
             }
         } else {
-             console.error(`API Error: Expected JSON but received ${contentType} for ${effectiveTranslation}/${bookId}/${chapter}`);
-             // If we get HTML, it's likely a 404 or other error page, so we should stop retrying for this specific case.
+             console.error(`API Error: Expected JSON but received ${contentType} for ${translation}/${bookId}/${chapter}`);
              break;
         }
       } else {
-        console.error(`API Error for ${effectiveTranslation}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
+        console.error(`API Error for ${translation}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error('Failed to fetch chapter (attempt ' + (attempts + 1) + '):', error);
@@ -64,7 +62,6 @@ async function getChapter(
 
 async function fetchBooksForTranslation(): Promise<Book[] | null> {
     try {
-        // Always fetch from BSB as it's the most reliable source for the book list
         const booksRes = await fetch(`https://bible.helloao.org/api/BSB/books.json`);
         if (!booksRes.ok) {
             console.error(`Failed to fetch books for BSB: ${booksRes.status}`);
@@ -89,10 +86,10 @@ async function getBooks(): Promise<Book[]> {
     return books || [];
 }
 
-function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslation }) {
+function PageContent({ books, chapterData, initialBook, initialChapter }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const providerKey = `${initialBook}-${initialChapter}-${initialTranslation}`;
+  const providerKey = `${initialBook}-${initialChapter}`;
   
   useEffect(() => {
     // Scroll to top when book or chapter changes
@@ -124,9 +121,8 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
 
         <div className="sticky top-0 z-20 grid grid-cols-1 md:grid-cols-2 gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
           <VerseSelector
-              defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslation }}
+              defaultValues={{ book: initialBook, chapter: initialChapter }}
               books={books}
-              translations={TRANSLATIONS}
           />
           {chapterData && <AnnotationWrapper chapterData={chapterData} />}
         </div>
@@ -136,8 +132,8 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
             <Card className="mt-6 animate-in fade-in duration-500">
               <CardContent className="pt-6">
                 <p className="text-center text-muted-foreground">
-                  Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span> in the <span className="font-bold">{initialTranslation}</span> translation.
-                  This may be due to a network issue or the translation not being available for this book. Please try a different selection.
+                  Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span>.
+                  This may be due to a network issue. Please try a different selection.
                 </p>
               </CardContent>
             </Card>
@@ -150,7 +146,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
   );
 }
 
-function ChapterLoader({ book, chapter, translation }) {
+function ChapterLoader({ book, chapter }) {
   const [books, setBooks] = useState<Book[]>([]);
   const [chapterData, setChapterData] = useState<BibleChapterResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -159,13 +155,13 @@ function ChapterLoader({ book, chapter, translation }) {
     async function loadData() {
       setIsLoading(true);
       const booksData = await getBooks();
-      const chapterContent = await getChapter(book, chapter, translation);
+      const chapterContent = await getChapter(book, chapter);
       setBooks(booksData);
       setChapterData(chapterContent);
       setIsLoading(false);
     }
     loadData();
-  }, [book, chapter, translation]);
+  }, [book, chapter]);
 
   if (isLoading) {
     return (
@@ -199,16 +195,15 @@ function ChapterLoader({ book, chapter, translation }) {
     );
   }
 
-  return <PageContent books={books} chapterData={chapterData} initialBook={book} initialChapter={chapter} initialTranslation={translation} />;
+  return <PageContent books={books} chapterData={chapterData} initialBook={book} initialChapter={chapter} />;
 }
 
 function PageWithSearchParams() {
   const searchParams = useSearchParams();
   const book = searchParams.get('book') || 'John';
   const chapter = searchParams.get('chapter') || '1';
-  const translation = searchParams.get('translation') || 'BSB';
 
-  return <ChapterLoader book={book} chapter={chapter} translation={translation} />
+  return <ChapterLoader book={book} chapter={chapter} />
 }
 
 export default function Home() {

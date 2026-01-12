@@ -6,7 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Book, Translation } from '@/lib/bible';
+import type { Book } from '@/lib/bible';
 import { Search, ChevronLeft, ChevronRight, Rewind, BookOpenCheck } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
@@ -19,17 +19,14 @@ const PREVIOUS_LOCATION_KEY = 'previousBibleLocation';
 type BibleLocation = {
     book: string;
     chapter: string;
-    translation: string;
 };
 
 export function VerseSelector({ 
     defaultValues, 
     books,
-    translations
 }: { 
-    defaultValues: { book: string; chapter: string; translation: string }, 
+    defaultValues: { book: string; chapter: string; }, 
     books: Book[],
-    translations: Translation[]
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -37,7 +34,6 @@ export function VerseSelector({
   
   const [book, setBook] = useState(defaultValues.book);
   const [chapter, setChapter] = useState(defaultValues.chapter);
-  const [translation, setTranslation] = useState(defaultValues.translation);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   
   const isMobile = useIsMobile();
@@ -55,7 +51,6 @@ export function VerseSelector({
   useEffect(() => {
     setBook(defaultValues.book);
     setChapter(defaultValues.chapter);
-    setTranslation(defaultValues.translation);
   }, [defaultValues]);
   
   const maxChapters = books.find(b => b.commonName === book)?.numberOfChapters || 1;
@@ -64,13 +59,12 @@ export function VerseSelector({
     const currentLocation = {
         book: searchParams.get('book') || defaultValues.book,
         chapter: searchParams.get('chapter') || defaultValues.chapter,
-        translation: searchParams.get('translation') || 'BSB',
     };
     sessionStorage.setItem(PREVIOUS_LOCATION_KEY, JSON.stringify(currentLocation));
     setPreviousLocation(currentLocation);
   };
 
-  const navigate = useCallback((newValues: { book?: string; chapter?: string; translation?: string }) => {
+  const navigate = useCallback((newValues: { book?: string; chapter?: string; }) => {
     saveCurrentLocationAsPrevious();
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     for (const [key, value] of Object.entries(newValues)) {
@@ -108,7 +102,7 @@ export function VerseSelector({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate({ book, chapter, translation });
+    navigate({ book, chapter });
     setIsSheetOpen(false);
   };
   
@@ -116,7 +110,7 @@ export function VerseSelector({
      <form onSubmit={handleSubmit}>
         <div className="flex flex-col gap-2">
             <div className="grid grid-cols-[1fr_min-content] gap-2">
-                 <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                 <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-2">
                     <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
                         <SelectTrigger id="book" aria-label="Book">
                             <SelectValue placeholder="Select book" />
@@ -134,16 +128,6 @@ export function VerseSelector({
                         <SelectContent>
                         {Array.from({ length: maxChapters }, (_, i) => i + 1).map(chapNum => (
                             <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={translation} onValueChange={(newTranslation) => setTranslation(newTranslation)}>
-                        <SelectTrigger id="translation" aria-label="Translation">
-                            <SelectValue placeholder="Tr." />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {translations.map(t => (
-                            <SelectItem key={t.id} value={t.id}>{t.id}</SelectItem>
                         ))}
                         </SelectContent>
                     </Select>
@@ -243,7 +227,7 @@ export function VerseSelector({
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
                 <Button variant="outline" className="w-full">
-                    {defaultValues.book} {defaultValues.chapter} ({defaultValues.translation})
+                    {defaultValues.book} {defaultValues.chapter} (BSB)
                 </Button>
             </SheetTrigger>
             <SheetContent side="bottom">
