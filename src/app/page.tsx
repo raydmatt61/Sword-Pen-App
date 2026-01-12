@@ -21,12 +21,13 @@ async function getChapter(
   let attempts = 0;
   const maxRetries = 3;
   const delay = 1000; // 1 second
+  const effectiveTranslation = TRANSLATIONS.find(t => t.id === translation) ? translation : 'BSB';
 
   while (attempts < maxRetries) {
     try {
       const bookId = BIBLE_BOOKS_ABBR[book] || book;
       const response = await fetch(
-        `https://bible.helloao.org/api/${translation}/${bookId}/${chapter}.json`
+        `https://bible.helloao.org/api/${effectiveTranslation}/${bookId}/${chapter}.json`
       );
 
       if (response.ok) {
@@ -37,12 +38,12 @@ async function getChapter(
                 return data;
             }
         } else {
-             console.error(`API Error: Expected JSON but received ${contentType} for ${translation}/${bookId}/${chapter}`);
+             console.error(`API Error: Expected JSON but received ${contentType} for ${effectiveTranslation}/${bookId}/${chapter}`);
              // If we get HTML, it's likely a 404 or other error page, so we should stop retrying for this specific case.
              break;
         }
       } else {
-        console.error(`API Error for ${translation}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
+        console.error(`API Error for ${effectiveTranslation}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error('Failed to fetch chapter (attempt ' + (attempts + 1) + '):', error);
@@ -58,11 +59,11 @@ async function getChapter(
   return null;
 }
 
-async function fetchBooksForTranslation(translation: string): Promise<Book[] | null> {
+async function fetchBooksForTranslation(): Promise<Book[] | null> {
     try {
-        const booksRes = await fetch(`https://bible.helloao.org/api/${translation}/books.json`);
+        const booksRes = await fetch(`https://bible.helloao.org/api/BSB/books.json`);
         if (!booksRes.ok) {
-            console.error(`Failed to fetch books for ${translation}: ${booksRes.status}`);
+            console.error(`Failed to fetch books for BSB: ${booksRes.status}`);
             return null;
         }
         const contentType = booksRes.headers.get("content-type");
@@ -70,22 +71,17 @@ async function fetchBooksForTranslation(translation: string): Promise<Book[] | n
             const booksData = await booksRes.json();
             return booksData.books || null;
         } else {
-            console.error(`Expected JSON for books list but received ${contentType} for ${translation}`);
+            console.error(`Expected JSON for books list but received ${contentType} for BSB`);
             return null;
         }
     } catch (error) {
-        console.error(`Error fetching books for ${translation}:`, error);
+        console.error(`Error fetching books for BSB:`, error);
         return null;
     }
 }
 
-async function getBooks(translation: string): Promise<Book[]> {
-    let books = await fetchBooksForTranslation(translation);
-    // Fallback to BSB if the primary fetch fails
-    if (!books) {
-        console.log(`Could not fetch book list for ${translation}, falling back to BSB.`);
-        books = await fetchBooksForTranslation('BSB');
-    }
+async function getBooks(): Promise<Book[]> {
+    const books = await fetchBooksForTranslation();
     return books || [];
 }
 
@@ -151,7 +147,7 @@ function ChapterLoader({ book, chapter, translation }) {
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const booksData = await getBooks(translation);
+      const booksData = await getBooks();
       const chapterContent = await getChapter(book, chapter, translation);
       setBooks(booksData);
       setChapterData(chapterContent);
