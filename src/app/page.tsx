@@ -150,17 +150,19 @@ function ChapterLoader({ book, chapter, translationId }) {
   const [chapterData, setChapterData] = useState<BibleChapterResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const effectiveTranslationId = TRANSLATIONS.find(t => t.id === translationId)?.id || TRANSLATIONS[0].id;
+
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const booksData = await getBooks(translationId);
-      const chapterContent = await getChapter(book, chapter, translationId);
+      const booksData = await getBooks(effectiveTranslationId);
+      const chapterContent = await getChapter(book, chapter, effectiveTranslationId);
       setBooks(booksData);
       setChapterData(chapterContent);
       setIsLoading(false);
     }
     loadData();
-  }, [book, chapter, translationId]);
+  }, [book, chapter, effectiveTranslationId]);
 
   if (isLoading) {
     return (
@@ -177,6 +179,7 @@ function ChapterLoader({ book, chapter, translationId }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+              <Skeleton className="h-10 w-10" />
               <Skeleton className="h-10 w-10" />
               <Skeleton className="h-10 w-24" />
           </div>
