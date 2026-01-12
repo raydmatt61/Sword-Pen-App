@@ -107,7 +107,6 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
       <main className="flex flex-col h-screen">
         <header className="flex items-center justify-between border-b p-2 md:p-4">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="The Sword & Pen logo" width={32} height={32} />
             <div>
               <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
                 The Sword & Pen
@@ -182,7 +181,6 @@ function ChapterLoader({ book, chapter, translation }) {
       <main className="flex flex-col h-screen">
          <header className="flex items-center justify-between border-b p-2 md:p-4">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="The Sword & Pen logo" width={32} height={32} />
             <div>
               <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
                 The Sword & Pen
