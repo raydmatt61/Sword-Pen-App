@@ -26,7 +26,7 @@ export const BIBLE_BOOKS = Object.keys(BIBLE_BOOKS_ABBR);
 
 export const TRANSLATIONS: Translation[] = [
   { id: 'BSB', name: 'Berean Standard Bible', englishName: 'Berean Standard Bible' },
-  { id: 'NET', name: 'New English Translation', englishName: 'New English Translation' },
+  { id: 'NET-notes', name: 'New English Translation (NET)', englishName: 'New English Translation' },
 ];
 
 export type VerseContent = string | { type: 'word'; text: string };
@@ -56,9 +56,9 @@ export type Annotation = {
   book: string;
   chapter: number;
   verse: number;
-  start?: number;
-  end?: number;
-  text?: string;
+  start: number;
+  end: number;
+  text: string;
   note?: string;
   highlight?: string;
   underline?: string;
