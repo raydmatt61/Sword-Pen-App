@@ -74,6 +74,10 @@
         "underline": {
           "type": "string",
           "description": "Underline style applied to the selected text (e.g., ul-red, ul-purple)."
+        },
+        "drawingDataUrl": {
+          "type": "string",
+          "description": "A data URL representing a user's handwritten drawing on the text."
         }
       },
       "required": [
@@ -82,10 +86,7 @@
         "translation",
         "book",
         "chapter",
-        "verse",
-        "start",
-        "end",
-        "text"
+        "verse"
       ]
     }
   },

@@ -1,4 +1,5 @@
 
+
 export type Translation = {
     id: string;
     name: string;
@@ -54,12 +55,13 @@ export type Annotation = {
   book: string;
   chapter: number;
   verse: number;
-  start: number;
-  end: number;
-  text: string;
+  start?: number;
+  end?: number;
+  text?: string;
   note?: string;
   highlight?: string;
   underline?: string;
+  drawingDataUrl?: string;
   createdAt?: any;
   updatedAt?: any;
 };

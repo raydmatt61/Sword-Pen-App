@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { type Annotation, type BibleChapterResponse, type ChapterContentItem } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,7 @@ import Balancer from 'react-wrap-balancer';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { DrawingCanvas } from './drawing-canvas';
 
 
 function VerseComponent({
@@ -20,7 +21,7 @@ function VerseComponent({
     annotations: Annotation[];
     onAnnotationClick: (annotation: Annotation) => void;
 }) {
-    const { fontSize } = useAnnotationContext();
+    const { fontSize, isDrawingMode } = useAnnotationContext();
     const verseText = useMemo(() => verse.content.map(c => typeof c === 'string' ? c : (c.text || '')).join(''), [verse.content]);
     
     const renderedContent = useMemo(() => {
@@ -29,6 +30,9 @@ function VerseComponent({
         const parts: React.ReactNode[] = [];
 
         sortedAnnotations.forEach((annotation) => {
+            // Don't render drawing annotations inline
+            if(annotation.drawingDataUrl) return;
+
             if (annotation.start > lastIndex) {
                 parts.push(verseText.substring(lastIndex, annotation.start));
             }
@@ -52,6 +56,8 @@ function VerseComponent({
     }, [verseText, annotations, onAnnotationClick]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
+        if(isDrawingMode) return;
+        
         const supElement = event.currentTarget;
         const pElement = supElement.parentElement;
         if (!pElement) return;
@@ -99,9 +105,12 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     const { 
         setSelection,
         setActiveAnnotation,
+        isDrawingMode,
     } = useAnnotationContext();
     const { user } = useUser();
     const firestore = useFirestore();
+    const bibleContentRef = useRef<HTMLDivElement>(null);
+
 
     const bookId = chapterData.book.id;
     const chapterNum = chapterData.chapter.number;
@@ -119,16 +128,27 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         const annotationMap: Record<string, Annotation[]> = {};
         annotations.filter(a => a.book === bookId && a.chapter === chapterNum && a.translation === translationId)
         .forEach(a => {
-            if (!annotationMap[a.verse]) {
-                annotationMap[a.verse] = [];
+            const key = a.verse === 0 ? 'chapter' : String(a.verse);
+            if (!annotationMap[key]) {
+                annotationMap[key] = [];
             }
-            annotationMap[a.verse].push(a);
+            annotationMap[key].push(a);
         });
         return annotationMap;
     }, [annotations, bookId, chapterNum, translationId]);
 
+    const drawingAnnotations = useMemo(() => {
+        if (!annotations) return [];
+        return annotations.filter(a => a.book === bookId && a.chapter === chapterNum && a.translation === translationId && a.drawingDataUrl)
+    }, [annotations, bookId, chapterNum, translationId]);
+
+
     const handleTextSelect = () => {
-        if (!user) return;
+        if (!user || isDrawingMode) {
+             if (window.getSelection()) window.getSelection()?.removeAllRanges();
+             setSelection(null);
+             return;
+        }
         const sel = window.getSelection();
 
         if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
@@ -168,23 +188,28 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         return () => {
             document.removeEventListener('selectionchange', handleTextSelect);
         };
-    }, [user, setSelection, setActiveAnnotation]); // Rerun if user changes
+    }, [user, setSelection, setActiveAnnotation, isDrawingMode]); // Rerun if user changes
     
     const handleAnnotationClick = (annotation: Annotation) => {
+        if(isDrawingMode) return;
         setActiveAnnotation(annotation);
     };
     
     const fullReference = `${chapterData.book.name} ${chapterData.chapter.number}`;
 
     return (
-        <div className="pt-4">
+        <div className="pt-4 relative">
+            <DrawingCanvas 
+                containerRef={bibleContentRef}
+                existingDrawings={drawingAnnotations}
+            />
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
                         <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-2 select-text bible-content">
+                    <div ref={bibleContentRef} className={cn("space-y-2 select-text bible-content", isDrawingMode && 'select-none')}>
                             {chapterData.chapter.content.map((item, index) => {
                             if (item.type === 'heading') {
                                 return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 select-none"><Balancer>{item.content.join(' ')}</Balancer></h4>

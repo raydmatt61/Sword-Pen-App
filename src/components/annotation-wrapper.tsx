@@ -29,7 +29,8 @@ const underlineColors = [
     { class: 'ul-orange', color: '#fb8c00' },
 ];
 
-function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete }) {
+function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw }) {
+    const { isDrawingMode, setIsDrawingMode } = useAnnotationContext();
     return (
         <div className="flex items-center justify-center gap-1 p-1 bg-background border rounded-lg shadow-md w-full">
             <Popover>
@@ -55,6 +56,7 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete }) {
                 </PopoverContent>
             </Popover>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNote}><StickyNote /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDraw} data-active={isDrawingMode}><Pencil /></Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 /></Button>
         </div>
     )
@@ -68,6 +70,8 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
     const {
         selection, setSelection,
         activeAnnotation, setActiveAnnotation,
+        isDrawingMode, setIsDrawingMode,
+        setSaveDrawing,
     } = useAnnotationContext();
 
     const [isEditingNote, setIsEditingNote] = useState(false);
@@ -86,18 +90,24 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         setSelection(null);
         setNote('');
         setIsEditingNote(false);
+        setIsDrawingMode(false);
     };
 
     const createOrUpdateAnnotation = async (data: Partial<Omit<Annotation, 'id' | 'userId'>>) => {
         if (!user || !firestore) return;
         
+        // Disallow updates if in drawing mode but not saving a drawing
+        if (isDrawingMode && !data.drawingDataUrl) return;
+
         let annotationToUpdate: Annotation | null = activeAnnotation;
 
+        // If there's no active annotation, but we have a selection, create a new one.
         if (!annotationToUpdate && selection) {
             const { range, verseNum } = selection;
             const verseElement = range.startContainer.parentElement?.closest('[data-verse-number]');
             if (!verseElement) return;
-
+            
+            // This is a new annotation based on text selection
             const allText = Array.from(verseElement.childNodes).map(node => node.textContent).join('');
             const supLength = verseElement.querySelector('sup')?.textContent?.length || 0;
             const preSelectionRange = document.createRange();
@@ -106,28 +116,48 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
             const start = preSelectionRange.toString().length - supLength;
             
             const text = range.toString();
+            if (!text && !data.drawingDataUrl) return; // Don't create empty annotations
             const end = start + text.length;
 
-            const newAnnotation: Omit<Annotation, 'id'> = {
+            const newAnnotation: Omit<Annotation, 'id' | 'userId'> = {
                 userId: user.uid,
                 translation: translationId,
                 book: bookId,
                 chapter: chapterNum,
                 verse: parseInt(verseNum),
-                start,
-                end,
-                text,
+                start: start || 0,
+                end: end || 0,
+                text: text || '',
                 ...data
             };
 
             const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
             setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() });
-            resetAnnotationState();
+
         } else if (annotationToUpdate) {
+            // We're updating an existing annotation
              const docRef = doc(firestore, `users/${user.uid}/annotations`, annotationToUpdate.id);
              setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
-             resetAnnotationState();
+        } else if (data.drawingDataUrl && !annotationToUpdate && !selection) {
+            // This is a new drawing annotation without a text selection, attached to the whole chapter
+            const newAnnotation: Omit<Annotation, 'id' | 'userId'> = {
+                userId: user.uid,
+                translation: translationId,
+                book: bookId,
+                chapter: chapterNum,
+                verse: 0, // Indicates chapter-level drawing
+                start: 0,
+                end: 0,
+                text: 'Handwritten Note',
+                ...data
+            };
+            const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
+            setDocumentNonBlocking(newDocRef, { ...newAnnotation, createdAt: serverTimestamp() });
+        } else {
+            return; // No valid condition to create or update
         }
+
+        resetAnnotationState();
     };
 
     const handleDeleteAnnotation = () => {
@@ -152,6 +182,16 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         setNote(activeAnnotation?.note || '');
         setIsEditingNote(false);
     }
+    
+    const handleDrawingMode = () => {
+        setSelection(null);
+        setActiveAnnotation(null);
+        setIsDrawingMode(!isDrawingMode);
+    }
+
+    const handleSaveDrawing = () => {
+        setSaveDrawing(true); // This will trigger the canvas to save
+    }
 
     // Effect to update local note state when active annotation changes
     useEffect(() => {
@@ -159,8 +199,9 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
             setNote(activeAnnotation.note || '');
             setIsEditingNote(false);
             setSelection(null);
+            setIsDrawingMode(false); // Turn off drawing mode when an annotation is clicked
         }
-    }, [activeAnnotation, setSelection]);
+    }, [activeAnnotation, setSelection, setIsDrawingMode]);
 
     return (
         <Card>
@@ -168,7 +209,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                 <CardTitle className="font-headline text-xl">
                     Annotation
                 </CardTitle>
-                {(activeAnnotation || selection) && (
+                {(activeAnnotation || selection || isDrawingMode) && (
                     <Button variant="ghost" size="icon" onClick={resetAnnotationState} className="h-6 w-6">
                         <X className="h-4 w-4" />
                         <span className="sr-only">Close annotation</span>
@@ -177,15 +218,26 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
             </CardHeader>
             <CardContent className="p-2 md:p-4">
                  {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
-                 !activeAnnotation && !selection ? <p className="text-sm text-muted-foreground">Select text or an annotation to see details.</p> :
+                 isDrawingMode ? (
+                     <div className="flex flex-col gap-2">
+                        <p className="text-sm text-primary font-bold font-headline">Drawing Mode</p>
+                        <p className="text-xs text-muted-foreground">Draw directly on the text. Your drawing will be saved as a new annotation for this chapter.</p>
+                        <Button onClick={handleSaveDrawing} size="sm"><Save className="mr-2"/>Save Drawing</Button>
+                    </div>
+                 ) :
+                 !activeAnnotation && !selection ? <p className="text-sm text-muted-foreground">Select text, an annotation, or enter drawing mode.</p> :
                  !activeAnnotation && selection ? <p className="font-bold font-headline text-primary">New selection in v. {selection.verseNum}</p> :
                  activeAnnotation ?
                  (
                     <div className="flex flex-col gap-2">
-                        <p className="font-bold font-headline text-primary text-sm">{fullReference}:{activeAnnotation.verse}</p>
-                        <blockquote className="p-2 border-l-4 border-muted bg-muted/20 rounded-r-lg text-sm">
-                            <Balancer>{activeAnnotation.text}</Balancer>
-                        </blockquote>
+                        {activeAnnotation.text && (
+                            <>
+                                <p className="font-bold font-headline text-primary text-sm">{fullReference}:{activeAnnotation.verse}</p>
+                                <blockquote className="p-2 border-l-4 border-muted bg-muted/20 rounded-r-lg text-sm">
+                                    <Balancer>{activeAnnotation.text}</Balancer>
+                                </blockquote>
+                            </>
+                        )}
                         {isEditingNote ? (
                             <>
                                 <Textarea
@@ -205,11 +257,10 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                                 {activeAnnotation.note ? (
                                     <p className="font-body text-sm p-2 whitespace-pre-wrap">{activeAnnotation.note}</p>
                                 ) : (
-                                    <p className="text-xs text-muted-foreground p-2">No note for this annotation.</p>
+                                   !activeAnnotation.drawingDataUrl && <p className="text-xs text-muted-foreground p-2">No note for this annotation.</p>
                                 )}
                                 <div className="flex flex-col gap-2">
-                                    <Button onClick={() => setIsEditingNote(true)} size="sm" variant="outline"><Pencil className="mr-2"/>{activeAnnotation.note ? 'Edit Note' : 'Add Note'}</Button>
-                                    
+                                    {!activeAnnotation.drawingDataUrl && <Button onClick={() => setIsEditingNote(true)} size="sm" variant="outline"><Pencil className="mr-2"/>{activeAnnotation.note ? 'Edit Note' : 'Add Note'}</Button>}
                                 </div>
                             </>
                         )}
@@ -224,7 +275,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                  : null
                  }
             </CardContent>
-             {(selection || activeAnnotation) && (
+             {(selection || activeAnnotation || isDrawingMode) && user && (
                <CardFooter ref={toolbarRef} className="p-2">
                    <AnnotationToolbar 
                        onHighlight={(style) => createOrUpdateAnnotation({ highlight: style || undefined })}
@@ -236,6 +287,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                                createOrUpdateAnnotation({note: ''});
                             }
                        }}
+                       onDraw={handleDrawingMode}
                        onDelete={handleDeleteAnnotation}
                    />
                </CardFooter>
