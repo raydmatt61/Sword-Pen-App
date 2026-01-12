@@ -114,37 +114,37 @@ export function VerseSelector({
     setIsSheetOpen(false);
   };
   
-  const renderControls = () => (
-     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-        <div className="grid grid-cols-2 gap-2 w-full">
-            <div className="space-y-2">
-                <Label htmlFor="book" className="font-headline">Book</Label>
-                <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
-                <SelectTrigger id="book">
-                    <SelectValue placeholder="Select book" />
+  const renderControls = (isMobileLayout = false) => (
+     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className={`grid gap-2 ${isMobileLayout ? 'grid-cols-2' : 'grid-cols-[1fr_auto_auto]'}`}>
+            <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
+              <SelectTrigger id="book" aria-label="Book">
+                  <SelectValue placeholder="Select book" />
+              </SelectTrigger>
+              <SelectContent>
+                  {books.map(b => (
+                  <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <Select value={chapter} onValueChange={(newChapter) => setChapter(newChapter)} disabled={books.length === 0}>
+                <SelectTrigger id="chapter" aria-label="Chapter">
+                  <SelectValue placeholder="Ch." />
                 </SelectTrigger>
                 <SelectContent>
-                    {books.map(b => (
-                    <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>
-                    ))}
+                  {Array.from({ length: maxChapters }, (_, i) => i + 1).map(chapNum => (
+                    <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>
+                  ))}
                 </SelectContent>
-                </Select>
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="chapter" className="font-headline">Chapter</Label>
-                <Select value={chapter} onValueChange={(newChapter) => setChapter(newChapter)} disabled={books.length === 0}>
-                  <SelectTrigger id="chapter">
-                    <SelectValue placeholder="Select chapter" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: maxChapters }, (_, i) => i + 1).map(chapNum => (
-                      <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-            </div>
+            </Select>
+             {!isMobileLayout && (
+                 <Button type="submit" className="px-6" disabled={books.length === 0}>
+                    <Search className="h-4 w-4" />
+                    <span className="sr-only">Load</span>
+                </Button>
+             )}
         </div>
-        <div className="flex gap-2 w-full pt-2">
+        <div className="flex gap-2 w-full">
             <Sheet>
               <SheetTrigger asChild>
                 <Button
@@ -208,10 +208,12 @@ export function VerseSelector({
             >
                 <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button type="submit" className="flex-grow" disabled={books.length === 0}>
-                <Search className="mr-2 h-4 w-4" />
-                Load
-            </Button>
+            {isMobileLayout && (
+                <Button type="submit" className="flex-grow" disabled={books.length === 0}>
+                    <Search className="mr-2 h-4 w-4" />
+                    Load
+                </Button>
+            )}
         </div>
     </form>
   );
@@ -238,11 +240,11 @@ export function VerseSelector({
                 <SheetHeader>
                     <SheetTitle>Select a Verse</SheetTitle>
                     <SheetDescription>
-                        Choose a book, chapter, and translation to read.
+                        Choose a book and chapter to read.
                     </SheetDescription>
                 </SheetHeader>
                 <div className="py-4">
-                    {renderControls()}
+                    {renderControls(true)}
                 </div>
             </SheetContent>
         </Sheet>
@@ -252,10 +254,8 @@ export function VerseSelector({
   return (
     <Card className="animate-in fade-in duration-500">
       <CardContent className="pt-6">
-        {renderControls()}
+        {renderControls(false)}
       </CardContent>
     </Card>
   );
 }
-
-    
