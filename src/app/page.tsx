@@ -15,6 +15,7 @@ import { AnnotationWrapper } from '@/components/annotation-wrapper';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
+import Image from 'next/image';
 
 async function getChapter(
   book: string,
@@ -105,13 +106,16 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
     <AnnotationProvider key={providerKey}>
       <main className="flex flex-col h-screen">
         <header className="flex items-center justify-between border-b p-2 md:p-4">
-          <div>
-            <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
-              The Sword & Pen
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1 font-headline">
-              Deepen your Bible study with annotations, notes and AI-powered insights.
-            </p>
+          <div className="flex items-center gap-2">
+            <Image src="/logo.png" alt="The Sword & Pen logo" width={40} height={40} className="hidden md:block" />
+            <div>
+              <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
+                The Sword & Pen
+              </h1>
+              <p className="text-xs text-muted-foreground mt-1 font-headline">
+                Deepen your Bible study with annotations, notes and AI-powered insights.
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {!isMobile && <FontSizeAdjuster />}
@@ -177,13 +181,16 @@ function ChapterLoader({ book, chapter, translation }) {
     return (
       <main className="flex flex-col h-screen">
          <header className="flex items-center justify-between border-b p-2 md:p-4">
-          <div>
-            <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
-              The Sword & Pen
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1 font-headline">
-              Deepen your Bible study with annotations, notes and AI-powered insights.
-            </p>
+          <div className="flex items-center gap-2">
+            <Image src="/logo.png" alt="The Sword & Pen logo" width={40} height={40} className="hidden md:block" />
+            <div>
+              <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
+                The Sword & Pen
+              </h1>
+              <p className="text-xs text-muted-foreground mt-1 font-headline">
+                Deepen your Bible study with annotations, notes and AI-powered insights.
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
               <Skeleton className="h-10 w-10" />
