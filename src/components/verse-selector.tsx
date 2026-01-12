@@ -115,28 +115,30 @@ export function VerseSelector({
   const renderControls = (isMobileLayout = false) => (
      <form onSubmit={handleSubmit}>
         <div className="flex flex-col gap-2">
-            <div className="grid grid-cols-[2fr_1fr_auto] gap-2">
-                <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
-                    <SelectTrigger id="book" aria-label="Book">
-                        <SelectValue placeholder="Select book" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {books.map(b => (
-                        <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>
+            <div className="flex gap-2">
+                <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-2">
+                    <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
+                        <SelectTrigger id="book" aria-label="Book">
+                            <SelectValue placeholder="Select book" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {books.map(b => (
+                            <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={chapter} onValueChange={(newChapter) => setChapter(newChapter)} disabled={books.length === 0}>
+                        <SelectTrigger id="chapter" aria-label="Chapter">
+                        <SelectValue placeholder="Ch." />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {Array.from({ length: maxChapters }, (_, i) => i + 1).map(chapNum => (
+                            <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>
                         ))}
-                    </SelectContent>
-                </Select>
-                <Select value={chapter} onValueChange={(newChapter) => setChapter(newChapter)} disabled={books.length === 0}>
-                    <SelectTrigger id="chapter" aria-label="Chapter">
-                    <SelectValue placeholder="Ch." />
-                    </SelectTrigger>
-                    <SelectContent>
-                    {Array.from({ length: maxChapters }, (_, i) => i + 1).map(chapNum => (
-                        <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>
-                    ))}
-                    </SelectContent>
-                </Select>
-                <Button type="submit" className="px-4" disabled={books.length === 0}>
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <Button type="submit" className="px-4" disabled={books.length === 0}>
                     <Search className="h-4 w-4" />
                     <span className="sr-only">Load</span>
                 </Button>
@@ -252,7 +254,100 @@ export function VerseSelector({
   return (
     <Card className="animate-in fade-in duration-500">
       <CardContent className="pt-6">
-        {renderControls(false)}
+        <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+                 <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-2 flex-grow">
+                    <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
+                        <SelectTrigger id="book" aria-label="Book">
+                            <SelectValue placeholder="Select book" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {books.map(b => (
+                            <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={chapter} onValueChange={(newChapter) => setChapter(newChapter)} disabled={books.length === 0}>
+                        <SelectTrigger id="chapter" aria-label="Chapter">
+                        <SelectValue placeholder="Ch." />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {Array.from({ length: maxChapters }, (_, i) => i + 1).map(chapNum => (
+                            <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <Button type="submit" onClick={handleSubmit} className="px-4" disabled={books.length === 0}>
+                    <Search className="h-4 w-4" />
+                </Button>
+            </div>
+             <div className="flex gap-2 w-full">
+                <Sheet>
+                <SheetTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        type="button"
+                        aria-label="List of Books"
+                        title="View all books and chapters"
+                    >
+                    <BookOpenCheck className="h-4 w-4" />
+                    </Button>
+                </SheetTrigger>
+                <SheetContent>
+                    <SheetHeader>
+                        <SheetTitle>Books of the Bible</SheetTitle>
+                        <SheetDescription>A list of all books and their chapter counts.</SheetDescription>
+                    </SheetHeader>
+                    <ScrollArea className="h-[calc(100%-4rem)] mt-4">
+                        <div className="pr-6">
+                            {books.map((b, index) => (
+                            <div key={b.id}>
+                                <div className="flex justify-between items-center py-2">
+                                    <span className="font-medium">{b.commonName}</span>
+                                    <span className="text-sm text-muted-foreground">{b.numberOfChapters} Chapters</span>
+                                </div>
+                                {index < books.length - 1 && <Separator />}
+                            </div>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                </SheetContent>
+                </Sheet>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    type="button"
+                    onClick={handleGoBack}
+                    disabled={!previousLocation}
+                    aria-label="Previous Location"
+                    title="Go to previous location"
+                >
+                    <Rewind className="h-4 w-4" />
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="icon" 
+                    type="button" 
+                    onClick={() => handleChapterNav('prev')}
+                    disabled={parseInt(chapter) <= 1}
+                    aria-label="Previous Chapter"
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="icon" 
+                    type="button" 
+                    onClick={() => handleChapterNav('next')}
+                    disabled={parseInt(chapter) >= maxChapters}
+                    aria-label="Next Chapter"
+                >
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+        </div>
       </CardContent>
     </Card>
   );

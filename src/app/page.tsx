@@ -92,6 +92,7 @@ async function getBooks(): Promise<Book[]> {
 function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslation }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const providerKey = `${initialBook}-${initialChapter}-${initialTranslation}`;
   
   useEffect(() => {
     // Scroll to top when book or chapter changes
@@ -101,7 +102,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
   }, [initialBook, initialChapter]);
 
   return (
-    <AnnotationProvider>
+    <AnnotationProvider key={providerKey}>
       <main className="flex flex-col h-screen">
         <header className="flex items-center justify-between border-b p-2 md:p-4">
           <div>
@@ -113,18 +114,26 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {isMobile && <FontSizeAdjuster />}
+            {!isMobile && <FontSizeAdjuster />}
             <QrCodeGenerator />
             <AuthManager />
           </div>
         </header>
 
         <div className="sticky top-0 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
-          <VerseSelector
-            defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslation }}
-            books={books}
-            translations={TRANSLATIONS}
-          />
+          <div className="flex items-start gap-4">
+            <div className="flex-grow">
+                 <VerseSelector
+                    defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslation }}
+                    books={books}
+                    translations={TRANSLATIONS}
+                />
+            </div>
+             <div className="flex-shrink-0 pt-2">
+                {isMobile ? <FontSizeAdjuster /> : null}
+            </div>
+          </div>
+         
           {chapterData && <AnnotationWrapper chapterData={chapterData} />}
         </div>
 
