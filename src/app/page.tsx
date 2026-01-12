@@ -1,5 +1,8 @@
 
-import { Suspense } from 'react';
+"use client";
+
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book } from '@/lib/bible';
@@ -55,27 +58,6 @@ async function getChapter(
   return null;
 }
 
-
-function ChapterLoader({
-  book,
-  chapter,
-  translation,
-  children
-}: {
-  book: string;
-  chapter: string;
-  translation: string;
-  children: (chapterData: BibleChapterResponse | null) => React.ReactNode;
-}) {
-  const chapterData = getChapter(book, chapter, translation);
-
-  return (
-    <Suspense fallback={<BibleDisplaySkeleton />}>
-        {children(chapterData)}
-    </Suspense>
-  )
-}
-
 async function getBooks(translation: string): Promise<Book[]> {
   try {
     const booksRes = await fetch(`https://bible.helloao.org/api/${translation}/books.json`);
@@ -97,25 +79,19 @@ async function getBooks(translation: string): Promise<Book[]> {
   }
 }
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams?: {
-    book?: string;
-    chapter?: string;
-    translation?: string;
-  };
-}) {
-  const translation = searchParams?.translation || 'BSB';
-  const book = searchParams?.book || 'John';
-  const chapter = searchParams?.chapter || '1';
-
-  const books = await getBooks(translation);
-  const chapterData = await getChapter(book, chapter, translation);
+function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslation }) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    // Scroll to top when book or chapter changes
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [initialBook, initialChapter]);
 
   return (
     <main className="flex flex-col h-screen">
-       <header className="flex items-center justify-between border-b p-2 md:p-4">
+      <header className="flex items-center justify-between border-b p-2 md:p-4">
         <div>
           <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
             The Sword & Pen
@@ -125,44 +101,102 @@ export default async function Home({
           </p>
         </div>
         <div className="flex items-center gap-2">
-            <QrCodeGenerator />
-            <AuthManager />
+          <QrCodeGenerator />
+          <AuthManager />
         </div>
       </header>
-      
+
       <div className="sticky top-0 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
-        <VerseSelector 
-          defaultValues={{ book, chapter, translation }}
+        <VerseSelector
+          defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslation }}
           books={books}
           translations={TRANSLATIONS}
         />
         {chapterData && <AnnotationWrapper chapterData={chapterData} />}
       </div>
 
-      <div className="flex-grow overflow-y-auto p-4">
-        <Suspense fallback={<BibleDisplaySkeleton />}>
-          <ChapterLoader book={book} chapter={chapter} translation={translation}>
-            {async (chapterDataPromise) => {
-              const chapterData = await chapterDataPromise;
-              if (!chapterData) {
-                const translationName = TRANSLATIONS.find(t => t.id === translation)?.englishName || translation;
-                return (
-                  <Card className="mt-6 animate-in fade-in duration-500">
-                    <CardContent className="pt-6">
-                      <p className="text-center text-muted-foreground">
-                        Could not load chapter <span className="font-bold">{book} {chapter}</span> in the <span className="font-bold">{translationName}</span> translation.
-                        This may be due to a network issue or the translation not being available for this book. Please try a different selection.
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              }
-              return <BibleDisplay chapterData={chapterData} />;
-            }}
-          </ChapterLoader>
-        </Suspense>
+      <div ref={contentRef} className="flex-grow overflow-y-auto p-4">
+        {!chapterData ? (
+          <Card className="mt-6 animate-in fade-in duration-500">
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">
+                Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span> in the <span className="font-bold">{initialTranslation}</span> translation.
+                This may be due to a network issue or the translation not being available for this book. Please try a different selection.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <BibleDisplay chapterData={chapterData} />
+        )}
       </div>
     </main>
+  );
+}
+
+function ChapterLoader({ book, chapter, translation }) {
+  const [books, setBooks] = useState<Book[]>([]);
+  const [chapterData, setChapterData] = useState<BibleChapterResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      const booksData = await getBooks(translation);
+      const chapterContent = await getChapter(book, chapter, translation);
+      setBooks(booksData);
+      setChapterData(chapterContent);
+      setIsLoading(false);
+    }
+    loadData();
+  }, [book, chapter, translation]);
+
+  if (isLoading) {
+    return (
+      <main className="flex flex-col h-screen">
+         <header className="flex items-center justify-between border-b p-2 md:p-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
+              The Sword & Pen
+            </h1>
+            <p className="text-xs text-muted-foreground mt-1 font-headline">
+              Deepen your Bible study with annotations, notes and AI-powered insights.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+              <Skeleton className="h-10 w-10" />
+              <Skeleton className="h-10 w-24" />
+          </div>
+        </header>
+        
+        <div className="sticky top-0 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
+           <Skeleton className="h-24 w-full" />
+           <Skeleton className="h-48 w-full" />
+        </div>
+  
+        <div className="flex-grow overflow-y-auto p-4">
+           <BibleDisplaySkeleton />
+        </div>
+      </main>
+    );
+  }
+
+  return <PageContent books={books} chapterData={chapterData} initialBook={book} initialChapter={chapter} initialTranslation={translation} />;
+}
+
+function PageWithSearchParams() {
+  const searchParams = useSearchParams();
+  const book = searchParams.get('book') || 'John';
+  const chapter = searchParams.get('chapter') || '1';
+  const translation = searchParams.get('translation') || 'BSB';
+
+  return <ChapterLoader book={book} chapter={chapter} translation={translation} />
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<BibleDisplaySkeleton />}>
+      <PageWithSearchParams />
+    </Suspense>
   );
 }
 
