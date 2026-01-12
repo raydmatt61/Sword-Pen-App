@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { type BibleChapterResponse } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import Balancer from 'react-wrap-balancer';
 import { useToast } from '@/hooks/use-toast';
 import { useAnnotationContext } from '@/contexts/annotation-context';
+import { collection, where, query, getDocs } from 'firebase/firestore';
 
 const highlightColors = [
     { class: 'hl-yellow', color: '#fff59d' },
@@ -88,6 +89,7 @@ function AnnotationToolbar({ onHighlight, onUnderline, onNote, onDelete, onDraw 
 
 export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterResponse }) {
     const { user } = useUser();
+    const firestore = useFirestore();
     const { toast } = useToast();
 
     const {
@@ -139,6 +141,38 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         setIsDrawingMode(!isDrawingMode);
     }
 
+    const handleDeleteAllDrawings = async () => {
+        if (!user || !firestore) {
+            toast({ variant: 'destructive', title: "Error", description: "You must be logged in to do that."});
+            return;
+        }
+
+        const confirmed = window.confirm("Are you sure you want to delete ALL of your drawings? This cannot be undone.");
+        if (!confirmed) return;
+
+        try {
+            const annotationsRef = collection(firestore, `users/${user.uid}/annotations`);
+            const q = query(annotationsRef, where("drawingDataUrl", "!=", null));
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                toast({ title: "No Drawings Found", description: "You don't have any drawings to delete."});
+                return;
+            }
+
+            const deletePromises: Promise<void>[] = [];
+            querySnapshot.forEach((doc) => {
+                deleteDocumentNonBlocking(doc.ref);
+            });
+
+            toast({ title: "Success", description: "All your drawings have been deleted."});
+            resetAnnotationState();
+        } catch (error) {
+            console.error("Error deleting all drawings:", error);
+            toast({ variant: 'destructive', title: "Deletion Failed", description: "Could not delete drawings. Please try again."});
+        }
+    };
+
     // Effect to update local note state when active annotation changes
     useEffect(() => {
         if (activeAnnotation) {
@@ -181,7 +215,12 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                         <Button onClick={triggerSaveDrawing} size="sm"><Save className="mr-2"/>Save Changes</Button>
                     </div>
                  ) :
-                 !activeAnnotation && !selection ? <p className="text-sm text-muted-foreground">Select text, an annotation, or enter drawing mode.</p> :
+                 !activeAnnotation && !selection ? (
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">Select text, an annotation, or enter drawing mode.</p>
+                        <Button variant="destructive" onClick={handleDeleteAllDrawings} size="sm">Delete All My Drawings</Button>
+                    </div>
+                 ):
                  !activeAnnotation && selection ? <p className="font-bold font-headline text-primary">New selection in v. {selection.verseNum}</p> :
                  activeAnnotation ?
                  (
@@ -254,5 +293,3 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         </Card>
     );
 }
-
-    
