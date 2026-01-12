@@ -55,12 +55,11 @@ export function VerseSelector({
   }, [books, book]);
 
   useEffect(() => {
-    if (isClient) {
-        setBook(defaultValues.book);
-        setChapter(defaultValues.chapter);
-        setTranslation(defaultValues.translation);
-    }
-  }, [defaultValues, isClient]);
+    // This effect ensures the component's state is synchronized with the props from the server.
+    setTranslation(defaultValues.translation);
+    setBook(defaultValues.book);
+    setChapter(defaultValues.chapter);
+  }, [defaultValues]);
 
   useEffect(() => {
     if (parseInt(chapter) > maxChapters) {
@@ -79,6 +78,7 @@ export function VerseSelector({
   };
 
   const navigate = useCallback((newValues: { book?: string; chapter?: string; translation?: string }) => {
+    saveCurrentLocationAsPrevious();
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     for (const [key, value] of Object.entries(newValues)) {
         if (value) {
@@ -94,7 +94,6 @@ export function VerseSelector({
   };
 
   const handleChapterNav = (direction: 'prev' | 'next') => {
-    saveCurrentLocationAsPrevious();
     let currentChapter = parseInt(chapter);
     if (direction === 'prev' && currentChapter > 1) {
         currentChapter--;
@@ -109,15 +108,12 @@ export function VerseSelector({
 
   const handleGoBack = () => {
     if (previousLocation) {
-        // The location we are navigating *to* (the previous one) becomes the new "previous" for the next back action.
-        saveCurrentLocationAsPrevious();
         navigate(previousLocation);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveCurrentLocationAsPrevious();
     navigate({ book, chapter, translation });
   };
 
@@ -147,9 +143,22 @@ export function VerseSelector({
 
   return (
     <Card className="animate-in fade-in duration-500">
-      <CardContent className="pt-2">
+      <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 items-end">
-            <div className="grid grid-cols-2 gap-2 w-full">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 w-full">
+                 <div className="space-y-2">
+                    <Label htmlFor="translation" className="font-headline">Translation</Label>
+                    <Select value={translation} onValueChange={setTranslation} disabled={translations.length === 0}>
+                    <SelectTrigger id="translation">
+                        <SelectValue placeholder="Select translation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {translations.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="book" className="font-headline">Book</Label>
                     <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
@@ -185,6 +194,7 @@ export function VerseSelector({
                     onClick={handleGoBack}
                     disabled={!previousLocation}
                     aria-label="Previous Location"
+                    title="Go to previous location"
                 >
                     <Rewind className="h-4 w-4" />
                 </Button>
