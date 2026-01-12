@@ -15,7 +15,6 @@ import { AnnotationWrapper } from '@/components/annotation-wrapper';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
-import Image from 'next/image';
 
 async function getChapter(
   book: string,
@@ -123,20 +122,12 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
           </div>
         </header>
 
-        <div className="sticky top-0 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
-          <div className="flex items-start gap-4">
-            <div className="flex-grow">
-                 <VerseSelector
-                    defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslation }}
-                    books={books}
-                    translations={TRANSLATIONS}
-                />
-            </div>
-             <div className="flex-shrink-0 pt-2">
-                {isMobile ? <FontSizeAdjuster /> : null}
-            </div>
-          </div>
-         
+        <div className="sticky top-0 z-20 grid grid-cols-1 md:grid-cols-2 gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
+          <VerseSelector
+              defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslation }}
+              books={books}
+              translations={TRANSLATIONS}
+          />
           {chapterData && <AnnotationWrapper chapterData={chapterData} />}
         </div>
 
