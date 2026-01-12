@@ -144,19 +144,6 @@ export function VerseSelector({
                 </Select>
             </div>
         </div>
-        <div className="space-y-2">
-            <Label htmlFor="translation" className="font-headline">Translation</Label>
-            <Select value={translation} onValueChange={setTranslation}>
-                <SelectTrigger id="translation">
-                    <SelectValue placeholder="Select translation" />
-                </SelectTrigger>
-                <SelectContent>
-                    {translations.map(t => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
         <div className="flex gap-2 w-full pt-2">
             <Sheet>
               <SheetTrigger asChild>
