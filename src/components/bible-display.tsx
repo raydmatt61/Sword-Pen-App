@@ -320,3 +320,5 @@ export function BibleDisplay({ chapterData, onChapterNav }: { chapterData: Bible
 }
 
     
+
+    
