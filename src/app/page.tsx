@@ -1,8 +1,8 @@
 
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book, Translation } from '@/lib/bible';
@@ -88,6 +88,34 @@ async function getBooks(translationId: string): Promise<Book[]> {
 function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslationId }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const providerKey = `${initialBook}-${initialChapter}-${initialTranslationId}`;
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const maxChapters = books.find(b => b.commonName === initialBook)?.numberOfChapters || 1;
+
+  const navigate = useCallback((newValues: Partial<{ book: string; chapter: string; translation: string }>) => {
+    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    for (const [key, value] of Object.entries(newValues)) {
+        if (value) {
+            current.set(key, value);
+        }
+    }
+    const newSearch = current.toString();
+    router.push(`${pathname}?${newSearch}`);
+  }, [router, pathname, searchParams]);
+
+  const handleChapterNav = (direction: 'prev' | 'next') => {
+    let currentChapter = parseInt(initialChapter);
+    if (direction === 'prev' && currentChapter > 1) {
+        currentChapter--;
+    }
+    if (direction === 'next' && currentChapter < maxChapters) {
+        currentChapter++;
+    }
+    const newChapter = currentChapter.toString();
+    navigate({ chapter: newChapter });
+  };
   
   useEffect(() => {
     // Scroll to top when book or chapter changes
@@ -122,6 +150,9 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
               defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslationId }}
               books={books}
               translations={TRANSLATIONS}
+              onChapterNav={handleChapterNav}
+              maxChapters={maxChapters}
+              navigate={navigate}
           />
           {chapterData && <AnnotationWrapper chapterData={chapterData} />}
         </div>
@@ -137,7 +168,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
               </CardContent>
             </Card>
           ) : (
-            <BibleDisplay chapterData={chapterData} />
+            <BibleDisplay chapterData={chapterData} onChapterNav={handleChapterNav} />
           )}
         </div>
       </main>
@@ -150,19 +181,19 @@ function ChapterLoader({ book, chapter, translationId }) {
   const [chapterData, setChapterData] = useState<BibleChapterResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const effectiveTranslationId = TRANSLATIONS.find(t => t.id === translationId)?.id || TRANSLATIONS[0].id;
+  const effectiveTranslation = TRANSLATIONS.find(t => t.id === translationId) || TRANSLATIONS[0];
 
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const booksData = await getBooks(effectiveTranslationId);
-      const chapterContent = await getChapter(book, chapter, effectiveTranslationId);
+      const booksData = await getBooks(effectiveTranslation.id);
+      const chapterContent = await getChapter(book, chapter, effectiveTranslation.id);
       setBooks(booksData);
       setChapterData(chapterContent);
       setIsLoading(false);
     }
     loadData();
-  }, [book, chapter, effectiveTranslationId]);
+  }, [book, chapter, effectiveTranslation]);
 
   if (isLoading) {
     return (

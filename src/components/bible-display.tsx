@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo, useEffect, useRef } from 'react';
+import useEmblaCarousel from 'embla-carousel-react';
 import { type Annotation, type BibleChapterResponse, type ChapterContentItem } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -160,7 +161,7 @@ function VerseComponent({
     );
 }
 
-export function BibleDisplay({ chapterData }: { chapterData: BibleChapterResponse }) {
+export function BibleDisplay({ chapterData, onChapterNav }: { chapterData: BibleChapterResponse, onChapterNav: (direction: 'prev' | 'next') => void }) {
     const { 
         setSelection,
         setActiveAnnotation,
@@ -168,6 +169,34 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
     const { user } = useUser();
     const firestore = useFirestore();
     const bibleContentRef = useRef<HTMLDivElement>(null);
+    const [emblaRef, emblaApi] = useEmblaCarousel({ axis: 'x', watchDrag: true });
+
+    useEffect(() => {
+        if (!emblaApi) return;
+    
+        const onSelect = () => {
+          // This is a bit of a hack. Embla doesn't have a simple "swipe left" or "swipe right" event.
+          // Instead, we check the scroll progress. If it's significantly more than 0, it was a left swipe.
+          // If it's significantly less than 0, it was a right swipe.
+          const progress = emblaApi.scrollProgress();
+    
+          if (progress > 0.15) { // Swiped left (to next chapter)
+            onChapterNav('next');
+          } else if (progress < -0.15) { // Swiped right (to previous chapter)
+            onChapterNav('prev');
+          }
+          // Reset immediately so we can detect the next swipe
+          emblaApi.scrollTo(0, true); 
+        };
+    
+        emblaApi.on('select', onSelect);
+        emblaApi.on('pointerUp', onSelect);
+    
+        return () => {
+          emblaApi.off('select', onSelect);
+          emblaApi.off('pointerUp', onSelect);
+        };
+      }, [emblaApi, onChapterNav]);
 
 
     const bookId = chapterData.book.id;
@@ -270,18 +299,22 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
 
 
     return (
-        <div className="pt-4 relative">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
-                </CardHeader>
-                <CardContent>
-                    <div ref={bibleContentRef} className={cn("space-y-2 select-text bible-content")}>
-                        {chapterData.chapter.content.map(renderContentItem)}
-                    </div>
-                </CardContent>
-            </Card>
+        <div ref={emblaRef} className="pt-4 relative overflow-hidden">
+            <div className="flex">
+                <div className="min-w-0 flex-shrink-0 flex-grow-0 basis-full">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
+                                <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
+                        </CardHeader>
+                        <CardContent>
+                            <div ref={bibleContentRef} className={cn("space-y-2 select-text bible-content")}>
+                                {chapterData.chapter.content.map(renderContentItem)}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     );
 }

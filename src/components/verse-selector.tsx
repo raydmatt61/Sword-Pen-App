@@ -25,15 +25,18 @@ type BibleLocation = {
 export function VerseSelector({ 
     defaultValues, 
     books,
-    translations
+    translations,
+    onChapterNav,
+    maxChapters,
+    navigate
 }: { 
     defaultValues: { book: string; chapter: string; translation: string; }, 
     books: Book[],
     translations: Translation[],
+    onChapterNav: (direction: 'prev' | 'next') => void,
+    maxChapters: number,
+    navigate: (newValues: Partial<{ book: string, chapter: string, translation: string }>) => void
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   
   const [book, setBook] = useState(defaultValues.book);
   const [chapter, setChapter] = useState(defaultValues.chapter);
@@ -58,46 +61,22 @@ export function VerseSelector({
     setTranslation(defaultValues.translation);
   }, [defaultValues]);
   
-  const maxChapters = books.find(b => b.commonName === book)?.numberOfChapters || 1;
-
   const saveCurrentLocationAsPrevious = () => {
-    const currentLocation: BibleLocation = {
-        book: searchParams.get('book') || defaultValues.book,
-        chapter: searchParams.get('chapter') || defaultValues.chapter,
-        translation: searchParams.get('translation') || defaultValues.translation,
-    };
-    sessionStorage.setItem(PREVIOUS_LOCATION_KEY, JSON.stringify(currentLocation));
-    setPreviousLocation(currentLocation);
+    sessionStorage.setItem(PREVIOUS_LOCATION_KEY, JSON.stringify({
+        book: defaultValues.book,
+        chapter: defaultValues.chapter,
+        translation: defaultValues.translation,
+    }));
+    setPreviousLocation({
+        book: defaultValues.book,
+        chapter: defaultValues.chapter,
+        translation: defaultValues.translation,
+    });
   };
-
-  const navigate = useCallback((newValues: Partial<BibleLocation>) => {
-    saveCurrentLocationAsPrevious();
-    const current = new URLSearchParams(Array.from(searchParams.entries()));
-    for (const [key, value] of Object.entries(newValues)) {
-        if (value) {
-            current.set(key, value);
-        }
-    }
-    const newSearch = current.toString();
-    router.push(`${pathname}?${newSearch}`);
-  }, [router, pathname, searchParams]);
 
   const handleBookChange = (newBook: string) => {
     setBook(newBook);
     setChapter('1');
-  };
-
-  const handleChapterNav = (direction: 'prev' | 'next') => {
-    let currentChapter = parseInt(chapter);
-    if (direction === 'prev' && currentChapter > 1) {
-        currentChapter--;
-    }
-    if (direction === 'next' && currentChapter < maxChapters) {
-        currentChapter++;
-    }
-    const newChapter = currentChapter.toString();
-    setChapter(newChapter);
-    navigate({ chapter: newChapter });
   };
 
   const handleGoBack = () => {
@@ -108,6 +87,7 @@ export function VerseSelector({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    saveCurrentLocationAsPrevious();
     navigate({ book, chapter, translation });
     setIsSheetOpen(false);
   };
@@ -201,7 +181,7 @@ export function VerseSelector({
                     variant="outline" 
                     size="icon" 
                     type="button" 
-                    onClick={() => handleChapterNav('prev')}
+                    onClick={() => onChapterNav('prev')}
                     disabled={parseInt(chapter) <= 1}
                     aria-label="Previous Chapter"
                 >
@@ -211,7 +191,7 @@ export function VerseSelector({
                     variant="outline" 
                     size="icon" 
                     type="button" 
-                    onClick={() => handleChapterNav('next')}
+                    onClick={() => onChapterNav('next')}
                     disabled={parseInt(chapter) >= maxChapters}
                     aria-label="Next Chapter"
                 >
