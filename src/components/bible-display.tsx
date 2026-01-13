@@ -23,13 +23,12 @@ function VerseComponent({
     const { fontSize } = useAnnotationContext();
 
     const renderedContent = useMemo(() => {
-        const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
-        
         // This function recursively processes the raw verse content (which can be nested)
         // and returns a flat string for calculating annotation offsets.
         const getFlatText = (content: any[]): string => {
             return content.flat(Infinity).map((item: any) => {
                 if (typeof item === 'string') return item;
+                if (item.type === 'note') return ''; // Exclude notes from flat text
                 if (item.text) return item.text;
                 if (item.content && typeof item.content === 'string') return item.content;
                 if (item.content && Array.isArray(item.content)) {
@@ -38,8 +37,9 @@ function VerseComponent({
                 return '';
             }).join('');
         };
-        
+
         const flatText = getFlatText(verse.content as any[]);
+        const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
 
         // Create a character map to hold styling info for each character
         const chars = flatText.split('').map(char => ({
@@ -50,33 +50,36 @@ function VerseComponent({
 
         // This function traverses the original content structure to mark "Words of Jesus"
         let currentIndex = 0;
-        const markWoj = (items: any[]) => {
+        const processContent = (items: any[]) => {
             items.forEach(item => {
                 if (typeof item === 'string') {
                     currentIndex += item.length;
                 } else if (item.type === 'note') {
-                   // Ignore notes completely
+                   // Ignore notes completely, they are not part of the renderable text
                 } else if (item.type === 'woj' || (Array.isArray(item.class) && item.class.includes('w-of-j'))) {
-                    const subContentText = getFlatText(Array.isArray(item.content) ? item.content : [item.content]);
+                    const subContent = Array.isArray(item.content) ? item.content : [item.content];
+                    const subContentText = getFlatText(subContent);
                     for (let i = 0; i < subContentText.length; i++) {
                         if (chars[currentIndex + i]) {
                             chars[currentIndex + i].isWoj = true;
                         }
                     }
-                    currentIndex += subContentText.length;
+                    // Recursively process child content of woj to handle nested structures
+                    processContent(subContent);
                 } else if (item.text) {
                     currentIndex += item.text.length;
                 } else if (Array.isArray(item.content)) {
-                    markWoj(item.content);
+                    processContent(item.content);
+                } else if (item.content && typeof item.content === 'string') {
+                    currentIndex += item.content.length;
                 }
             });
         }
-        markWoj(verse.content as any[]);
+        processContent(verse.content as any[]);
 
         // Mark characters covered by annotations
         sortedAnnotations.forEach(ann => {
             for (let i = ann.start; i < ann.end; i++) {
-                // Also, don't apply annotations to notes
                 if(chars[i]) chars[i].annotations.push(ann);
             }
         });
@@ -122,18 +125,18 @@ function VerseComponent({
         if (!selection) return;
 
         const range = document.createRange();
-        // Skip the sup element (the first child) and select the rest
-        const textNodes = Array.from(pElement.childNodes).filter(node => node !== supElement);
-        if (textNodes.length > 0) {
-            range.setStart(textNodes[0], 0);
-            const lastNode = textNodes[textNodes.length - 1];
-            range.setEnd(lastNode, lastNode.textContent?.length || 0);
-            selection.removeAllRanges();
-            selection.addRange(range);
-            
-            // Manually trigger the selection change handler
-            document.dispatchEvent(new Event('selectionchange'));
-        }
+        // Select the entire content of the parent <p> element
+        range.selectNodeContents(pElement);
+        
+        // Collapse the start of the range to be after the <sup> element
+        // This programmatically deselects the verse number
+        range.setStartAfter(supElement);
+        
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // Manually trigger the selection change handler
+        document.dispatchEvent(new Event('selectionchange'));
     };
 
 
@@ -282,3 +285,5 @@ export function BibleDisplay({ chapterData }: { chapterData: BibleChapterRespons
         </div>
     );
 }
+
+    
