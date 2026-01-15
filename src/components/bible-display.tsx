@@ -176,27 +176,21 @@ export function BibleDisplay({ chapterData, onChapterNav }: { chapterData: Bible
     useEffect(() => {
         if (!emblaApi) return;
     
-        const onSelect = () => {
-          // This is a bit of a hack. Embla doesn't have a simple "swipe left" or "swipe right" event.
-          // Instead, we check the scroll progress. If it's significantly more than 0, it was a left swipe.
-          // If it's significantly less than 0, it was a right swipe.
+        const handleSwipe = () => {
           const progress = emblaApi.scrollProgress();
-    
-          if (progress > 0.15) { // Swiped left (to next chapter)
-            onChapterNav('next');
-          } else if (progress < -0.15) { // Swiped right (to previous chapter)
+          emblaApi.scrollTo(0, true); // Prevent snap-back
+          
+          if (progress < -0.1) { // Right swipe
             onChapterNav('prev');
+          } else if (progress > 0.1) { // Left swipe
+            onChapterNav('next');
           }
-          // Reset immediately so we can detect the next swipe
-          emblaApi.scrollTo(0, true); 
         };
     
-        emblaApi.on('select', onSelect);
-        emblaApi.on('pointerUp', onSelect);
+        emblaApi.on('pointerUp', handleSwipe);
     
         return () => {
-          emblaApi.off('select', onSelect);
-          emblaApi.off('pointerUp', onSelect);
+          emblaApi.off('pointerUp', handleSwipe);
         };
       }, [emblaApi, onChapterNav]);
 
@@ -348,3 +342,4 @@ export function BibleDisplay({ chapterData, onChapterNav }: { chapterData: Bible
     
 
     
+
