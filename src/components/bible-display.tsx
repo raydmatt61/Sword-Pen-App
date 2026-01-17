@@ -303,30 +303,36 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
         <div ref={emblaRef} className="pt-4 relative overflow-hidden">
             <div className="flex">
                 <div className="min-w-0 flex-shrink-0 flex-grow-0 basis-full">
-                    <div className="md:hidden flex gap-2 justify-between mb-4">
-                        <Button
-                            variant="outline"
-                            type="button"
-                            onClick={() => onChapterNav('prev')}
-                            disabled={currentChapter <= 1}
-                            aria-label="Previous Chapter"
-                        >
-                            <ChevronLeft className="h-4 w-4 mr-2" /> Previous
-                        </Button>
-                        <Button
-                            variant="outline"
-                            type="button"
-                            onClick={() => onChapterNav('next')}
-                            disabled={currentChapter >= maxChapters}
-                            aria-label="Next Chapter"
-                        >
-                            Next <ChevronRight className="h-4 w-4 ml-2" />
-                        </Button>
-                    </div>
                     <Card>
                         <CardHeader>
-                            <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
-                                <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
+                                    <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
+                                </div>
+                                <div className="md:hidden flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        type="button"
+                                        onClick={() => onChapterNav('prev')}
+                                        disabled={currentChapter <= 1}
+                                        aria-label="Previous Chapter"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        type="button"
+                                        onClick={() => onChapterNav('next')}
+                                        disabled={currentChapter >= maxChapters}
+                                        aria-label="Next Chapter"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent className="pb-6">
                             <div ref={bibleContentRef} className={cn("space-y-2 select-text bible-content")}>
@@ -345,3 +351,6 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
     
 
 
+
+
+    
