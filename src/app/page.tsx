@@ -168,7 +168,12 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
               </CardContent>
             </Card>
           ) : (
-            <BibleDisplay chapterData={chapterData} onChapterNav={handleChapterNav} />
+            <BibleDisplay
+              chapterData={chapterData}
+              onChapterNav={handleChapterNav}
+              currentChapter={parseInt(initialChapter)}
+              maxChapters={maxChapters}
+            />
           )}
         </div>
       </main>

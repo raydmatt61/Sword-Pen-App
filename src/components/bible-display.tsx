@@ -4,7 +4,7 @@
 import { useMemo, useEffect, useRef } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { type Annotation, type BibleChapterResponse, type ChapterContentItem } from '@/lib/bible';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Balancer from 'react-wrap-balancer';
 import { useAnnotationContext } from '@/contexts/annotation-context';
@@ -163,7 +163,12 @@ function VerseComponent({
     );
 }
 
-export function BibleDisplay({ chapterData, onChapterNav }: { chapterData: BibleChapterResponse, onChapterNav: (direction: 'prev' | 'next') => void }) {
+export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxChapters }: { 
+    chapterData: BibleChapterResponse, 
+    onChapterNav: (direction: 'prev' | 'next') => void,
+    currentChapter: number,
+    maxChapters: number
+}) {
     const { 
         setSelection,
         setActiveAnnotation,
@@ -298,40 +303,36 @@ export function BibleDisplay({ chapterData, onChapterNav }: { chapterData: Bible
         <div ref={emblaRef} className="pt-4 relative overflow-hidden">
             <div className="flex">
                 <div className="min-w-0 flex-shrink-0 flex-grow-0 basis-full">
+                    <div className="md:hidden flex gap-2 justify-between mb-4">
+                        <Button
+                            variant="outline"
+                            type="button"
+                            onClick={() => onChapterNav('prev')}
+                            disabled={currentChapter <= 1}
+                            aria-label="Previous Chapter"
+                        >
+                            <ChevronLeft className="h-4 w-4 mr-2" /> Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            type="button"
+                            onClick={() => onChapterNav('next')}
+                            disabled={currentChapter >= maxChapters}
+                            aria-label="Next Chapter"
+                        >
+                            Next <ChevronRight className="h-4 w-4 ml-2" />
+                        </Button>
+                    </div>
                     <Card>
                         <CardHeader>
                             <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
                                 <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
                         </CardHeader>
-                        <CardContent className="pb-20 md:pb-6">
+                        <CardContent className="pb-6">
                             <div ref={bibleContentRef} className={cn("space-y-2 select-text bible-content")}>
                                 {chapterData.chapter.content.map(renderContentItem)}
                             </div>
                         </CardContent>
-                        <CardFooter className="md:hidden fixed bottom-4 right-4 left-4 z-30 p-0 bg-transparent justify-end">
-                             <div className="flex gap-2">
-                                <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                                    type="button" 
-                                    onClick={() => onChapterNav('prev')}
-                                    className="h-12 w-12 rounded-full shadow-lg bg-background/80 backdrop-blur-sm"
-                                    aria-label="Previous Chapter"
-                                >
-                                    <ChevronLeft className="h-6 w-6" />
-                                </Button>
-                                <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                                    type="button" 
-                                    onClick={() => onChapterNav('next')}
-                                    className="h-12 w-12 rounded-full shadow-lg bg-background/80 backdrop-blur-sm"
-                                    aria-label="Next Chapter"
-                                >
-                                    <ChevronRight className="h-6 w-6" />
-                                </Button>
-                             </div>
-                        </CardFooter>
                     </Card>
                 </div>
             </div>
@@ -342,4 +343,5 @@ export function BibleDisplay({ chapterData, onChapterNav }: { chapterData: Bible
     
 
     
+
 
