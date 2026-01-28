@@ -29,17 +29,37 @@ function VerseComponent({
         // This function recursively processes the raw verse content (which can be nested)
         // and returns a flat string for calculating annotation offsets.
         const getFlatText = (content: any[]): string => {
-            return content.flat(Infinity).map((item: any) => {
-                if (typeof item === 'string') return item;
-                if (item.type === 'note') return ''; // Exclude notes from flat text
-                if (item.text) return item.text;
-                if (item.content && typeof item.content === 'string') return item.content;
-                if (item.content && Array.isArray(item.content)) {
-                    return getFlatText(item.content);
+            if (!content || !Array.isArray(content)) return '';
+
+            let parts: string[] = [];
+            for (const item of content) {
+                if (typeof item === 'string') {
+                    parts.push(item);
+                } else if (item && item.type === 'note') {
+                    // Notes are ignored in the flat text representation for offsets
+                    continue;
+                } else if (item && item.type === 'word' && item.text) {
+                    parts.push(item.text);
+                } else if (item && item.content) {
+                    if (typeof item.content === 'string') {
+                        parts.push(item.content);
+                    } else if (Array.isArray(item.content)) {
+                        parts.push(getFlatText(item.content));
+                    }
                 }
-                return '';
-            }).join('');
+            }
+            
+            // If all items in this level are word objects, they need spaces between them.
+            // Strings are assumed to have their own spacing.
+            const isAllWords = content.every(item => 
+                (item && item.type === 'word') || 
+                (item && item.type === 'note') || // Also allow notes in this check
+                (item && item.type === 'woj' && Array.isArray(item.content)) // Handle nested woj
+            );
+
+            return parts.join(isAllWords ? ' ' : '');
         };
+
 
         const flatText = getFlatText(verse.content as any[]);
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
@@ -54,7 +74,9 @@ function VerseComponent({
         // This function traverses the original content structure to mark "Words of Jesus"
         let currentIndex = 0;
         const processContent = (items: any[]) => {
-            items.forEach(item => {
+            const isWordBased = items.every(item => typeof item === 'object' && (item.type === 'word' || item.type === 'note' || item.type === 'woj'));
+            
+            items.forEach((item, index) => {
                 if (typeof item === 'string') {
                     currentIndex += item.length;
                 } else if (item.type === 'note') {
@@ -71,6 +93,10 @@ function VerseComponent({
                     processContent(subContent);
                 } else if (item.text) {
                     currentIndex += item.text.length;
+                    if (isWordBased && index < items.length - 1) {
+                         // Account for the space we add when joining
+                        currentIndex++;
+                    }
                 } else if (Array.isArray(item.content)) {
                     processContent(item.content);
                 } else if (item.content && typeof item.content === 'string') {
