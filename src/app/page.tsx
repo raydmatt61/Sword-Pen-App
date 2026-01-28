@@ -283,16 +283,50 @@ function ChapterLoader({ book, chapter, translationId }) {
   return <PageContent books={books} chapterData={chapterData} initialBook={book} initialChapter={chapter} initialTranslationId={translationId} />;
 }
 
+const LAST_LOCATION_KEY = 'verse-insights-last-location';
+
 function PageWithSearchParams() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  // On first client-side render, check if we need to load from localStorage.
+  useEffect(() => {
+    // Only run if there are no query params in the URL.
+    if (!searchParams.has('book')) {
+      const savedLocationRaw = localStorage.getItem(LAST_LOCATION_KEY);
+      if (savedLocationRaw) {
+        const savedLocation = JSON.parse(savedLocationRaw);
+        // Replace the current URL with the one from storage.
+        // This will trigger a re-render where searchParams will have a value.
+        router.replace(`${pathname}?book=${savedLocation.book}&chapter=${savedLocation.chapter}&translation=${savedLocation.translationId}`);
+      }
+    }
+  }, [searchParams, router, pathname]);
+
   const book = searchParams.get('book') || 'John';
   const chapter = searchParams.get('chapter') || '1';
   const translationUrlParam = searchParams.get('translation') || 'BSB';
+
+  // Save to localStorage whenever the effective location changes.
+  useEffect(() => {
+    // Only save if the book param is present, to avoid overwriting on initial load before redirect.
+    if (searchParams.has('book')) {
+      const location = { book, chapter, translationId: translationUrlParam };
+      localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify(location));
+    }
+  }, [book, chapter, translationUrlParam, searchParams]);
+  
+  // If searchParams is empty and we expect a redirect from localStorage, show a loader.
+  if (!searchParams.has('book') && typeof window !== 'undefined' && localStorage.getItem(LAST_LOCATION_KEY)) {
+    return <BibleDisplaySkeleton />;
+  }
 
   const translation = TRANSLATIONS.find(t => t.id === translationUrlParam) || TRANSLATIONS[0];
   
   return <ChapterLoader book={book} chapter={chapter} translationId={translation.id} />
 }
+
 
 export default function Home() {
   return (
@@ -325,5 +359,3 @@ function BibleDisplaySkeleton() {
     </Card>
   );
 }
-
-    
