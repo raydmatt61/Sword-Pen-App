@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book, Translation } from '@/lib/bible';
+import type { BibleChapterResponse, Book, Translation, ChapterContentItem } from '@/lib/bible';
 import { BIBLE_BOOKS_ABBR, TRANSLATIONS } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +20,52 @@ async function getChapter(
   chapter: string,
   translationId: string,
 ): Promise<BibleChapterResponse | null> {
+  // Use labs.bible.org for NET translation
+  if (translationId === 'engnet') {
+    try {
+      const response = await fetch(`https://labs.bible.org/api/?passage=${book}+${chapter}&type=json`);
+      if (!response.ok) {
+        console.error(`labs.bible.org API Error for ${book} ${chapter}: ${response.status} ${response.statusText}`);
+        return null;
+      }
+      const netData = await response.json();
+      if (!netData || !Array.isArray(netData) || netData.length === 0) {
+        console.error(`labs.bible.org returned no data for ${book} ${chapter}`);
+        return null;
+      }
+      
+      const translationInfo = TRANSLATIONS.find(t => t.id === 'engnet');
+      const bookAbbr = BIBLE_BOOKS_ABBR[book];
+
+      const chapterContent: ChapterContentItem[] = netData.map((verse: any) => ({
+        type: 'verse',
+        number: verse.verse,
+        // The new API returns text with HTML tags, strip them
+        content: [verse.text.replace(/<[^>]*>?/gm, '')]
+      }));
+
+      const result: BibleChapterResponse = {
+        book: {
+          name: netData[0].bookname,
+          id: bookAbbr || book,
+        },
+        chapter: {
+          number: parseInt(netData[0].chapter, 10),
+          content: chapterContent,
+        },
+        translation: {
+          id: 'engnet',
+          name: translationInfo?.name || 'New English Translation',
+        }
+      };
+      return result;
+    } catch (error) {
+      console.error('Failed to fetch NET chapter from labs.bible.org:', error);
+      return null;
+    }
+  }
+
+  // Original logic for other translations
   let attempts = 0;
   const maxRetries = 3;
   const delay = 1000; // 1 second
@@ -59,11 +105,12 @@ async function getChapter(
   return null;
 }
 
-async function fetchBooksForTranslation(translationId: string): Promise<Book[] | null> {
+async function fetchBooksForTranslation(): Promise<Book[] | null> {
+    const bookListTranslation = 'BSB'; // Always use BSB for a reliable book list
     try {
-        const booksRes = await fetch(`https://bible.helloao.org/api/${translationId}/books.json`);
+        const booksRes = await fetch(`https://bible.helloao.org/api/${bookListTranslation}/books.json`);
         if (!booksRes.ok) {
-            console.error(`Failed to fetch books for ${translationId}: ${booksRes.status}`);
+            console.error(`Failed to fetch books for ${bookListTranslation}: ${booksRes.status}`);
             return null;
         }
         const contentType = booksRes.headers.get("content-type");
@@ -71,17 +118,17 @@ async function fetchBooksForTranslation(translationId: string): Promise<Book[] |
             const booksData = await booksRes.json();
             return booksData.books || null;
         } else {
-            console.error(`Expected JSON for books list but received ${contentType} for ${translationId}`);
+            console.error(`Expected JSON for books list but received ${contentType} for ${bookListTranslation}`);
             return null;
         }
     } catch (error) {
-        console.error(`Error fetching books for ${translationId}:`, error);
+        console.error(`Error fetching books for ${bookListTranslation}:`, error);
         return null;
     }
 }
 
-async function getBooks(translationId: string): Promise<Book[]> {
-    const books = await fetchBooksForTranslation(translationId);
+async function getBooks(): Promise<Book[]> {
+    const books = await fetchBooksForTranslation();
     return books || [];
 }
 
@@ -191,7 +238,7 @@ function ChapterLoader({ book, chapter, translationId }) {
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const booksData = await getBooks(effectiveTranslation.id);
+      const booksData = await getBooks();
       const chapterContent = await getChapter(book, chapter, effectiveTranslation.id);
       setBooks(booksData);
       setChapterData(chapterContent);
@@ -278,3 +325,5 @@ function BibleDisplaySkeleton() {
     </Card>
   );
 }
+
+    
