@@ -26,94 +26,82 @@ function VerseComponent({
     const { fontSize } = useAnnotationContext();
 
     const renderedContent = useMemo(() => {
-        // This function recursively processes the raw verse content (which can be nested)
-        // and returns a flat string for calculating annotation offsets.
-        const getFlatText = (content: any[]): string => {
-            if (!content || !Array.isArray(content)) return '';
+        // Step 1: Flatten the complex verse.content into a simple array of text segments with styling info.
+        const flattenContent = (content: any, isInsideWoj = false): { text: string, isWoj: boolean }[] => {
+            if (!content) return [];
+            if (typeof content === 'string') return [{ text: content, isWoj: isInsideWoj }];
 
-            let parts: string[] = [];
-            for (const item of content) {
-                if (typeof item === 'string') {
-                    parts.push(item);
-                } else if (item && item.type === 'note') {
-                    // Notes are ignored in the flat text representation for offsets
-                    continue;
-                } else if (item && item.type === 'word' && item.text) {
-                    parts.push(item.text);
-                } else if (item && item.content) {
-                    if (typeof item.content === 'string') {
-                        parts.push(item.content);
-                    } else if (Array.isArray(item.content)) {
-                        parts.push(getFlatText(item.content));
-                    }
-                }
+            if (!Array.isArray(content)) {
+                // Handle non-array content, which might be a single object
+                const itemIsWoj = content.type === 'woj' || (Array.isArray(content.class) && content.class.includes('w-of-j')) || isInsideWoj;
+                if (content.text && typeof content.text === 'string') return [{ text: content.text, isWoj: itemIsWoj }];
+                if (content.content) return flattenContent(content.content, itemIsWoj);
+                return [];
             }
             
-            // If all items in this level are word objects, they need spaces between them.
-            // Strings are assumed to have their own spacing.
-            const isAllWords = content.every(item => 
-                (item && item.type === 'word') || 
-                (item && item.type === 'note') || // Also allow notes in this check
-                (item && item.type === 'woj' && Array.isArray(item.content)) // Handle nested woj
+            const isWordBased = content.length > 0 && content.every(
+                (item: any) => typeof item === 'object' && item !== null && (item.type === 'word' || item.type === 'note' || item.type === 'woj')
             );
-
-            return parts.join(isAllWords ? ' ' : '');
+            
+            let segments: { text: string, isWoj: boolean }[] = [];
+            content.forEach((item, index) => {
+                if (typeof item === 'string') {
+                    segments.push({ text: item, isWoj: isInsideWoj });
+                } else if (item && item.type !== 'note') {
+                    const itemIsWoj = item.type === 'woj' || (Array.isArray(item.class) && item.class.includes('w-of-j')) || isInsideWoj;
+                    if (item.text && typeof item.text === 'string') {
+                        segments.push({ text: item.text, isWoj: itemIsWoj });
+                    } else if (item.content) {
+                        segments.push(...flattenContent(item.content, itemIsWoj));
+                    }
+                }
+                
+                if (isWordBased && index < content.length - 1) {
+                    // Check if the next item is not a note before adding a space
+                    const nextItem = content[index + 1];
+                    if (nextItem && nextItem.type !== 'note') {
+                        segments.push({ text: ' ', isWoj: isInsideWoj });
+                    }
+                }
+            });
+            return segments;
         };
 
+        const segments = flattenContent(verse.content);
 
-        const flatText = getFlatText(verse.content as any[]);
+        // Step 2: Create the flat text and character map from the flattened segments.
+        const flatText = segments.map(s => s.text).join('');
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
+        
+        if (!flatText) {
+            return null; // Don't render anything if there's no text
+        }
 
-        // Create a character map to hold styling info for each character
         const chars = flatText.split('').map(char => ({
             char,
             isWoj: false,
             annotations: [] as Annotation[],
         }));
-
-        // This function traverses the original content structure to mark "Words of Jesus"
-        let currentIndex = 0;
-        const processContent = (items: any[]) => {
-            const isWordBased = items.every(item => typeof item === 'object' && (item.type === 'word' || item.type === 'note' || item.type === 'woj'));
-            
-            items.forEach((item, index) => {
-                if (typeof item === 'string') {
-                    currentIndex += item.length;
-                } else if (item.type === 'note') {
-                   // Ignore notes completely, they are not part of the renderable text
-                } else if (item.type === 'woj' || (Array.isArray(item.class) && item.class.includes('w-of-j'))) {
-                    const subContent = Array.isArray(item.content) ? item.content : [item.content];
-                    const subContentText = getFlatText(subContent);
-                    for (let i = 0; i < subContentText.length; i++) {
-                        if (chars[currentIndex + i]) {
-                            chars[currentIndex + i].isWoj = true;
-                        }
-                    }
-                    // Recursively process child content of woj to handle nested structures
-                    processContent(subContent);
-                } else if (item.text) {
-                    currentIndex += item.text.length;
-                    if (isWordBased && index < items.length - 1) {
-                         // Account for the space we add when joining
-                        currentIndex++;
-                    }
-                } else if (Array.isArray(item.content)) {
-                    processContent(item.content);
-                } else if (item.content && typeof item.content === 'string') {
-                    currentIndex += item.content.length;
+        
+        // Populate isWoj from our segments
+        let charIndex = 0;
+        for (const segment of segments) {
+            for (let i = 0; i < segment.text.length; i++) {
+                if (chars[charIndex]) {
+                    chars[charIndex].isWoj = segment.isWoj;
                 }
-            });
+                charIndex++;
+            }
         }
-        processContent(verse.content as any[]);
-
-        // Mark characters covered by annotations
+        
+        // Step 3: Apply annotations to the character map.
         sortedAnnotations.forEach(ann => {
             for (let i = ann.start; i < ann.end; i++) {
-                if(chars[i]) chars[i].annotations.push(ann);
+                if (chars[i]) chars[i].annotations.push(ann);
             }
         });
 
-        // Build the final render output by grouping characters with the same styling
+        // Step 4: Build the final render output by grouping characters.
         const finalRender: React.ReactNode[] = [];
         let i = 0;
         while (i < chars.length) {
@@ -142,7 +130,6 @@ function VerseComponent({
             i = j;
         }
         return finalRender;
-
     }, [verse.content, annotations, onAnnotationClick]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
