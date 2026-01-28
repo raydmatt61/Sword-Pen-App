@@ -1,8 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,6 +45,10 @@ export function VerseSelector({
   const isMobile = useIsMobile();
   const [isClient, setIsClient] = useState(false);
   const [previousLocation, setPreviousLocation] = useState<BibleLocation | null>(null);
+
+  const currentMaxChaptersForSelectedBook = useMemo(() => {
+    return books.find(b => b.commonName === book)?.numberOfChapters || maxChapters;
+  }, [book, books, maxChapters]);
 
   useEffect(() => {
     setIsClient(true);
@@ -112,7 +115,7 @@ export function VerseSelector({
                         <SelectValue placeholder="Ch." />
                         </SelectTrigger>
                         <SelectContent>
-                        {Array.from({ length: maxChapters }, (_, i) => i + 1).map(chapNum => (
+                        {Array.from({ length: currentMaxChaptersForSelectedBook }, (_, i) => i + 1).map(chapNum => (
                             <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>
                         ))}
                         </SelectContent>
