@@ -95,10 +95,10 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
 
     return (
         <Card>
-            <div className="relative flex items-center justify-center p-2" style={{minHeight: '64px'}}>
+            <div className="relative flex items-center justify-center p-2" style={{minHeight: '56px'}}>
                 {!showToolbar ? (
                     <p className="text-sm text-muted-foreground text-center px-4">
-                        {!user ? "Sign in to annotate verses." : "Select text in the chapter to get started."}
+                        {!user ? "Sign in to annotate verses." : "Select text in the chapter to annotate."}
                     </p>
                 ) : (
                    <div ref={toolbarRef} className="w-full">
