@@ -55,27 +55,11 @@ export function VerseSelector({
   };
 
   const handleGoBack = () => {
-    const savedLocationRaw = localStorage.getItem('verse-insights-last-location');
-    if (savedLocationRaw) {
-      try {
-        const savedLocation = JSON.parse(savedLocationRaw);
-        if (savedLocation.book && savedLocation.chapter && savedLocation.translationId) {
-            // First, reset the component's internal state to match the saved location.
-            // This ensures the dropdowns update immediately, even if the URL doesn't change.
-            setBook(savedLocation.book);
-            setChapter(savedLocation.chapter);
-            setTranslation(savedLocation.translationId);
-
-            navigate({ 
-                book: savedLocation.book, 
-                chapter: savedLocation.chapter, 
-                translation: savedLocation.translationId 
-            });
-        }
-      } catch (e) {
-        console.error("Failed to parse last location from localStorage", e);
-      }
-    }
+    // Revert the local state of the dropdowns to match the props (which reflect the current URL).
+    // This effectively cancels any un-submitted changes the user has made in the selectors.
+    setBook(defaultValues.book);
+    setChapter(defaultValues.chapter);
+    setTranslation(defaultValues.translation);
   };
 
   const currentMaxChaptersForSelectedBook = useMemo(() => {
