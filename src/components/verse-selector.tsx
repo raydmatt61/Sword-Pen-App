@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Book, Translation } from '@/lib/bible';
-import { ChevronsRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronsRight, ChevronLeft, ChevronRight, History } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -54,6 +54,24 @@ export function VerseSelector({
     }
   };
 
+  const handleGoBack = () => {
+    const savedLocationRaw = localStorage.getItem('verse-insights-last-location');
+    if (savedLocationRaw) {
+      try {
+        const savedLocation = JSON.parse(savedLocationRaw);
+        if (savedLocation.book && savedLocation.chapter && savedLocation.translationId) {
+            navigate({ 
+                book: savedLocation.book, 
+                chapter: savedLocation.chapter, 
+                translation: savedLocation.translationId 
+            });
+        }
+      } catch (e) {
+        console.error("Failed to parse last location from localStorage", e);
+      }
+    }
+  };
+
   const currentMaxChaptersForSelectedBook = useMemo(() => {
     return books.find(b => b.commonName === book)?.numberOfChapters || maxChapters;
   }, [book, books, maxChapters]);
@@ -81,7 +99,7 @@ export function VerseSelector({
 
             <Select value={translation} onValueChange={setTranslation}>
                 <SelectTrigger id="translation" aria-label="Translation" className="md:w-[90px]"><SelectValue placeholder="Translation" /></SelectTrigger>
-                <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id}</SelectItem>)}</SelectContent>
+                <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id.toUpperCase()}</SelectItem>)}</SelectContent>
             </Select>
         </>
     );
@@ -95,6 +113,9 @@ export function VerseSelector({
                 <div className="flex gap-2 w-full">
                     <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} aria-label="Previous Chapter"><ChevronLeft className="h-4 w-4" /></Button>
                     <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChapters} aria-label="Next Chapter"><ChevronRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon" type="button" onClick={handleGoBack} aria-label="Go to last location">
+                        <History className="h-4 w-4" />
+                    </Button>
                     <Button type="submit" className="flex-grow" disabled={books.length === 0}>
                         Go
                         <ChevronsRight className="ml-2 h-4 w-4" />
@@ -113,6 +134,9 @@ export function VerseSelector({
             </Button>
             <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChapters} aria-label="Next Chapter">
                 <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" type="button" onClick={handleGoBack} aria-label="Go to last location">
+                <History className="h-4 w-4" />
             </Button>
             <Button type="submit" size="icon" disabled={books.length === 0} aria-label="Go to selection">
                 <ChevronsRight className="h-4 w-4" />
@@ -136,7 +160,7 @@ export function VerseSelector({
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
                 <Button variant="outline" className="w-full">
-                    {defaultValues.book} {defaultValues.chapter} ({defaultValues.translation})
+                    {defaultValues.book} {defaultValues.chapter} ({defaultValues.translation.toUpperCase()})
                 </Button>
             </SheetTrigger>
             <SheetContent side="bottom">
