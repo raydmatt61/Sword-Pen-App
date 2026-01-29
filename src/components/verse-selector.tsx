@@ -11,6 +11,8 @@ import { Skeleton } from './ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 
+const LAST_LOCATION_KEY = 'verse-insights-last-location';
+
 export function VerseSelector({ 
     defaultValues, 
     books,
@@ -43,7 +45,7 @@ export function VerseSelector({
     setBook(defaultValues.book);
     setChapter(defaultValues.chapter);
     setTranslation(defaultValues.translation);
-  }, [defaultValues]);
+  }, [defaultValues.book, defaultValues.chapter, defaultValues.translation]);
   
   const handleBookChange = (newBook: string) => {
     setBook(newBook);
@@ -55,11 +57,16 @@ export function VerseSelector({
   };
 
   const handleGoBack = () => {
-    // Revert the local state of the dropdowns to match the props (which reflect the current URL).
-    // This effectively cancels any un-submitted changes the user has made in the selectors.
-    setBook(defaultValues.book);
-    setChapter(defaultValues.chapter);
-    setTranslation(defaultValues.translation);
+    // Navigate to the last saved location from localStorage
+    const savedLocationRaw = localStorage.getItem(LAST_LOCATION_KEY);
+    if (savedLocationRaw) {
+        const savedLocation = JSON.parse(savedLocationRaw);
+        navigate({
+            book: savedLocation.book,
+            chapter: savedLocation.chapter,
+            translation: savedLocation.translationId
+        });
+    }
   };
 
   const currentMaxChaptersForSelectedBook = useMemo(() => {
