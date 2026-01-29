@@ -192,16 +192,20 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
           </div>
         </header>
 
-        <div className="sticky top-0 z-20 grid grid-cols-1 md:grid-cols-2 gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
-          <VerseSelector
-              defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslationId }}
-              books={books}
-              translations={TRANSLATIONS}
-              onChapterNav={handleChapterNav}
-              maxChapters={maxChapters}
-              navigate={navigate}
-          />
-          {chapterData && <AnnotationWrapper chapterData={chapterData} />}
+        <div className="sticky top-0 z-20 grid grid-cols-1 md:grid-cols-5 gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
+          <div className="md:col-span-3">
+            <VerseSelector
+                defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslationId }}
+                books={books}
+                translations={TRANSLATIONS}
+                onChapterNav={handleChapterNav}
+                maxChapters={maxChapters}
+                navigate={navigate}
+            />
+          </div>
+          <div className="md:col-span-2">
+            {chapterData && <AnnotationWrapper chapterData={chapterData} />}
+          </div>
         </div>
 
         <div ref={contentRef} className="flex-grow overflow-y-auto p-4">
