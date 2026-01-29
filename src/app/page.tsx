@@ -252,36 +252,7 @@ function ChapterLoader({ book, chapter, translationId }) {
   }, [book, chapter, effectiveTranslation]);
 
   if (isLoading) {
-    return (
-      <main className="flex flex-col h-screen">
-         <header className="flex items-center justify-between border-b p-2 md:p-4">
-          <div className="flex items-center gap-2">
-            <div>
-              <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
-                The Sword & Pen
-              </h1>
-              <p className="text-xs text-muted-foreground mt-1 font-headline">
-                Deepen your Bible study with annotations, notes and AI-powered insights.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-              <Skeleton className="h-10 w-10" />
-              <Skeleton className="h-10 w-10" />
-              <Skeleton className="h-10 w-24" />
-          </div>
-        </header>
-        
-        <div className="sticky top-0 z-20 flex flex-col gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
-           <Skeleton className="h-24 w-full" />
-           <Skeleton className="h-48 w-full" />
-        </div>
-  
-        <div className="flex-grow overflow-y-auto p-4">
-           <BibleDisplaySkeleton />
-        </div>
-      </main>
-    );
+    return <FullPageSkeleton />;
   }
 
   return <PageContent books={books} chapterData={chapterData} initialBook={book} initialChapter={chapter} initialTranslationId={translationId} />;
@@ -321,11 +292,6 @@ function PageWithSearchParams() {
     }
   }, [book, chapter, translationUrlParam, searchParams]);
   
-  // If searchParams is empty and we expect a redirect from localStorage, show a loader.
-  if (!searchParams.has('book') && typeof window !== 'undefined' && localStorage.getItem(LAST_LOCATION_KEY)) {
-    return <BibleDisplaySkeleton />;
-  }
-
   const translation = TRANSLATIONS.find(t => t.id === translationUrlParam) || TRANSLATIONS[0];
   
   return <ChapterLoader book={book} chapter={chapter} translationId={translation.id} />
@@ -334,7 +300,7 @@ function PageWithSearchParams() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<BibleDisplaySkeleton />}>
+    <Suspense fallback={<FullPageSkeleton />}>
       <PageWithSearchParams />
     </Suspense>
   );
@@ -361,5 +327,42 @@ function BibleDisplaySkeleton() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function FullPageSkeleton() {
+  return (
+    <main className="flex flex-col h-screen">
+      <header className="flex items-center justify-between border-b p-2 md:p-4">
+        <div className="flex items-center gap-2">
+          <div>
+            <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
+              The Sword & Pen
+            </h1>
+            <p className="text-xs text-muted-foreground mt-1 font-headline">
+              Deepen your Bible study with annotations, notes and AI-powered insights.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-24" />
+        </div>
+      </header>
+      
+      <div className="sticky top-0 z-20 grid grid-cols-1 md:grid-cols-5 gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
+        <div className="md:col-span-3">
+          <Skeleton className="h-[104px] w-full" />
+        </div>
+        <div className="md:col-span-2">
+          <Skeleton className="h-[56px] w-full" />
+        </div>
+      </div>
+
+      <div className="flex-grow overflow-y-auto p-4">
+         <BibleDisplaySkeleton />
+      </div>
+    </main>
   );
 }
