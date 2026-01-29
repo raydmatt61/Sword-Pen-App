@@ -41,13 +41,13 @@ export function AiInsightGenerator({ verse, annotation }: { verse: string; annot
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" onClick={handleGenerate}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleGenerate}>
           {isLoading && isOpen ? (
-            <Loader2 className="mr-2 animate-spin" />
+            <Loader2 className="animate-spin" />
           ) : (
-            <Lightbulb className="mr-2" />
+            <Lightbulb />
           )}
-          AI Insight
+          <span className="sr-only">AI Insight</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
