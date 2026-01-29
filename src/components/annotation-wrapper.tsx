@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Save, Trash2, StickyNote, Highlighter, Underline, X } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import Balancer from 'react-wrap-balancer';
 import { useToast } from '@/hooks/use-toast';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 
@@ -105,27 +104,20 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                     </Button>
                 )}
             </CardHeader>
-            <CardContent className="p-2 md:p-4 min-h-[50px]">
-                 {!user ? <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p> :
-                 !activeAnnotation && !selection ? (
+            <CardContent className="px-4 py-3 min-h-[48px] flex items-center">
+                {!user ? (
+                    <p className="text-sm text-muted-foreground">Sign in to annotate verses.</p>
+                ) : !activeAnnotation && !selection ? (
                     <p className="text-sm text-muted-foreground">Select text or an annotation to get started.</p>
-                 ):
-                 !activeAnnotation && selection ? <p className="font-bold font-headline text-primary">New selection in v. {selection.verseNum}</p> :
-                 activeAnnotation ?
-                 (
-                    <div className="flex flex-col gap-2">
-                        {activeAnnotation.text ? (
-                            <>
-                                <p className="font-bold font-headline text-primary text-sm">{fullReference}:{activeAnnotation.verse}</p>
-                                <blockquote className="p-2 border-l-4 border-muted bg-muted/20 rounded-r-lg text-sm">
-                                    <Balancer>{activeAnnotation.text}</Balancer>
-                                </blockquote>
-                            </>
-                        ) : null}
-                    </div>
-                 )
-                 : null
-                 }
+                ) : !activeAnnotation && selection ? (
+                    <p className="font-bold font-headline text-primary truncate">New selection in v. {selection.verseNum}</p>
+                ) : activeAnnotation ? (
+                    <p className="font-bold font-headline text-primary text-sm truncate" title={activeAnnotation.text}>
+                        {fullReference}:{activeAnnotation.verse} &mdash; "{activeAnnotation.text}"
+                    </p>
+                ) : (
+                    <p className="text-sm text-muted-foreground">Select text or an annotation to get started.</p>
+                )}
             </CardContent>
              {(selection || activeAnnotation) && user && (
                <CardFooter ref={toolbarRef} className="p-2">
