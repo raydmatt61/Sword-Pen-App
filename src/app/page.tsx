@@ -269,6 +269,7 @@ function PageWithSearchParams() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // On first client-side render, check if we need to load from localStorage.
   useEffect(() => {
@@ -280,7 +281,13 @@ function PageWithSearchParams() {
         // Replace the current URL with the one from storage.
         // This will trigger a re-render where searchParams will have a value.
         router.replace(`${pathname}?book=${savedLocation.book}&chapter=${savedLocation.chapter}&translation=${savedLocation.translationId}`);
+      } else {
+        // If no saved location, we are done with initial load checks.
+        setIsInitialLoad(false);
       }
+    } else {
+       // If params exist, we are also done.
+      setIsInitialLoad(false);
     }
   }, [searchParams, router, pathname]);
 
@@ -298,6 +305,12 @@ function PageWithSearchParams() {
   }, [book, chapter, translationUrlParam, searchParams]);
   
   const translation = TRANSLATIONS.find(t => t.id === translationUrlParam) || TRANSLATIONS[0];
+  
+  // If we are on the initial load and there are no search params, we are about to redirect.
+  // Show the skeleton to prevent rendering the default content ("John 1") for a split second, which causes a hydration error.
+  if (isInitialLoad && !searchParams.has('book')) {
+    return <FullPageSkeleton />;
+  }
   
   return <ChapterLoader book={book} chapter={chapter} translationId={translation.id} />
 }
@@ -358,7 +371,7 @@ function FullPageSkeleton() {
       
       <div className="sticky top-0 z-20 grid grid-cols-1 md:grid-cols-5 gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
         <div className="md:col-span-3">
-          <Skeleton className="h-[104px] w-full" />
+          <Skeleton className="h-[56px] w-full" />
         </div>
         <div className="md:col-span-2">
           <Skeleton className="h-[56px] w-full" />
