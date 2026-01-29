@@ -60,6 +60,12 @@ export function VerseSelector({
       try {
         const savedLocation = JSON.parse(savedLocationRaw);
         if (savedLocation.book && savedLocation.chapter && savedLocation.translationId) {
+            // First, reset the component's internal state to match the saved location.
+            // This ensures the dropdowns update immediately, even if the URL doesn't change.
+            setBook(savedLocation.book);
+            setChapter(savedLocation.chapter);
+            setTranslation(savedLocation.translationId);
+
             navigate({ 
                 book: savedLocation.book, 
                 chapter: savedLocation.chapter, 
