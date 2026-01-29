@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Book, Translation } from '@/lib/bible';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronsRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -35,10 +35,6 @@ export function VerseSelector({
   const isMobile = useIsMobile();
   const [isClient, setIsClient] = useState(false);
 
-  const currentMaxChaptersForSelectedBook = useMemo(() => {
-    return books.find(b => b.commonName === book)?.numberOfChapters || maxChapters;
-  }, [book, books, maxChapters]);
-
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -51,41 +47,58 @@ export function VerseSelector({
   
   const handleBookChange = (newBook: string) => {
     setBook(newBook);
-    setChapter('1');
+    const newBookData = books.find(b => b.commonName === newBook);
+    const chapterAsNum = parseInt(chapter, 10);
+    if (newBookData && chapterAsNum > newBookData.numberOfChapters) {
+      setChapter('1');
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const currentMaxChaptersForSelectedBook = useMemo(() => {
+    return books.find(b => b.commonName === book)?.numberOfChapters || maxChapters;
+  }, [book, books, maxChapters]);
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     navigate({ book, chapter, translation });
-    setIsSheetOpen(false);
+    if(isMobile) {
+      setIsSheetOpen(false);
+    }
   };
   
   const renderControls = (isMobileLayout = false) => {
+    const selectorControls = (
+        <>
+            <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
+                <SelectTrigger id="book" aria-label="Book" className="md:w-[150px]"><SelectValue placeholder="Select book" /></SelectTrigger>
+                <SelectContent>{books.map(b => <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>)}</SelectContent>
+            </Select>
+
+            <Select value={chapter} onValueChange={setChapter} disabled={books.length === 0}>
+                <SelectTrigger id="chapter" aria-label="Chapter" className="md:w-[70px]"><SelectValue placeholder="Ch." /></SelectTrigger>
+                <SelectContent>{Array.from({ length: currentMaxChaptersForSelectedBook }, (_, i) => i + 1).map(chapNum => <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>)}</SelectContent>
+            </Select>
+
+            <Select value={translation} onValueChange={setTranslation}>
+                <SelectTrigger id="translation" aria-label="Translation" className="md:w-[90px]"><SelectValue placeholder="Translation" /></SelectTrigger>
+                <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id}</SelectItem>)}</SelectContent>
+            </Select>
+        </>
+    );
+
     if (isMobileLayout) {
         return (
-            <form onSubmit={handleSubmit}>
-                <div className="flex flex-col gap-4">
-                    <div className="grid grid-cols-2 gap-2">
-                        <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
-                            <SelectTrigger id="book-mobile" aria-label="Book"><SelectValue placeholder="Select book" /></SelectTrigger>
-                            <SelectContent>{books.map(b => <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Select value={chapter} onValueChange={setChapter} disabled={books.length === 0}>
-                            <SelectTrigger id="chapter-mobile" aria-label="Chapter"><SelectValue placeholder="Ch." /></SelectTrigger>
-                            <SelectContent>{Array.from({ length: currentMaxChaptersForSelectedBook }, (_, i) => i + 1).map(chapNum => <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>)}</SelectContent>
-                        </Select>
-                    </div>
-                     <Select value={translation} onValueChange={setTranslation}>
-                        <SelectTrigger id="translation-mobile" aria-label="Translation"><SelectValue placeholder="Translation" /></SelectTrigger>
-                        <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <div className="flex gap-2 w-full">
-                        <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} aria-label="Previous Chapter"><ChevronLeft className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChapters} aria-label="Next Chapter"><ChevronRight className="h-4 w-4" /></Button>
-                        <Button type="submit" className="flex-grow" disabled={books.length === 0}>
-                            <Search className="mr-2 h-4 w-4" /> Load
-                        </Button>
-                    </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-3 gap-2">
+                  {selectorControls}
+                </div>
+                <div className="flex gap-2 w-full">
+                    <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} aria-label="Previous Chapter"><ChevronLeft className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChapters} aria-label="Next Chapter"><ChevronRight className="h-4 w-4" /></Button>
+                    <Button type="submit" className="flex-grow" disabled={books.length === 0}>
+                        Go
+                        <ChevronsRight className="ml-2 h-4 w-4" />
+                    </Button>
                 </div>
             </form>
         )
@@ -93,32 +106,16 @@ export function VerseSelector({
 
     return (
      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,1.5fr)_minmax(0,1.5fr)_auto_auto_auto] items-center gap-2">
-            <Select value={book} onValueChange={handleBookChange} disabled={books.length === 0}>
-                <SelectTrigger id="book" aria-label="Book"><SelectValue placeholder="Select book" /></SelectTrigger>
-                <SelectContent>{books.map(b => <SelectItem key={b.id} value={b.commonName}>{b.commonName}</SelectItem>)}</SelectContent>
-            </Select>
-
-            <Select value={chapter} onValueChange={setChapter} disabled={books.length === 0}>
-                <SelectTrigger id="chapter" aria-label="Chapter"><SelectValue placeholder="Ch." /></SelectTrigger>
-                <SelectContent>{Array.from({ length: currentMaxChaptersForSelectedBook }, (_, i) => i + 1).map(chapNum => <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>)}</SelectContent>
-            </Select>
-
-            <Select value={translation} onValueChange={setTranslation}>
-                <SelectTrigger id="translation" aria-label="Translation"><SelectValue placeholder="Translation" /></SelectTrigger>
-                <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id}</SelectItem>)}</SelectContent>
-            </Select>
-
-            <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} aria-label="Previous Chapter">
+        <div className="flex items-center gap-2">
+            {selectorControls}
+             <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} aria-label="Previous Chapter">
                 <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChapters} aria-label="Next Chapter">
                 <ChevronRight className="h-4 w-4" />
             </Button>
-
-            <Button type="submit" size="icon" className="px-3" disabled={books.length === 0}>
-                <Search className="h-4 w-4" />
-                <span className="sr-only">Load</span>
+            <Button type="submit" size="icon" disabled={books.length === 0} aria-label="Go to selection">
+                <ChevronsRight className="h-4 w-4" />
             </Button>
         </div>
     </form>
