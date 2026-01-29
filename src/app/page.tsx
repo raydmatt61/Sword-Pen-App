@@ -20,22 +20,27 @@ async function getChapter(
   chapter: string,
   translationId: string,
 ): Promise<BibleChapterResponse | null> {
+  const bookNameAliases: Record<string, string> = {
+    'Song of Songs': 'Song of Solomon',
+  };
+  const canonicalBook = bookNameAliases[book] || book;
+
   // Use labs.bible.org for NET translation
   if (translationId === 'engnet') {
     try {
-      const response = await fetch(`https://labs.bible.org/api/?passage=${book}+${chapter}&type=json`);
+      const response = await fetch(`https://labs.bible.org/api/?passage=${canonicalBook}+${chapter}&type=json`);
       if (!response.ok) {
-        console.error(`labs.bible.org API Error for ${book} ${chapter}: ${response.status} ${response.statusText}`);
+        console.error(`labs.bible.org API Error for ${canonicalBook} ${chapter}: ${response.status} ${response.statusText}`);
         return null;
       }
       const netData = await response.json();
       if (!netData || !Array.isArray(netData) || netData.length === 0) {
-        console.error(`labs.bible.org returned no data for ${book} ${chapter}`);
+        console.error(`labs.bible.org returned no data for ${canonicalBook} ${chapter}`);
         return null;
       }
       
       const translationInfo = TRANSLATIONS.find(t => t.id === 'engnet');
-      const bookAbbr = BIBLE_BOOKS_ABBR[book];
+      const bookAbbr = BIBLE_BOOKS_ABBR[canonicalBook];
 
       const chapterContent: ChapterContentItem[] = netData.map((verse: any) => ({
         type: 'verse',
@@ -47,7 +52,7 @@ async function getChapter(
       const result: BibleChapterResponse = {
         book: {
           name: netData[0].bookname,
-          id: bookAbbr || book,
+          id: bookAbbr || canonicalBook,
         },
         chapter: {
           number: parseInt(netData[0].chapter, 10),
@@ -72,7 +77,7 @@ async function getChapter(
   
   while (attempts < maxRetries) {
     try {
-      const bookId = BIBLE_BOOKS_ABBR[book] || book;
+      const bookId = BIBLE_BOOKS_ABBR[canonicalBook] || canonicalBook;
       const response = await fetch(
         `https://bible.helloao.org/api/${translationId}/${bookId}/${chapter}.json`
       );
