@@ -28,7 +28,7 @@ async function getChapter(
   // Use labs.bible.org for NET translation
   if (translationId === 'engnet') {
     try {
-      const response = await fetch(`https://labs.bible.org/api/?passage=${canonicalBook}+${chapter}&type=json`);
+      const response = await fetch(`https://labs.bible.org/api/?passage=${canonicalBook}+${chapter}&type=json&formatting=full`);
       if (!response.ok) {
         console.error(`labs.bible.org API Error for ${canonicalBook} ${chapter}: ${response.status} ${response.statusText}`);
         return null;
@@ -42,12 +42,21 @@ async function getChapter(
       const translationInfo = TRANSLATIONS.find(t => t.id === 'engnet');
       const bookAbbr = BIBLE_BOOKS_ABBR[canonicalBook];
 
-      const chapterContent: ChapterContentItem[] = netData.map((verse: any) => ({
-        type: 'verse',
-        number: verse.verse,
-        // The new API returns text with HTML tags, strip them
-        content: [verse.text.replace(/<[^>]*>?/gm, '')]
-      }));
+      const chapterContent: ChapterContentItem[] = netData.map((verse: any) => {
+        const noteRegex = /<span class="note">.*?<\/span>/gi;
+        const notesMatch = verse.text.match(noteRegex);
+        const notesHtml = notesMatch ? notesMatch.join(' ') : null;
+
+        const verseTextWithoutNotes = verse.text.replace(noteRegex, '').trim();
+        const cleanVerseText = verseTextWithoutNotes.replace(/<[^>]*>?/gm, '');
+
+        return {
+          type: 'verse',
+          number: verse.verse,
+          content: [cleanVerseText],
+          notes: notesHtml,
+        };
+      });
 
       const result: BibleChapterResponse = {
         book: {

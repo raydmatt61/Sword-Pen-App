@@ -157,22 +157,30 @@ function VerseComponent({
 
 
     return (
-        <p className={cn(
-            "font-body",
-            fontSize === 'sm' && 'text-sm leading-relaxed',
-            fontSize === 'md' && 'text-base leading-relaxed',
-            fontSize === 'lg' && 'text-lg leading-relaxed',
-            fontSize === 'xl' && 'text-xl leading-relaxed',
-            fontSize === '2xl' && 'text-2xl leading-relaxed',
-        )} data-verse-number={verse.number}>
-            <sup 
-                className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
-                onClick={handleVerseNumberClick}
-            >
-                {verse.number}
-            </sup>
-            {renderedContent}
-        </p>
+        <>
+            <p className={cn(
+                "font-body",
+                fontSize === 'sm' && 'text-sm leading-relaxed',
+                fontSize === 'md' && 'text-base leading-relaxed',
+                fontSize === 'lg' && 'text-lg leading-relaxed',
+                fontSize === 'xl' && 'text-xl leading-relaxed',
+                fontSize === '2xl' && 'text-2xl leading-relaxed',
+            )} data-verse-number={verse.number}>
+                <sup 
+                    className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
+                    onClick={handleVerseNumberClick}
+                >
+                    {verse.number}
+                </sup>
+                {renderedContent}
+            </p>
+            {verse.notes && (
+                <div 
+                    className="text-muted-foreground ml-8 mt-2 border-l-2 border-border pl-4 text-xs"
+                    dangerouslySetInnerHTML={{ __html: verse.notes.replace(/<a class="key".*?>.*?<\/a>/gi, '').replace(/<span class="note">/gi, '').replace(/<\/span>/gi, '<br />') }} 
+                />
+            )}
+        </>
     );
 }
 

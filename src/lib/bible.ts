@@ -31,7 +31,7 @@ export const BIBLE_BOOKS = Object.keys(BIBLE_BOOKS_ABBR);
 export type VerseContent = string | { type: 'word'; text: string };
 export type ChapterContentItem = 
     | { type: 'heading'; content: string[] }
-    | { type: 'verse'; number: string; content: VerseContent[]; 'para-break'?: boolean };
+    | { type: 'verse'; number: string; content: VerseContent[]; 'para-break'?: boolean; notes?: string | null; };
 
 export type BibleChapterResponse = {
     book: {
