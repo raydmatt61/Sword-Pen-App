@@ -14,15 +14,15 @@ import { useToast } from '@/hooks/use-toast';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 
 const highlightColors = [
-    { class: 'hl-yellow', color: '#fff59d' },
-    { class: 'hl-green', color: '#c8e6c9' },
-    { class: 'hl-blue', color: '#bbdefb' },
-    { class: 'hl-pink', color: '#f8bbd0' },
+    { class: 'hl-yellow', color: '#fef08a' },
+    { class: 'hl-green', color: '#bbf7d0' },
+    { class: 'hl-blue', color: '#bfdbfe' },
+    { class: 'hl-purple', color: '#e9d5ff' },
 ];
 const underlineColors = [
-    { class: 'ul-red', color: '#e53935' },
-    { class: 'ul-purple', color: '#8e24aa' },
-    { class: 'ul-orange', color: '#fb8c00' },
+    { class: 'ul-red', color: '#991b1b' },
+    { class: 'ul-blue', color: '#2563eb' },
+    { class: 'ul-orange', color: '#ea580c' },
 ];
 
 export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterResponse }) {

@@ -5,25 +5,25 @@
 
 @layer base {
   :root {
-    --background: 48 33% 94%;
-    --foreground: 36 10% 20%;
-    --card: 48 33% 98%;
-    --card-foreground: 36 10% 20%;
-    --popover: 48 33% 98%;
-    --popover-foreground: 36 10% 20%;
-    --primary: 36 18% 58%;
-    --primary-foreground: 48 33% 98%;
-    --secondary: 48 15% 90%;
-    --secondary-foreground: 36 10% 20%;
-    --muted: 48 15% 90%;
-    --muted-foreground: 36 10% 45%;
-    --accent: 87 13% 45%;
-    --accent-foreground: 48 33% 98%;
+    --background: 210 40% 98%;
+    --foreground: 215 30% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 30% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 30% 18%;
+    --primary: 224 82% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 215 30% 18%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 19% 47%;
+    --accent: 224 82% 96%;
+    --accent-foreground: 224 82% 53%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 36 10% 80%;
-    --input: 36 10% 85%;
-    --ring: 36 18% 58%;
+    --border: 215 28% 90%;
+    --input: 215 28% 90%;
+    --ring: 224 82% 53%;
     --radius: 0.5rem;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -33,25 +33,25 @@
   }
 
   .dark {
-    --background: 36 10% 10%;
-    --foreground: 48 33% 94%;
-    --card: 36 10% 15%;
-    --card-foreground: 48 33% 94%;
-    --popover: 36 10% 10%;
-    --popover-foreground: 48 33% 94%;
-    --primary: 36 18% 58%;
-    --primary-foreground: 36 10% 10%;
-    --secondary: 36 10% 20%;
-    --secondary-foreground: 48 33% 94%;
-    --muted: 36 10% 20%;
-    --muted-foreground: 48 10% 60%;
-    --accent: 87 13% 45%;
-    --accent-foreground: 48 33% 98%;
+    --background: 215 28% 17%;
+    --foreground: 210 40% 98%;
+    --card: 215 28% 22%;
+    --card-foreground: 210 40% 98%;
+    --popover: 215 28% 17%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 224 82% 53%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 215 28% 22%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 28% 22%;
+    --muted-foreground: 215 19% 60%;
+    --accent: 224 82% 40%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 36 10% 25%;
-    --input: 36 10% 25%;
-    --ring: 36 18% 58%;
+    --border: 215 28% 27%;
+    --input: 215 28% 27%;
+    --ring: 224 82% 53%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -69,13 +69,13 @@
   }
 }
 
-.hl-yellow { background-color: #fff59d !important; color: black !important; }
-.hl-green { background-color: #c8e6c9 !important; color: black !important; }
-.hl-blue { background-color: #bbdefb !important; color: black !important; }
-.hl-pink { background-color: #f8bbd0 !important; color: black !important; }
-.ul-red { border-bottom: 3px solid #e53935; padding-bottom: 1px; }
-.ul-purple { border-bottom: 3px solid #8e24aa; padding-bottom: 1px; }
-.ul-orange { border-bottom: 3px solid #fb8c00; padding-bottom: 1px; }
+.hl-yellow { background-color: #fef08a !important; color: black !important; }
+.hl-green { background-color: #bbf7d0 !important; color: black !important; }
+.hl-blue { background-color: #bfdbfe !important; color: black !important; }
+.hl-purple { background-color: #e9d5ff !important; color: black !important; }
+.ul-red { border-bottom: 3px solid #991b1b; padding-bottom: 1px; }
+.ul-blue { border-bottom: 3px solid #2563eb; padding-bottom: 1px; }
+.ul-orange { border-bottom: 3px solid #ea580c; padding-bottom: 1px; }
 
 .words-of-jesus {
   color: #c00;
