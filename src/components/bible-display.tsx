@@ -12,6 +12,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import { collection } from 'firebase/firestore';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 function VerseComponent({
@@ -99,7 +100,7 @@ function VerseComponent({
         let i = 0;
         while (i < chars.length) {
             const charInfo = chars[i];
-            const currentAnnotationClasses = charInfo.annotations.map(a => cn(a.highlight, a.underline, a.note && "border-b-2 border-dashed border-primary")).join(' ');
+            const currentAnnotationClasses = charInfo.annotations.map(a => cn(a.highlight, a.underline, a.note && a.note.trim() !== '' && "border-b-2 border-dashed border-primary")).join(' ');
             const isCurrentWoj = charInfo.isWoj;
 
             let j = i;
@@ -109,16 +110,32 @@ function VerseComponent({
 
             const segmentText = chars.slice(i, j).map(c => c.char).join('');
             const mainAnnotation = charInfo.annotations[0];
+            const hasNote = mainAnnotation?.note && mainAnnotation.note.trim() !== '';
 
-            finalRender.push(
+            const segmentSpan = (
                 <span 
                     key={i} 
-                    className={cn(currentAnnotationClasses, isCurrentWoj && 'words-of-jesus')}
+                    className={cn(currentAnnotationClasses, isCurrentWoj && 'words-of-jesus', hasNote && 'cursor-help')}
                     onClick={mainAnnotation ? (e) => { e.stopPropagation(); onAnnotationClick(mainAnnotation); } : undefined}
                 >
                     {segmentText}
                 </span>
             );
+
+            if (hasNote) {
+                finalRender.push(
+                    <Tooltip key={`t-${i}`} delayDuration={100}>
+                        <TooltipTrigger asChild>
+                            {segmentSpan}
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm font-body whitespace-pre-wrap shadow-lg">
+                            <p>{mainAnnotation.note}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                );
+            } else {
+                finalRender.push(segmentSpan);
+            }
             i = j;
         }
         return finalRender;
@@ -310,18 +327,54 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
 
 
     return (
-        <div ref={emblaRef} className="pt-4 relative overflow-hidden">
-            <div className="flex">
-                <div className="min-w-0 flex-shrink-0 flex-grow-0 basis-full">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
-                                    <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
+        <TooltipProvider>
+            <div ref={emblaRef} className="pt-4 relative overflow-hidden">
+                <div className="flex">
+                    <div className="min-w-0 flex-shrink-0 flex-grow-0 basis-full">
+                        <Card>
+                            <CardHeader>
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
+                                        <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
+                                    </div>
+                                    <div className="md:hidden flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            type="button"
+                                            onClick={() => onChapterNav('prev')}
+                                            disabled={currentChapter <= 1}
+                                            aria-label="Previous Chapter"
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            type="button"
+                                            onClick={() => onChapterNav('next')}
+                                            disabled={currentChapter >= maxChapters}
+                                            aria-label="Next Chapter"
+                                        >
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div className="md:hidden flex gap-2">
-                                    <Button
+                            </CardHeader>
+                            <CardContent className="pb-0">
+                                <div ref={bibleContentRef} className={cn("select-text bible-content", textClasses)}>
+                                    <div className="space-y-2">
+                                        {chapterData.chapter.content.map(renderContentItem)}
+                                    </div>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="pt-6 flex flex-col items-start gap-4">
+                                {chapterData.copyright && (
+                                    <p className="text-xs text-muted-foreground italic">{chapterData.copyright}</p>
+                                )}
+                                <div className="w-full md:hidden flex justify-center gap-2 pt-4">
+                                     <Button
                                         variant="outline"
                                         size="icon"
                                         type="button"
@@ -342,47 +395,15 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                                         <ChevronRight className="h-4 w-4" />
                                     </Button>
                                 </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pb-0">
-                            <div ref={bibleContentRef} className={cn("select-text bible-content", textClasses)}>
-                                <div className="space-y-2">
-                                    {chapterData.chapter.content.map(renderContentItem)}
-                                </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter className="pt-6 flex flex-col items-start gap-4">
-                            {chapterData.copyright && (
-                                <p className="text-xs text-muted-foreground italic">{chapterData.copyright}</p>
-                            )}
-                            <div className="w-full md:hidden flex justify-center gap-2 pt-4">
-                                 <Button
-                                    variant="outline"
-                                    size="icon"
-                                    type="button"
-                                    onClick={() => onChapterNav('prev')}
-                                    disabled={currentChapter <= 1}
-                                    aria-label="Previous Chapter"
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    type="button"
-                                    onClick={() => onChapterNav('next')}
-                                    disabled={currentChapter >= maxChapters}
-                                    aria-label="Next Chapter"
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </CardFooter>
-                    </Card>
+                            </CardFooter>
+                        </Card>
+                    </div>
                 </div>
             </div>
-        </div>
+        </TooltipProvider>
     );
 }
+
+    
 
     
