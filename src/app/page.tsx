@@ -42,25 +42,23 @@ async function getChapter(
       const translationInfo = TRANSLATIONS.find(t => t.id === 'engnet');
       const bookAbbr = BIBLE_BOOKS_ABBR[canonicalBook];
 
-      // Inject the verse number inside the first HTML tag of each verse's text
-      // to prevent the verse number from being orphaned on a separate line.
       const fullHtmlContent = netData.map((verse: any) => {
         const sup = `<sup class="font-headline font-bold text-primary mr-1 select-none">${verse.verse}</sup>`;
         const text = verse.text.trim();
         
-        // The API for `formatting=full` usually wraps verse text in <p> tags.
-        // We need to insert the <sup> inside that tag.
-        if (text.startsWith('<p')) {
-            const pTagEnd = text.indexOf('>');
-            if (pTagEnd !== -1) {
-                // Injects: <p><sup>1</sup> In the beginning...
-                return text.slice(0, pTagEnd + 1) + sup + '&nbsp;' + text.slice(pTagEnd + 1);
-            }
+        // This regex finds the first HTML tag, e.g., <p> or <p class="foo">
+        const match = text.match(/<([a-z1-6]+)([^>]*)>/i);
+
+        if (match) {
+          // If a tag is found, inject the sup after the opening tag
+          const tagEndIndex = match[0].length;
+          return text.substring(0, tagEndIndex) + sup + '&nbsp;' + text.substring(tagEndIndex);
         }
         
-        // Fallback for cases where the text isn't wrapped in a paragraph.
-        return `<div>${sup}&nbsp;${text}</div>`;
-      }).join('');
+        // Fallback if for some reason a verse's text has no HTML tags.
+        // Wrap it in a paragraph to ensure block formatting.
+        return `<p>${sup}&nbsp;${text}</p>`;
+      }).join('\n');
       
       const copyright = netData.length > 0 ? netData[0].copyright : undefined;
 
@@ -407,5 +405,7 @@ function FullPageSkeleton() {
     </main>
   );
 }
+
+    
 
     
