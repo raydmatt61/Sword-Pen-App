@@ -18,19 +18,18 @@ function VerseComponent({
     verse,
     annotations,
     onAnnotationClick,
+    translationId,
 }: {
     verse: Extract<ChapterContentItem, { type: 'verse' }>;
     annotations: Annotation[];
     onAnnotationClick: (annotation: Annotation) => void;
+    translationId: string;
 }) {
     const { fontSize } = useAnnotationContext();
-
-    const isHtmlContent = useMemo(() => 
-        verse.content.length === 1 && typeof verse.content[0] === 'string' && /<[a-z][\s\S]*>/i.test(verse.content[0])
-    , [verse.content]);
+    const isNetTranslation = translationId === 'engnet';
 
     const nonHtmlContent = useMemo(() => {
-        if (isHtmlContent) return null;
+        if (isNetTranslation) return null;
         
         // Original annotation rendering logic for BSB, WEB, etc.
         const flattenContent = (content: any, isInsideWoj = false): { text: string, isWoj: boolean }[] => {
@@ -128,7 +127,7 @@ function VerseComponent({
             i = j;
         }
         return finalRender;
-    }, [isHtmlContent, verse.content, annotations, onAnnotationClick]);
+    }, [isNetTranslation, verse.content, annotations, onAnnotationClick]);
 
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -158,14 +157,14 @@ function VerseComponent({
     );
 
     return (
-        <div className="flex flex-row items-baseline" data-verse-number={verse.number}>
+        <div className="flex flex-row items-start" data-verse-number={verse.number}>
             <sup 
                 className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
                 onClick={handleVerseNumberClick}
             >
                 {verse.number}
             </sup>
-            {isHtmlContent ? (
+            {isNetTranslation ? (
                  <div 
                     className={cn(textClasses, "verse-html-content")}
                     dangerouslySetInnerHTML={{ __html: verse.content[0] as string }} 
@@ -303,6 +302,7 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                         verse={item} 
                         annotations={chapterAnnotations[item.number] || []}
                         onAnnotationClick={handleAnnotationClick}
+                        translationId={translationId}
                     />;
         }
         if (item.type === 'para-break' || item['para-break']) {
@@ -381,5 +381,7 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
     );
 }
 
+
+    
 
     
