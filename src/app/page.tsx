@@ -25,10 +25,10 @@ async function getChapter(
   };
   const canonicalBook = bookNameAliases[book] || book;
 
-  // Use labs.bible.org for NET translation
+  // Use labs.bible.org for NET translation, but without notes/full formatting.
   if (translationId === 'engnet') {
     try {
-      const response = await fetch(`https://labs.bible.org/api/?passage=${canonicalBook}+${chapter}&type=json&formatting=full`);
+      const response = await fetch(`https://labs.bible.org/api/?passage=${canonicalBook}+${chapter}&type=json`);
       if (!response.ok) {
         console.error(`labs.bible.org API Error for ${canonicalBook} ${chapter}: ${response.status} ${response.statusText}`);
         return null;
@@ -42,26 +42,16 @@ async function getChapter(
       const translationInfo = TRANSLATIONS.find(t => t.id === 'engnet');
       const bookAbbr = BIBLE_BOOKS_ABBR[canonicalBook];
 
-      const fullHtmlContent = netData.map((verse: any) => {
-        const sup = `<sup class="font-headline font-bold text-primary mr-1 select-none">${verse.verse}</sup>`;
-        const text = verse.text.trim();
-        
-        // This regex finds the first HTML tag, e.g., <p> or <p class="foo">
-        const match = text.match(/<([a-z1-6]+)([^>]*)>/i);
-
-        if (match) {
-          // If a tag is found, inject the sup after the opening tag
-          const tagEndIndex = match[0].length;
-          return text.substring(0, tagEndIndex) + sup + '&nbsp;' + text.substring(tagEndIndex);
-        }
-        
-        // Fallback if for some reason a verse's text has no HTML tags.
-        // Wrap it in a paragraph to ensure block formatting.
-        return `<p>${sup}&nbsp;${text}</p>`;
-      }).join('\n');
-      
-      const copyright = netData.length > 0 ? netData[0].copyright : undefined;
-
+      const chapterContent: ChapterContentItem[] = netData.map((verse: any) => {
+        // Strip any lingering HTML tags from the basic text response
+        const cleanText = verse.text.replace(/<[^>]*>/g, '');
+        return {
+          type: 'verse',
+          number: verse.verse,
+          content: [cleanText.trim()],
+          'para-break': verse.text.includes('<p>') // A simple heuristic for paragraphs
+        };
+      });
 
       const result: BibleChapterResponse = {
         book: {
@@ -70,14 +60,13 @@ async function getChapter(
         },
         chapter: {
           number: parseInt(netData[0].chapter, 10),
-          content: [], // Individual verses not needed for this display method
-          htmlContent: fullHtmlContent
+          content: chapterContent,
         },
         translation: {
           id: 'engnet',
           name: translationInfo?.name || 'New English Translation',
         },
-        copyright: copyright,
+        // No copyright info in this simplified response
       };
       return result;
     } catch (error) {
@@ -405,7 +394,5 @@ function FullPageSkeleton() {
     </main>
   );
 }
-
-    
 
     

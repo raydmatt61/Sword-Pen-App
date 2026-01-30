@@ -346,16 +346,9 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                         </CardHeader>
                         <CardContent className="pb-0">
                             <div ref={bibleContentRef} className={cn("select-text bible-content", textClasses)}>
-                                {chapterData.chapter.htmlContent ? (
-                                    <div
-                                        className="space-y-4 verse-html-content"
-                                        dangerouslySetInnerHTML={{ __html: chapterData.chapter.htmlContent }}
-                                    />
-                                ) : (
-                                    <div className="space-y-2">
-                                        {chapterData.chapter.content.map(renderContentItem)}
-                                    </div>
-                                )}
+                                <div className="space-y-2">
+                                    {chapterData.chapter.content.map(renderContentItem)}
+                                </div>
                             </div>
                         </CardContent>
                         <CardFooter className="pt-6 flex flex-col items-start gap-4">
@@ -391,3 +384,5 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
         </div>
     );
 }
+
+    

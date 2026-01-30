@@ -41,7 +41,6 @@ export type BibleChapterResponse = {
     chapter: {
         number: number;
         content: ChapterContentItem[];
-        htmlContent?: string;
     };
     translation: {
         name: string;
@@ -66,3 +65,5 @@ export type Annotation = {
   createdAt?: any;
   updatedAt?: any;
 };
+
+    
