@@ -423,6 +423,10 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                                         </a>
                                         .
                                     </p>
+                                ) : chapterData.translation.id === 'BSB' ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        The Berean Bible and Majority Bible texts are officially dedicated to the public domain as of April 30, 2023.
+                                    </p>
                                 ) : (
                                     chapterData.copyright && (
                                         <p className="text-xs text-muted-foreground italic">{chapterData.copyright}</p>
