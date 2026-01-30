@@ -29,13 +29,9 @@ function VerseComponent({
         verse.content.length === 1 && typeof verse.content[0] === 'string' && /<[a-z][\s\S]*>/i.test(verse.content[0])
     , [verse.content]);
 
-    const renderedContent = useMemo(() => {
-        // Special render path for NET bible to show formatting.
-        // This preserves HTML tags but means existing annotations (highlights/underlines) cannot be displayed on the text.
-        if (isHtmlContent) {
-            return <span dangerouslySetInnerHTML={{ __html: verse.content[0] as string }} />;
-        }
-
+    const nonHtmlContent = useMemo(() => {
+        if (isHtmlContent) return null;
+        
         // Original annotation rendering logic for BSB, WEB, etc.
         const flattenContent = (content: any, isInsideWoj = false): { text: string, isWoj: boolean }[] => {
             if (!content) return [];
@@ -132,42 +128,55 @@ function VerseComponent({
             i = j;
         }
         return finalRender;
-    }, [verse.content, annotations, onAnnotationClick, isHtmlContent]);
+    }, [isHtmlContent, verse.content, annotations, onAnnotationClick]);
+
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
         const supElement = event.currentTarget;
-        const pElement = supElement.parentElement;
-        if (!pElement) return;
+        const verseContainer = supElement.parentElement;
+        if (!verseContainer) return;
 
         const selection = window.getSelection();
         if (!selection) return;
 
         const range = document.createRange();
-        range.selectNodeContents(pElement);
+        range.selectNodeContents(verseContainer);
         range.setStartAfter(supElement);
+        
         selection.removeAllRanges();
         selection.addRange(range);
         document.dispatchEvent(new Event('selectionchange'));
     };
 
+    const textClasses = cn(
+        "font-body",
+        fontSize === 'sm' && 'text-sm leading-relaxed',
+        fontSize === 'md' && 'text-base leading-relaxed',
+        fontSize === 'lg' && 'text-lg leading-relaxed',
+        fontSize === 'xl' && 'text-xl leading-relaxed',
+        fontSize === '2xl' && 'text-2xl leading-relaxed',
+    );
+
     return (
         <>
-            <p className={cn(
-                "font-body",
-                fontSize === 'sm' && 'text-sm leading-relaxed',
-                fontSize === 'md' && 'text-base leading-relaxed',
-                fontSize === 'lg' && 'text-lg leading-relaxed',
-                fontSize === 'xl' && 'text-xl leading-relaxed',
-                fontSize === '2xl' && 'text-2xl leading-relaxed',
-            )} data-verse-number={verse.number}>
+            <div className="flex flex-row items-baseline" data-verse-number={verse.number}>
                 <sup 
                     className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
                     onClick={handleVerseNumberClick}
                 >
                     {verse.number}
                 </sup>
-                {renderedContent}
-            </p>
+                {isHtmlContent ? (
+                     <div 
+                        className={textClasses}
+                        dangerouslySetInnerHTML={{ __html: verse.content[0] as string }} 
+                     />
+                ) : (
+                    <p className={textClasses}>
+                        {nonHtmlContent}
+                    </p>
+                )}
+            </div>
             {verse.notes && (
                 <div 
                     className="text-muted-foreground ml-8 mt-2 border-l-2 border-border pl-4 text-xs [&_span.note]:block [&_span.note]:mb-2"
@@ -379,3 +388,6 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
         </div>
     );
 }
+
+
+    
