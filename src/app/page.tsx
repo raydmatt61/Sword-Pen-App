@@ -42,8 +42,11 @@ async function getChapter(
       const translationInfo = TRANSLATIONS.find(t => t.id === 'engnet');
       const bookAbbr = BIBLE_BOOKS_ABBR[canonicalBook];
 
-      // Join all verse HTML content into a single string for paragraph rendering
-      const fullHtmlContent = netData.map((verse: any) => verse.text).join(' ');
+      // Join all verse HTML content into a single string for paragraph rendering,
+      // prepending the verse number to each verse's text.
+      const fullHtmlContent = netData.map((verse: any) => 
+        `<sup class="font-headline font-bold text-primary mr-1 select-none">${verse.verse}</sup> ${verse.text}`
+      ).join(' ');
       const copyright = netData.length > 0 ? netData[0].copyright : undefined;
 
 
@@ -389,3 +392,5 @@ function FullPageSkeleton() {
     </main>
   );
 }
+
+    
