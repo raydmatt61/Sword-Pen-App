@@ -158,32 +158,24 @@ function VerseComponent({
     );
 
     return (
-        <>
-            <div className="flex flex-row items-baseline" data-verse-number={verse.number}>
-                <sup 
-                    className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
-                    onClick={handleVerseNumberClick}
-                >
-                    {verse.number}
-                </sup>
-                {isHtmlContent ? (
-                     <div 
-                        className={textClasses}
-                        dangerouslySetInnerHTML={{ __html: verse.content[0] as string }} 
-                     />
-                ) : (
-                    <p className={textClasses}>
-                        {nonHtmlContent}
-                    </p>
-                )}
-            </div>
-            {verse.notes && (
-                <div 
-                    className="text-muted-foreground ml-8 mt-2 border-l-2 border-border pl-4 text-xs [&_span.note]:block [&_span.note]:mb-2"
-                    dangerouslySetInnerHTML={{ __html: (verse.notes || "").replace(/<a class="key".*?>.*?<\/a>/gi, '') }} 
-                />
+        <div className="flex flex-row items-baseline" data-verse-number={verse.number}>
+            <sup 
+                className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
+                onClick={handleVerseNumberClick}
+            >
+                {verse.number}
+            </sup>
+            {isHtmlContent ? (
+                 <div 
+                    className={cn(textClasses, "verse-html-content")}
+                    dangerouslySetInnerHTML={{ __html: verse.content[0] as string }} 
+                 />
+            ) : (
+                <p className={textClasses}>
+                    {nonHtmlContent}
+                </p>
             )}
-        </>
+        </div>
     );
 }
 

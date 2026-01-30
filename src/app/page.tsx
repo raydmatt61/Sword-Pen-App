@@ -43,18 +43,10 @@ async function getChapter(
       const bookAbbr = BIBLE_BOOKS_ABBR[canonicalBook];
 
       const chapterContent: ChapterContentItem[] = netData.map((verse: any) => {
-        const noteRegex = /<span class="note">.*?<\/span>/gi;
-        const notesMatch = verse.text.match(noteRegex);
-        const notesHtml = notesMatch ? notesMatch.join(' ') : null;
-
-        // Keep HTML formatting in the verse text, but remove the notes from the main content
-        const verseTextWithFormatting = verse.text.replace(noteRegex, '').trim();
-
         return {
           type: 'verse',
           number: verse.verse,
-          content: [verseTextWithFormatting], // Pass HTML string in content array
-          notes: notesHtml,
+          content: [verse.text], // Pass the full HTML string with notes and formatting
         };
       });
 
