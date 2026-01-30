@@ -11,20 +11,34 @@ import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, StickyNote } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 
 function VerseComponent({
     verse,
     annotations,
     onAnnotationClick,
+    chapterData,
 }: {
     verse: Extract<ChapterContentItem, { type: 'verse' }>;
     annotations: Annotation[];
     onAnnotationClick: (annotation: Annotation) => void;
+    chapterData: BibleChapterResponse;
 }) {
     const { fontSize } = useAnnotationContext();
+
+    const verseNotes = useMemo(() => {
+        const notes = new Set<string>();
+        annotations.forEach(ann => {
+            if (ann.note && ann.note.trim() !== '') {
+                notes.add(ann.note);
+            }
+        });
+        return Array.from(notes);
+    }, [annotations]);
+
 
     const renderedContent = useMemo(() => {
         // Original annotation rendering logic for BSB, WEB, etc.
@@ -144,15 +158,21 @@ function VerseComponent({
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
         const supElement = event.currentTarget;
-        const verseContainer = supElement.parentElement;
-        if (!verseContainer) return;
+        const pElement = supElement.parentElement;
+        if (!pElement) return;
 
         const selection = window.getSelection();
         if (!selection) return;
 
         const range = document.createRange();
-        range.selectNodeContents(verseContainer);
-        range.setStartAfter(supElement);
+        range.selectNodeContents(pElement);
+
+        const iconNode = pElement.querySelector('button[data-dialog-trigger]');
+        if (iconNode) {
+            range.setStartAfter(iconNode);
+        } else {
+            range.setStartAfter(supElement);
+        }
         
         selection.removeAllRanges();
         selection.addRange(range);
@@ -169,14 +189,34 @@ function VerseComponent({
     );
 
     return (
-        <div className="flex flex-row items-start" data-verse-number={verse.number}>
-            <sup 
-                className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
-                onClick={handleVerseNumberClick}
-            >
-                {verse.number}
-            </sup>
+        <div data-verse-number={verse.number}>
             <p className={textClasses}>
+                <sup 
+                    className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
+                    onClick={handleVerseNumberClick}
+                >
+                    {verse.number}
+                </sup>
+                {verseNotes.length > 0 && (
+                     <Dialog>
+                        <DialogTrigger asChild>
+                             <button data-dialog-trigger className="relative -top-1 mx-1 p-1 align-middle text-muted-foreground hover:text-primary rounded-full hover:bg-secondary">
+                                <StickyNote className="h-4 w-4" />
+                                <span className="sr-only">View notes for verse {verse.number}</span>
+                            </button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Notes for {chapterData.book.name} {chapterData.chapter.number}:{verse.number}</DialogTitle>
+                            </DialogHeader>
+                             <div className="py-4 font-body whitespace-pre-wrap space-y-4 text-sm max-h-[60vh] overflow-y-auto">
+                                {verseNotes.map((note, index) => (
+                                    <div key={index} className="border-l-4 border-primary/70 pl-4 bg-secondary/30 py-2 rounded-r-md">{note}</div>
+                                ))}
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                )}
                 {renderedContent}
             </p>
         </div>
@@ -308,6 +348,7 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                         verse={item} 
                         annotations={chapterAnnotations[item.number] || []}
                         onAnnotationClick={handleAnnotationClick}
+                        chapterData={chapterData}
                     />;
         }
         if (item.type === 'para-break' || item['para-break']) {
@@ -403,7 +444,3 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
         </TooltipProvider>
     );
 }
-
-    
-
-    
