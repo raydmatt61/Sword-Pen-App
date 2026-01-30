@@ -42,11 +42,26 @@ async function getChapter(
       const translationInfo = TRANSLATIONS.find(t => t.id === 'engnet');
       const bookAbbr = BIBLE_BOOKS_ABBR[canonicalBook];
 
-      // Join all verse HTML content into a single string for paragraph rendering,
-      // prepending the verse number to each verse's text.
-      const fullHtmlContent = netData.map((verse: any) => 
-        `<sup class="font-headline font-bold text-primary mr-1 select-none">${verse.verse}</sup> ${verse.text}`
-      ).join(' ');
+      // Inject the verse number inside the first HTML tag of each verse's text
+      // to prevent the verse number from being orphaned on a separate line.
+      const fullHtmlContent = netData.map((verse: any) => {
+        const sup = `<sup class="font-headline font-bold text-primary mr-1 select-none">${verse.verse}</sup>`;
+        const text = verse.text.trim();
+        
+        // The API for `formatting=full` usually wraps verse text in <p> tags.
+        // We need to insert the <sup> inside that tag.
+        if (text.startsWith('<p')) {
+            const pTagEnd = text.indexOf('>');
+            if (pTagEnd !== -1) {
+                // Injects: <p><sup>1</sup> In the beginning...
+                return text.slice(0, pTagEnd + 1) + sup + '&nbsp;' + text.slice(pTagEnd + 1);
+            }
+        }
+        
+        // Fallback for cases where the text isn't wrapped in a paragraph.
+        return `<div>${sup}&nbsp;${text}</div>`;
+      }).join('');
+      
       const copyright = netData.length > 0 ? netData[0].copyright : undefined;
 
 
