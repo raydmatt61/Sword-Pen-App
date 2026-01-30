@@ -47,13 +47,13 @@ async function getChapter(
         const notesMatch = verse.text.match(noteRegex);
         const notesHtml = notesMatch ? notesMatch.join(' ') : null;
 
-        const verseTextWithoutNotes = verse.text.replace(noteRegex, '').trim();
-        const cleanVerseText = verseTextWithoutNotes.replace(/<[^>]*>?/gm, '');
+        // Keep HTML formatting in the verse text, but remove the notes from the main content
+        const verseTextWithFormatting = verse.text.replace(noteRegex, '').trim();
 
         return {
           type: 'verse',
           number: verse.verse,
-          content: [cleanVerseText],
+          content: [verseTextWithFormatting], // Pass HTML string in content array
           notes: notesHtml,
         };
       });
@@ -283,22 +283,27 @@ function PageWithSearchParams() {
   // On first client-side render, check if we need to load from localStorage.
   useEffect(() => {
     // Only run if there are no query params in the URL.
-    if (!searchParams.has('book')) {
+    if (isInitialLoad && !searchParams.has('book')) {
       const savedLocationRaw = localStorage.getItem(LAST_LOCATION_KEY);
       if (savedLocationRaw) {
-        const savedLocation = JSON.parse(savedLocationRaw);
-        // Replace the current URL with the one from storage.
-        // This will trigger a re-render where searchParams will have a value.
-        router.replace(`${pathname}?book=${savedLocation.book}&chapter=${savedLocation.chapter}&translation=${savedLocation.translationId}`);
+        try {
+            const savedLocation = JSON.parse(savedLocationRaw);
+            // Replace the current URL with the one from storage.
+            // This will trigger a re-render where searchParams will have a value.
+            router.replace(`${pathname}?book=${savedLocation.book}&chapter=${savedLocation.chapter}&translation=${savedLocation.translationId}`);
+        } catch (e) {
+            console.error("Failed to parse last location from localStorage", e);
+            setIsInitialLoad(false);
+        }
       } else {
         // If no saved location, we are done with initial load checks.
         setIsInitialLoad(false);
       }
-    } else {
-       // If params exist, we are also done.
+    } else if (isInitialLoad && searchParams.has('book')) {
+       // If params exist on initial load, we are also done.
       setIsInitialLoad(false);
     }
-  }, [searchParams, router, pathname]);
+  }, [isInitialLoad, searchParams, router, pathname]);
 
   const book = searchParams.get('book') || 'John';
   const chapter = searchParams.get('chapter') || '1';
@@ -316,7 +321,7 @@ function PageWithSearchParams() {
   const translation = TRANSLATIONS.find(t => t.id === translationUrlParam) || TRANSLATIONS[0];
   
   // If we are on the initial load and there are no search params, we are about to redirect.
-  // Show the skeleton to prevent rendering the default content ("John 1") for a split second, which causes a hydration error.
+  // Show the skeleton to prevent rendering the default content ("John 1") for a split second.
   if (isInitialLoad && !searchParams.has('book')) {
     return <FullPageSkeleton />;
   }
@@ -372,15 +377,15 @@ function FullPageSkeleton() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-            <Skeleton className="h-10 w-10" />
-            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-8" />
             <Skeleton className="h-10 w-24" />
         </div>
       </header>
       
       <div className="sticky top-0 z-20 grid grid-cols-1 md:grid-cols-5 gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
         <div className="md:col-span-3">
-          <Skeleton className="h-[56px] w-full" />
+          <Skeleton className="h-[40px] w-full" />
         </div>
         <div className="md:col-span-2">
           <Skeleton className="h-[56px] w-full" />

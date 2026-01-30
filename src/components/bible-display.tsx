@@ -25,14 +25,23 @@ function VerseComponent({
 }) {
     const { fontSize } = useAnnotationContext();
 
+    const isHtmlContent = useMemo(() => 
+        verse.content.length === 1 && typeof verse.content[0] === 'string' && /<[a-z][\s\S]*>/i.test(verse.content[0])
+    , [verse.content]);
+
     const renderedContent = useMemo(() => {
-        // Step 1: Flatten the complex verse.content into a simple array of text segments with styling info.
+        // Special render path for NET bible to show formatting.
+        // This preserves HTML tags but means existing annotations (highlights/underlines) cannot be displayed on the text.
+        if (isHtmlContent) {
+            return <span dangerouslySetInnerHTML={{ __html: verse.content[0] as string }} />;
+        }
+
+        // Original annotation rendering logic for BSB, WEB, etc.
         const flattenContent = (content: any, isInsideWoj = false): { text: string, isWoj: boolean }[] => {
             if (!content) return [];
             if (typeof content === 'string') return [{ text: content, isWoj: isInsideWoj }];
 
             if (!Array.isArray(content)) {
-                // Handle non-array content, which might be a single object
                 const itemIsWoj = content.type === 'woj' || (Array.isArray(content.class) && content.class.includes('w-of-j')) || isInsideWoj;
                 if (content.text && typeof content.text === 'string') return [{ text: content.text, isWoj: itemIsWoj }];
                 if (content.content) return flattenContent(content.content, itemIsWoj);
@@ -57,7 +66,6 @@ function VerseComponent({
                 }
                 
                 if (isWordBased && index < content.length - 1) {
-                    // Check if the next item is not a note before adding a space
                     const nextItem = content[index + 1];
                     if (nextItem && nextItem.type !== 'note') {
                         segments.push({ text: ' ', isWoj: isInsideWoj });
@@ -68,13 +76,11 @@ function VerseComponent({
         };
 
         const segments = flattenContent(verse.content);
-
-        // Step 2: Create the flat text and character map from the flattened segments.
         const flatText = segments.map(s => s.text).join('');
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
         
         if (!flatText) {
-            return null; // Don't render anything if there's no text
+            return null;
         }
 
         const chars = flatText.split('').map(char => ({
@@ -83,7 +89,6 @@ function VerseComponent({
             annotations: [] as Annotation[],
         }));
         
-        // Populate isWoj from our segments
         let charIndex = 0;
         for (const segment of segments) {
             for (let i = 0; i < segment.text.length; i++) {
@@ -94,14 +99,12 @@ function VerseComponent({
             }
         }
         
-        // Step 3: Apply annotations to the character map.
         sortedAnnotations.forEach(ann => {
             for (let i = ann.start; i < ann.end; i++) {
                 if (chars[i]) chars[i].annotations.push(ann);
             }
         });
 
-        // Step 4: Build the final render output by grouping characters.
         const finalRender: React.ReactNode[] = [];
         let i = 0;
         while (i < chars.length) {
@@ -110,7 +113,6 @@ function VerseComponent({
             const isCurrentWoj = charInfo.isWoj;
 
             let j = i;
-            // Find end of current segment (same annotations and same WoJ status)
             while (j < chars.length && chars[j].isWoj === isCurrentWoj && chars[j].annotations.map(a => a.id).join(',') === charInfo.annotations.map(a => a.id).join(',')) {
                 j++;
             }
@@ -130,7 +132,7 @@ function VerseComponent({
             i = j;
         }
         return finalRender;
-    }, [verse.content, annotations, onAnnotationClick]);
+    }, [verse.content, annotations, onAnnotationClick, isHtmlContent]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
         const supElement = event.currentTarget;
@@ -141,20 +143,12 @@ function VerseComponent({
         if (!selection) return;
 
         const range = document.createRange();
-        // Select the entire content of the parent <p> element
         range.selectNodeContents(pElement);
-        
-        // Collapse the start of the range to be after the <sup> element
-        // This programmatically deselects the verse number
         range.setStartAfter(supElement);
-        
         selection.removeAllRanges();
         selection.addRange(range);
-        
-        // Manually trigger the selection change handler
         document.dispatchEvent(new Event('selectionchange'));
     };
-
 
     return (
         <>
@@ -176,8 +170,8 @@ function VerseComponent({
             </p>
             {verse.notes && (
                 <div 
-                    className="text-muted-foreground ml-8 mt-2 border-l-2 border-border pl-4 text-xs"
-                    dangerouslySetInnerHTML={{ __html: verse.notes.replace(/<a class="key".*?>.*?<\/a>/gi, '').replace(/<span class="note">/gi, '').replace(/<\/span>/gi, '<br />') }} 
+                    className="text-muted-foreground ml-8 mt-2 border-l-2 border-border pl-4 text-xs [&_span.note]:block [&_span.note]:mb-2"
+                    dangerouslySetInnerHTML={{ __html: (verse.notes || "").replace(/<a class="key".*?>.*?<\/a>/gi, '') }} 
                 />
             )}
         </>
@@ -286,13 +280,11 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
     };
     
     useEffect(() => {
-        // Use document selectionchange event which is more reliable on mobile
         document.addEventListener('selectionchange', handleTextSelect);
-
         return () => {
             document.removeEventListener('selectionchange', handleTextSelect);
         };
-    }, [user, setSelection, setActiveAnnotation]); // Rerun if user changes
+    }, [user, setSelection, setActiveAnnotation]);
     
     const handleAnnotationClick = (annotation: Annotation) => {
         setActiveAnnotation(annotation);
@@ -312,7 +304,6 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                         onAnnotationClick={handleAnnotationClick}
                     />;
         }
-        // The API sometimes includes paragraph breaks as their own items
         if (item.type === 'para-break' || item['para-break']) {
             return <div key={`p-br-${index}`} className="h-4" />;
         }
