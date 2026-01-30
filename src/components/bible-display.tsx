@@ -129,7 +129,7 @@ function VerseComponent({
                             {segmentSpan}
                         </TooltipTrigger>
                         <TooltipContent className="max-w-sm font-body whitespace-pre-wrap shadow-lg">
-                            <p>{mainAnnotation.note}</p>
+                            {mainAnnotation.note}
                         </TooltipContent>
                     </Tooltip>
                 );
