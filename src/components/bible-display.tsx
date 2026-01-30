@@ -411,8 +411,22 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                                 </div>
                             </CardContent>
                             <CardFooter className="pt-6 flex flex-col items-start gap-4">
-                                {chapterData.copyright && (
-                                    <p className="text-xs text-muted-foreground italic">{chapterData.copyright}</p>
+                                {chapterData.translation.id === 'engnet' ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        NET Bible® Copyright | For full NET Bible notes, please see{' '}
+                                        <a href="https://netbible.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
+                                            netbible.org
+                                        </a>
+                                        . | Donations appreciated to support free services at{' '}
+                                        <a href="https://bible.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
+                                            Bible.org
+                                        </a>
+                                        .
+                                    </p>
+                                ) : (
+                                    chapterData.copyright && (
+                                        <p className="text-xs text-muted-foreground italic">{chapterData.copyright}</p>
+                                    )
                                 )}
                                 <div className="w-full md:hidden flex justify-center gap-2 pt-4">
                                      <Button
