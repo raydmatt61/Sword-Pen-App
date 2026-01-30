@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useEffect, useRef } from 'react';
@@ -426,6 +425,14 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                                 ) : chapterData.translation.id === 'BSB' ? (
                                     <p className="text-xs text-muted-foreground">
                                         The Berean Bible and Majority Bible texts are officially dedicated to the public domain as of April 30, 2023.
+                                    </p>
+                                ) : chapterData.translation.id === 'ENGWEBP' ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        The World English Bible is in the Public Domain. That means that it is not copyrighted. However, "World English Bible" is a Trademark of{' '}
+                                        <a href="https://eBible.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
+                                            eBible.org
+                                        </a>
+                                        .
                                     </p>
                                 ) : (
                                     chapterData.copyright && (
