@@ -41,11 +41,13 @@ export type BibleChapterResponse = {
     chapter: {
         number: number;
         content: ChapterContentItem[];
+        htmlContent?: string;
     };
     translation: {
         name: string;
         id: string;
     };
+    copyright?: string;
 };
 
 export type Annotation = {

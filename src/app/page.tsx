@@ -42,13 +42,10 @@ async function getChapter(
       const translationInfo = TRANSLATIONS.find(t => t.id === 'engnet');
       const bookAbbr = BIBLE_BOOKS_ABBR[canonicalBook];
 
-      const chapterContent: ChapterContentItem[] = netData.map((verse: any) => {
-        return {
-          type: 'verse',
-          number: verse.verse,
-          content: [verse.text], // Pass the full HTML string with notes and formatting
-        };
-      });
+      // Join all verse HTML content into a single string for paragraph rendering
+      const fullHtmlContent = netData.map((verse: any) => verse.text).join(' ');
+      const copyright = netData.length > 0 ? netData[0].copyright : undefined;
+
 
       const result: BibleChapterResponse = {
         book: {
@@ -57,12 +54,14 @@ async function getChapter(
         },
         chapter: {
           number: parseInt(netData[0].chapter, 10),
-          content: chapterContent,
+          content: [], // Individual verses not needed for this display method
+          htmlContent: fullHtmlContent
         },
         translation: {
           id: 'engnet',
           name: translationInfo?.name || 'New English Translation',
-        }
+        },
+        copyright: copyright,
       };
       return result;
     } catch (error) {

@@ -18,19 +18,14 @@ function VerseComponent({
     verse,
     annotations,
     onAnnotationClick,
-    translationId,
 }: {
     verse: Extract<ChapterContentItem, { type: 'verse' }>;
     annotations: Annotation[];
     onAnnotationClick: (annotation: Annotation) => void;
-    translationId: string;
 }) {
     const { fontSize } = useAnnotationContext();
-    const isNetTranslation = translationId === 'engnet';
 
-    const nonHtmlContent = useMemo(() => {
-        if (isNetTranslation) return null;
-        
+    const renderedContent = useMemo(() => {
         // Original annotation rendering logic for BSB, WEB, etc.
         const flattenContent = (content: any, isInsideWoj = false): { text: string, isWoj: boolean }[] => {
             if (!content) return [];
@@ -127,7 +122,7 @@ function VerseComponent({
             i = j;
         }
         return finalRender;
-    }, [isNetTranslation, verse.content, annotations, onAnnotationClick]);
+    }, [verse.content, annotations, onAnnotationClick]);
 
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -164,16 +159,9 @@ function VerseComponent({
             >
                 {verse.number}
             </sup>
-            {isNetTranslation ? (
-                 <div 
-                    className={cn(textClasses, "verse-html-content")}
-                    dangerouslySetInnerHTML={{ __html: verse.content[0] as string }} 
-                 />
-            ) : (
-                <p className={textClasses}>
-                    {nonHtmlContent}
-                </p>
-            )}
+            <p className={textClasses}>
+                {renderedContent}
+            </p>
         </div>
     );
 }
@@ -187,6 +175,7 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
     const { 
         setSelection,
         setActiveAnnotation,
+        fontSize,
     } = useAnnotationContext();
     const { user } = useUser();
     const firestore = useFirestore();
@@ -302,7 +291,6 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                         verse={item} 
                         annotations={chapterAnnotations[item.number] || []}
                         onAnnotationClick={handleAnnotationClick}
-                        translationId={translationId}
                     />;
         }
         if (item.type === 'para-break' || item['para-break']) {
@@ -310,6 +298,15 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
         }
         return null;
     };
+    
+    const textClasses = cn(
+        "font-body",
+        fontSize === 'sm' && 'text-sm leading-relaxed',
+        fontSize === 'md' && 'text-base leading-relaxed',
+        fontSize === 'lg' && 'text-lg leading-relaxed',
+        fontSize === 'xl' && 'text-xl leading-relaxed',
+        fontSize === '2xl' && 'text-2xl leading-relaxed',
+    );
 
 
     return (
@@ -347,32 +344,46 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent className="pb-6">
-                            <div ref={bibleContentRef} className={cn("space-y-2 select-text bible-content")}>
-                                {chapterData.chapter.content.map(renderContentItem)}
+                        <CardContent className="pb-0">
+                            <div ref={bibleContentRef} className={cn("select-text bible-content", textClasses)}>
+                                {chapterData.chapter.htmlContent ? (
+                                    <div
+                                        className="space-y-4 verse-html-content"
+                                        dangerouslySetInnerHTML={{ __html: chapterData.chapter.htmlContent }}
+                                    />
+                                ) : (
+                                    <div className="space-y-2">
+                                        {chapterData.chapter.content.map(renderContentItem)}
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
-                        <CardFooter className="md:hidden justify-center gap-2 pt-4">
-                             <Button
-                                variant="outline"
-                                size="icon"
-                                type="button"
-                                onClick={() => onChapterNav('prev')}
-                                disabled={currentChapter <= 1}
-                                aria-label="Previous Chapter"
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                type="button"
-                                onClick={() => onChapterNav('next')}
-                                disabled={currentChapter >= maxChapters}
-                                aria-label="Next Chapter"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
+                        <CardFooter className="pt-6 flex flex-col items-start gap-4">
+                            {chapterData.copyright && (
+                                <p className="text-xs text-muted-foreground italic">{chapterData.copyright}</p>
+                            )}
+                            <div className="w-full md:hidden flex justify-center gap-2 pt-4">
+                                 <Button
+                                    variant="outline"
+                                    size="icon"
+                                    type="button"
+                                    onClick={() => onChapterNav('prev')}
+                                    disabled={currentChapter <= 1}
+                                    aria-label="Previous Chapter"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    type="button"
+                                    onClick={() => onChapterNav('next')}
+                                    disabled={currentChapter >= maxChapters}
+                                    aria-label="Next Chapter"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </CardFooter>
                     </Card>
                 </div>
@@ -380,8 +391,3 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
         </div>
     );
 }
-
-
-    
-
-    
