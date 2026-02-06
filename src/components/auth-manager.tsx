@@ -36,10 +36,15 @@ export function AuthManager() {
   const { toast } = useToast();
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  
+  // Separate state for sign-in
   const [signInEmail, setSignInEmail] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
+  
+  // Separate state for sign-up
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('signin');
 
@@ -70,7 +75,7 @@ export function AuthManager() {
     }
   };
 
-  const handleSignIn = async () => {
+  const handleSignIn = () => {
     if (!signInEmail || !signInPassword) {
       toast({
         variant: 'destructive',
@@ -80,34 +85,36 @@ export function AuthManager() {
       return;
     }
     setIsProcessing(true);
-    try {
-      await signInWithEmailAndPassword(auth, signInEmail, signInPassword);
-      toast({ title: 'Signed In', description: `Welcome back, ${signInEmail}!` });
-      setIsAuthModalOpen(false);
-    } catch (error: any) {
-      if (
-        error.code === 'auth/invalid-credential' ||
-        error.code === 'auth/wrong-password' ||
-        error.code === 'auth/user-not-found'
-      ) {
-        toast({
-          variant: 'destructive',
-          title: 'Sign-in failed',
-          description: 'Incorrect email or password. Please try again.',
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Authentication failed',
-          description: error.message,
-        });
-      }
-    } finally {
-      setIsProcessing(false);
-    }
+    signInWithEmailAndPassword(auth, signInEmail, signInPassword)
+      .then(() => {
+        toast({ title: 'Signed In', description: `Welcome back, ${signInEmail}!` });
+        setIsAuthModalOpen(false);
+      })
+      .catch((error: any) => {
+        if (
+          error.code === 'auth/invalid-credential' ||
+          error.code === 'auth/wrong-password' ||
+          error.code === 'auth/user-not-found'
+        ) {
+          toast({
+            variant: 'destructive',
+            title: 'Sign-in failed',
+            description: 'Incorrect email or password. Please try again.',
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Authentication failed',
+            description: error.message,
+          });
+        }
+      })
+      .finally(() => {
+        setIsProcessing(false);
+      });
   };
 
-  const handleSignUp = async () => {
+  const handleSignUp = () => {
     if (!signUpEmail || !signUpPassword) {
         toast({
             variant: "destructive",
@@ -125,28 +132,30 @@ export function AuthManager() {
         return;
     }
     setIsProcessing(true);
-    try {
-        const newUserCredential = await createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword);
-        handleUserDocCreation(newUserCredential);
-        toast({ title: "Account Created!", description: `Welcome to Sword and Pen Bible, ${signUpEmail}!` });
-        setIsAuthModalOpen(false);
-    } catch (error: any) {
-        if (error.code === 'auth/email-already-in-use') {
-             toast({
-                variant: "destructive",
-                title: "Sign-up failed",
-                description: "This email is already in use. Try signing in instead."
-            });
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Sign-up failed",
-                description: error.message
-            });
-        }
-    } finally {
-        setIsProcessing(false);
-    }
+    createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword)
+        .then((newUserCredential) => {
+            handleUserDocCreation(newUserCredential);
+            toast({ title: "Account Created!", description: `Welcome to Sword and Pen Bible, ${signUpEmail}!` });
+            setIsAuthModalOpen(false);
+        })
+        .catch((error: any) => {
+            if (error.code === 'auth/email-already-in-use') {
+                toast({
+                    variant: "destructive",
+                    title: "Sign-up failed",
+                    description: "This email is already in use. Try signing in instead."
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Sign-up failed",
+                    description: error.message
+                });
+            }
+        })
+        .finally(() => {
+            setIsProcessing(false);
+        });
   };
 
   if (isUserLoading) {
