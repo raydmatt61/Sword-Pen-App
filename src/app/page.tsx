@@ -247,19 +247,17 @@ function ChapterLoader({ book, chapter, translationId }) {
   const [chapterData, setChapterData] = useState<BibleChapterResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const effectiveTranslation = TRANSLATIONS.find(t => t.id === translationId) || TRANSLATIONS[0];
-
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
       const booksData = await getBooks();
-      const chapterContent = await getChapter(book, chapter, effectiveTranslation.id);
+      const chapterContent = await getChapter(book, chapter, translationId);
       setBooks(booksData);
       setChapterData(chapterContent);
       setIsLoading(false);
     }
     loadData();
-  }, [book, chapter, effectiveTranslation]);
+  }, [book, chapter, translationId]);
 
   if (isLoading) {
     return <FullPageSkeleton />;
@@ -312,7 +310,7 @@ function PageWithSearchParams() {
       const location = { book, chapter, translationId: translationUrlParam };
       localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify(location));
     }
-  }, [book, chapter, translationUrlParam, searchParams]);
+  }, [book, chapter, translationUrlParam]);
   
   const translation = TRANSLATIONS.find(t => t.id === translationUrlParam) || TRANSLATIONS[0];
   
