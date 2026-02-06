@@ -202,7 +202,6 @@ export function AuthManager() {
                     value={signInEmail}
                     onChange={(e) => setSignInEmail(e.target.value)}
                     className="col-span-3"
-                    autoComplete="email"
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -215,7 +214,6 @@ export function AuthManager() {
                     value={signInPassword}
                     onChange={(e) => setSignInPassword(e.target.value)}
                     className="col-span-3"
-                    autoComplete="current-password"
                   />
                 </div>
               </div>
@@ -237,7 +235,6 @@ export function AuthManager() {
                         value={signUpEmail}
                         onChange={(e) => setSignUpEmail(e.target.value)}
                         className="col-span-3"
-                        autoComplete="email"
                     />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -250,7 +247,6 @@ export function AuthManager() {
                         value={signUpPassword}
                         onChange={(e) => setSignUpPassword(e.target.value)}
                         className="col-span-3"
-                        autoComplete="new-password"
                     />
                     </div>
                 </div>
