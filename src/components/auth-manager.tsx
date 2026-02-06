@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -27,7 +26,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export function AuthManager() {
@@ -37,10 +36,27 @@ export function AuthManager() {
   const { toast } = useToast();
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [signInEmail, setSignInEmail] = useState('');
+  const [signInPassword, setSignInPassword] = useState('');
+  const [signUpEmail, setSignUpEmail] = useState('');
+  const [signUpPassword, setSignUpPassword] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('signin');
+
+  useEffect(() => {
+    if (!isAuthModalOpen) {
+      // Delay to allow fade-out animation to complete before clearing state
+      setTimeout(() => {
+        setSignInEmail('');
+        setSignInPassword('');
+        setSignUpEmail('');
+        setSignUpPassword('');
+        setActiveTab('signin');
+        setIsProcessing(false);
+      }, 300);
+    }
+  }, [isAuthModalOpen]);
+
 
   const handleUserDocCreation = (userCredential: UserCredential) => {
     const user = userCredential.user;
@@ -55,7 +71,7 @@ export function AuthManager() {
   };
 
   const handleSignIn = async () => {
-    if (!email || !password) {
+    if (!signInEmail || !signInPassword) {
       toast({
         variant: 'destructive',
         title: 'Missing fields',
@@ -65,8 +81,8 @@ export function AuthManager() {
     }
     setIsProcessing(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: 'Signed In', description: `Welcome back, ${email}!` });
+      await signInWithEmailAndPassword(auth, signInEmail, signInPassword);
+      toast({ title: 'Signed In', description: `Welcome back, ${signInEmail}!` });
       setIsAuthModalOpen(false);
     } catch (error: any) {
       if (
@@ -92,7 +108,7 @@ export function AuthManager() {
   };
 
   const handleSignUp = async () => {
-    if (!email || !password) {
+    if (!signUpEmail || !signUpPassword) {
         toast({
             variant: "destructive",
             title: "Missing fields",
@@ -100,7 +116,7 @@ export function AuthManager() {
         });
         return;
     }
-    if (password.length < 6) {
+    if (signUpPassword.length < 6) {
         toast({
             variant: "destructive",
             title: "Sign-up failed",
@@ -110,9 +126,9 @@ export function AuthManager() {
     }
     setIsProcessing(true);
     try {
-        const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const newUserCredential = await createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword);
         handleUserDocCreation(newUserCredential);
-        toast({ title: "Account Created!", description: `Welcome to The Sword & Pen, ${email}!` });
+        toast({ title: "Account Created!", description: `Welcome to Sword and Pen Bible, ${signUpEmail}!` });
         setIsAuthModalOpen(false);
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
@@ -163,7 +179,7 @@ export function AuthManager() {
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>The Sword & Pen</DialogTitle>
+            <DialogTitle>Sword and Pen Bible</DialogTitle>
             <DialogDescription>
               Sign in or create an account to save your notes and highlights.
             </DialogDescription>
@@ -183,9 +199,10 @@ export function AuthManager() {
                   <Input
                     id="email-signin"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={signInEmail}
+                    onChange={(e) => setSignInEmail(e.target.value)}
                     className="col-span-3"
+                    autoComplete="email"
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -195,9 +212,10 @@ export function AuthManager() {
                   <Input
                     id="password-signin"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={signInPassword}
+                    onChange={(e) => setSignInPassword(e.target.value)}
                     className="col-span-3"
+                    autoComplete="current-password"
                   />
                 </div>
               </div>
@@ -216,9 +234,10 @@ export function AuthManager() {
                     <Input
                         id="email-signup"
                         type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={signUpEmail}
+                        onChange={(e) => setSignUpEmail(e.target.value)}
                         className="col-span-3"
+                        autoComplete="email"
                     />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -228,9 +247,10 @@ export function AuthManager() {
                     <Input
                         id="password-signup"
                         type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        value={signUpPassword}
+                        onChange={(e) => setSignUpPassword(e.target.value)}
                         className="col-span-3"
+                        autoComplete="new-password"
                     />
                     </div>
                 </div>
