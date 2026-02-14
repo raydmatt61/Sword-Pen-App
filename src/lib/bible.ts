@@ -38,10 +38,31 @@ export const NEW_TESTAMENT_BOOK_NAMES = [
 
 export const BIBLE_BOOKS = Object.keys(BIBLE_BOOKS_ABBR);
 
-export type VerseContent = string | { type: 'word'; text: string };
-export type ChapterContentItem = 
-    | { type: 'heading'; content: string[] }
-    | { type: 'verse'; number: string; content: VerseContent[]; 'para-break'?: boolean; notes?: any; };
+export type VerseContent = string | {
+    text: string;
+    poem?: number;
+    wordsOfJesus?: boolean;
+} | {
+    heading: string;
+} | {
+    lineBreak: true;
+} | {
+    noteId: number;
+};
+
+export type ChapterContentItem = {
+    type: 'heading';
+    content: string[];
+} | {
+    type: 'line_break';
+} | {
+    type: 'verse';
+    number: number;
+    content: VerseContent[];
+} | {
+    type: 'hebrew_subtitle';
+    content: VerseContent[];
+};
 
 export type BibleChapterResponse = {
     book: {
@@ -51,6 +72,7 @@ export type BibleChapterResponse = {
     chapter: {
         number: number;
         content: ChapterContentItem[];
+        footnotes?: any[];
     };
     translation: {
         name: string;
@@ -111,6 +133,8 @@ export type CrossRefChapterResponse = {
 export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
     Object.entries(BIBLE_BOOKS_ABBR).map(([name, abbr]) => [abbr, name])
 );
+    
+
     
 
     

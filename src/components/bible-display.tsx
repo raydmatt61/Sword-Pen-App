@@ -3,7 +3,7 @@
 
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef } from '@/lib/bible';
+import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, type VerseContent } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Balancer from 'react-wrap-balancer';
@@ -47,46 +47,29 @@ function VerseComponent({
 
 
     const renderedContent = useMemo(() => {
-        // Original annotation rendering logic for BSB, WEB, etc.
-        const flattenContent = (content: any, isInsideWoj = false): { text: string, isWoj: boolean }[] => {
-            if (!content) return [];
-            if (typeof content === 'string') return [{ text: content, isWoj: isInsideWoj }];
-
-            if (!Array.isArray(content)) {
-                const itemIsWoj = content.type === 'woj' || (Array.isArray(content.class) && content.class.includes('w-of-j')) || isInsideWoj;
-                if (content.text && typeof content.text === 'string') return [{ text: content.text, isWoj: itemIsWoj }];
-                if (content.content) return flattenContent(content.content, itemIsWoj);
-                return [];
-            }
-            
-            const isWordBased = content.length > 0 && content.every(
-                (item: any) => typeof item === 'object' && item !== null && (item.type === 'word' || item.type === 'note' || item.type === 'woj')
-            );
-            
-            let segments: { text: string, isWoj: boolean }[] = [];
-            content.forEach((item, index) => {
+        const flattenVerseContent = (content: VerseContent[]): { text: string; isWoj: boolean }[] => {
+            const segments: { text: string; isWoj: boolean }[] = [];
+            if (!Array.isArray(content)) return segments;
+    
+            for (const item of content) {
                 if (typeof item === 'string') {
-                    segments.push({ text: item, isWoj: isInsideWoj });
-                } else if (item && item.type !== 'note') {
-                    const itemIsWoj = item.type === 'woj' || (Array.isArray(item.class) && item.class.includes('w-of-j')) || isInsideWoj;
-                    if (item.text && typeof item.text === 'string') {
-                        segments.push({ text: item.text, isWoj: itemIsWoj });
-                    } else if (item.content) {
-                        segments.push(...flattenContent(item.content, itemIsWoj));
+                    segments.push({ text: item, isWoj: false });
+                } else if (item && typeof item === 'object') {
+                    // This is a FormattedText object
+                    if ('text' in item && typeof item.text === 'string') {
+                        segments.push({ text: item.text, isWoj: !!(item as any).wordsOfJesus });
+                    } 
+                    // This is an InlineLineBreak. Treat as space to maintain character offsets.
+                    else if ('lineBreak' in item && (item as any).lineBreak === true) {
+                        segments.push({ text: ' ', isWoj: false });
                     }
+                    // We ignore InlineHeading and VerseFootnoteReference for flat text generation.
                 }
-                
-                if (isWordBased && index < content.length - 1) {
-                    const nextItem = content[index + 1];
-                    if (nextItem && nextItem.type !== 'note') {
-                        segments.push({ text: ' ', isWoj: isInsideWoj });
-                    }
-                }
-            });
+            }
             return segments;
         };
 
-        const segments = flattenContent(verse.content);
+        const segments = flattenVerseContent(verse.content);
         const flatText = segments.map(s => s.text).join('');
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
         
@@ -395,7 +378,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     
     const fullReference = `${chapterData.book.name} ${chapterData.chapter.number}`;
 
-    const renderContentItem = (item, index) => {
+    const renderContentItem = (item: ChapterContentItem, index: number) => {
         if (item.type === 'heading') {
             return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 select-none"><Balancer>{item.content.join(' ')}</Balancer></h4>;
         }
@@ -410,7 +393,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                         navigate={navigate}
                     />;
         }
-        if (item.type === 'para-break' || item['para-break']) {
+        if (item.type === 'line_break') {
             return <div key={`p-br-${index}`} className="h-4" />;
         }
         return null;
@@ -533,3 +516,5 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         </TooltipProvider>
     );
 }
+
+    
