@@ -19,7 +19,13 @@ async function getCrossReferences(
   book: string,
   chapter: string,
 ): Promise<CrossRefChapterResponse | null> {
-  const bookId = BIBLE_BOOKS_ABBR[book] || book;
+  // Aliasing for different book names (e.g. Song of Songs vs Song of Solomon)
+  const bookNameAliases: Record<string, string> = {
+    'Song of Songs': 'Song of Solomon',
+  };
+  const canonicalBook = bookNameAliases[book] || book;
+  const bookId = BIBLE_BOOKS_ABBR[canonicalBook] || canonicalBook;
+
   try {
     const response = await fetch(
       `https://bible.helloao.org/api/d/open-cross-ref/${bookId}/${chapter}.json`
@@ -29,9 +35,19 @@ async function getCrossReferences(
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
             const text = await response.text();
-            if(!text) return null; // handle empty response
+            if(!text) {
+                // The API returned a 200 OK but the body was empty.
+                console.warn(`Cross-reference API returned an empty response for ${bookId} ${chapter}.`);
+                return null;
+            }
             return JSON.parse(text) as CrossRefChapterResponse;
+        } else {
+            // The API returned a 200 OK but the content-type was not JSON.
+            console.warn(`Cross-reference API returned an unexpected content type (${contentType}) for ${bookId} ${chapter}.`);
         }
+    } else {
+        // The API returned a non-200 status code.
+        console.warn(`Cross-reference API returned status ${response.status} for ${bookId} ${chapter}.`);
     }
   } catch (error) {
     console.error(`Failed to fetch cross-references for ${bookId} ${chapter}:`, error);

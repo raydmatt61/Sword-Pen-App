@@ -174,10 +174,14 @@ function VerseComponent({
         const range = document.createRange();
         range.selectNodeContents(pElement);
 
-        const iconNode = pElement.querySelector('button[data-dialog-trigger]');
-        if (iconNode) {
-            range.setStartAfter(iconNode);
+        // Find all icons between the verse number and the verse text
+        const iconNodes = Array.from(pElement.querySelectorAll('sup ~ button'));
+
+        if (iconNodes.length > 0) {
+            // Set the start of the range to be after the last icon
+            range.setStartAfter(iconNodes[iconNodes.length - 1]);
         } else {
+            // If no icons, start the range after the verse number itself
             range.setStartAfter(supElement);
         }
         
