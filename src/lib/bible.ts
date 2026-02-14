@@ -6,10 +6,8 @@ export type Translation = {
 
 export const TRANSLATIONS: Translation[] = [
     { id: 'BSB', name: 'Berean Standard Bible' },
-    { id: 'KJV', name: 'King James Version' },
-    { id: 'WEB', name: 'World English Bible' },
-    { id: 'ASV', name: 'American Standard Version' },
     { id: 'engnet', name: 'New English Translation' },
+    { id: 'EWEB', name: 'World English Bible' },
 ];
 
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
@@ -38,17 +36,27 @@ export const NEW_TESTAMENT_BOOK_NAMES = [
 
 export const BIBLE_BOOKS = Object.keys(BIBLE_BOOKS_ABBR);
 
-export type VerseContent = string | {
+export type FormattedText = {
     text: string;
     poem?: number;
     wordsOfJesus?: boolean;
-} | {
+};
+
+export type InlineHeading = {
     heading: string;
-} | {
+};
+
+export type InlineLineBreak = {
     lineBreak: true;
-} | {
+};
+
+export type VerseFootnoteReference = {
     noteId: number;
 };
+
+export type VerseContent = string | FormattedText | InlineHeading | InlineLineBreak | VerseFootnoteReference;
+
+export type HebrewSubtitleContent = string | FormattedText | VerseFootnoteReference;
 
 export type ChapterContentItem = {
     type: 'heading';
@@ -61,7 +69,7 @@ export type ChapterContentItem = {
     content: VerseContent[];
 } | {
     type: 'hebrew_subtitle';
-    content: VerseContent[];
+    content: HebrewSubtitleContent[];
 };
 
 export type BibleChapterResponse = {
