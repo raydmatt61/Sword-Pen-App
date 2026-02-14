@@ -74,6 +74,10 @@
         "underline": {
           "type": "string",
           "description": "Underline style applied to the selected text (e.g., ul-red, ul-purple)."
+        },
+        "groupId": {
+          "type": "string",
+          "description": "Identifier to group multiple annotations that belong to a single user action (e.g., a multi-verse selection)."
         }
       },
       "required": [

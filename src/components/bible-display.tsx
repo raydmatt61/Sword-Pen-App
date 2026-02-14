@@ -8,8 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { cn } from '@/lib/utils';
 import Balancer from 'react-wrap-balancer';
 import { useAnnotationContext } from '@/contexts/annotation-context';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -172,19 +171,10 @@ function VerseComponent({
         if (!selection) return;
 
         const range = document.createRange();
-        range.selectNodeContents(pElement);
-        
-        // Find all icons between the verse number and the verse text
-        const iconNodes = Array.from(pElement.querySelectorAll('sup ~ button, sup ~ span[data-dialog-trigger]'));
+        const verseTextWrapper = pElement.querySelector('.verse-text-wrapper');
+        if (!verseTextWrapper) return;
 
-        if (iconNodes.length > 0) {
-            // Set the start of the range to be after the last icon
-            const lastIcon = iconNodes[iconNodes.length - 1];
-            range.setStartAfter(lastIcon);
-        } else {
-            // If no icons, start the range after the verse number itself
-            range.setStartAfter(supElement);
-        }
+        range.selectNodeContents(verseTextWrapper);
         
         selection.removeAllRanges();
         selection.addRange(range);
@@ -290,9 +280,9 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         setSelection,
         setActiveAnnotation,
         fontSize,
+        chapterAnnotations,
     } = useAnnotationContext();
     const { user } = useUser();
-    const firestore = useFirestore();
     const bibleContentRef = useRef<HTMLDivElement>(null);
     const [emblaRef, emblaApi] = useEmblaCarousel({ axis: 'x', watchDrag: true });
 
@@ -317,32 +307,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         };
       }, [emblaApi, onChapterNav]);
 
-
-    const bookId = chapterData.book.id;
-    const chapterNum = chapterData.chapter.number;
-    const translationId = chapterData.translation.id;
-
-    const annotationsQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return collection(firestore, `users/${user.uid}/annotations`);
-    }, [user, firestore]);
-
-    const { data: annotations } = useCollection<Annotation>(annotationsQuery);
-
-    const chapterAnnotations = useMemo(() => {
-        if (!annotations) return {};
-        const annotationMap: Record<string, Annotation[]> = {};
-        annotations.filter(a => a.book === bookId && a.chapter === chapterNum && a.translation === translationId)
-        .forEach(a => {
-            const key = String(a.verse);
-            if (!annotationMap[key]) {
-                annotationMap[key] = [];
-            }
-            annotationMap[key].push(a);
-        });
-        return annotationMap;
-    }, [annotations, bookId, chapterNum, translationId]);
-
     const crossRefMap = useMemo(() => {
         if (!crossRefs || !crossRefs.chapter || !crossRefs.chapter.content) return {};
         const map: Record<string, CrossRef[]> = {};
@@ -364,25 +328,44 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
             const range = sel.getRangeAt(0);
 
-            let verseEl = range.startContainer.parentElement;
-            while(verseEl && !verseEl.hasAttribute('data-verse-number')) {
-                verseEl = verseEl.parentElement;
-            }
-
-            if (!verseEl || !verseEl.closest('.bible-content')) {
-                 setSelection(null);
-                 return;
+            // Ensure the selection is within our bible content
+            const contentContainer = bibleContentRef.current;
+            if (!contentContainer || !contentContainer.contains(range.commonAncestorContainer)) {
+                setSelection(null);
+                return;
             };
-            const verseNum = verseEl.getAttribute('data-verse-number');
 
-            if (verseNum) {
-                // Check if the selection is within our bible content to avoid capturing other selections
-                const contentContainer = document.querySelector('.bible-content');
-                if (contentContainer && contentContainer.contains(range.commonAncestorContainer)) {
-                    setSelection({ range, verseNum });
-                    setActiveAnnotation(null);
-                }
+            const allVerseElements = Array.from(contentContainer.querySelectorAll<HTMLElement>('[data-verse-number]'));
+            if (allVerseElements.length === 0) return;
+
+            let startNode = range.startContainer;
+            let endNode = range.endContainer;
+
+            // Traverse up to find the parent verse elements
+            const startVerseEl = startNode.nodeType === 3 ? startNode.parentElement?.closest('[data-verse-number]') : (startNode as Element).closest('[data-verse-number]');
+            const endVerseEl = endNode.nodeType === 3 ? endNode.parentElement?.closest('[data-verse-number]') : (endNode as Element).closest('[data-verse-number]');
+
+            if (!startVerseEl || !endVerseEl) {
+                setSelection(null);
+                return;
             }
+
+            const startIndex = allVerseElements.findIndex(el => el === startVerseEl);
+            const endIndex = allVerseElements.findIndex(el => el === endVerseEl);
+
+            if (startIndex === -1 || endIndex === -1) {
+                setSelection(null);
+                return;
+            }
+
+            // Slice to get all verse elements within the selection
+            const selectedVerseElements = allVerseElements.slice(startIndex, endIndex + 1);
+
+            if (selectedVerseElements.length > 0) {
+                 setSelection({ range, verseElements: selectedVerseElements });
+                 setActiveAnnotation(null);
+            }
+
         } else {
              // Only clear selection if there's no text selected anywhere on the page
              if (sel && sel.isCollapsed) {
@@ -392,9 +375,12 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     };
     
     useEffect(() => {
-        document.addEventListener('selectionchange', handleTextSelect);
+        // Use a more reliable event for selections
+        document.addEventListener('mouseup', handleTextSelect);
+        document.addEventListener('keyup', handleTextSelect);
         return () => {
-            document.removeEventListener('selectionchange', handleTextSelect);
+            document.removeEventListener('mouseup', handleTextSelect);
+            document.removeEventListener('keyup', handleTextSelect);
         };
     }, [user, setSelection, setActiveAnnotation]);
     

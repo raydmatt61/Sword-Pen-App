@@ -3,8 +3,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useUser } from '@/firebase';
-import { type BibleChapterResponse } from '@/lib/bible';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Trash2, StickyNote, Highlighter, Underline, X } from 'lucide-react';
@@ -25,7 +24,7 @@ const underlineColors = [
     { class: 'ul-orange', color: '#ea580c' },
 ];
 
-export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterResponse }) {
+export function AnnotationWrapper() {
     const { user } = useUser();
     const { toast } = useToast();
 
@@ -36,6 +35,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
         createOrUpdateAnnotation,
         deleteAnnotation,
         resetAnnotationState,
+        chapterData
     } = useAnnotationContext();
 
     const [isEditingNote, setIsEditingNote] = useState(false);
@@ -43,7 +43,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
     const noteDirty = useMemo(() => activeAnnotation && note !== (activeAnnotation.note || ''), [activeAnnotation, note]);
 
     const toolbarRef = useRef<HTMLDivElement>(null);
-    const fullReference = `${chapterData.book.name} ${chapterData.chapter.number}`;
+    const fullReference = chapterData ? `${chapterData.book.name} ${chapterData.chapter.number}` : "";
 
     const handleDelete = () => {
         if (activeAnnotation) {
@@ -54,7 +54,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
     
     const handleSaveNote = () => {
         if (!activeAnnotation || !noteDirty) return;
-        createOrUpdateAnnotation({ note }, chapterData);
+        createOrUpdateAnnotation({ note });
         toast({ title: "Note Saved", description: "Your annotation note has been saved." });
         setIsEditingNote(false);
     }
@@ -75,19 +75,19 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
 
     const onHighlight = (style: string | null) => {
         if (!selection && !activeAnnotation) return;
-        createOrUpdateAnnotation({ highlight: style ?? undefined }, chapterData);
+        createOrUpdateAnnotation({ highlight: style ?? undefined });
     };
 
     const onUnderline = (style: string | null) => {
         if (!selection && !activeAnnotation) return;
-        createOrUpdateAnnotation({ underline: style ?? undefined }, chapterData);
+        createOrUpdateAnnotation({ underline: style ?? undefined });
     };
 
     const onNote = () => {
         if (activeAnnotation) {
             setIsEditingNote(true);
         } else if (selection) {
-            createOrUpdateAnnotation({ note: '' }, chapterData);
+            createOrUpdateAnnotation({ note: '' });
         }
     };
     
@@ -141,7 +141,7 @@ export function AnnotationWrapper({ chapterData }: { chapterData: BibleChapterRe
                                             <h4 className="font-medium leading-none">Annotation Note</h4>
                                             {(activeAnnotation || selection) && (
                                             <p className="text-sm text-muted-foreground">
-                                                For your selection in {fullReference}:{(activeAnnotation?.verse || selection?.verseNum)}.
+                                                For your selection in {fullReference}:{activeAnnotation?.verse || selection?.verseElements[0].dataset.verseNumber}.
                                             </p>
                                             )}
                                         </div>

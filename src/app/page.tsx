@@ -239,7 +239,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   }, [initialBook, initialChapter, initialTranslationId]);
 
   return (
-    <AnnotationProvider key={providerKey}>
+    <AnnotationProvider key={providerKey} chapterData={chapterData}>
       <main className="flex flex-col h-screen">
         <header className="flex items-center justify-between border-b p-2 md:p-4">
           <div className="flex items-center gap-2">
@@ -270,7 +270,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
             />
           </div>
           <div className="md:col-span-2">
-            {chapterData && <AnnotationWrapper chapterData={chapterData} />}
+            {chapterData && <AnnotationWrapper />}
           </div>
         </div>
 
@@ -456,3 +456,4 @@ function FullPageSkeleton() {
     
 
     
+

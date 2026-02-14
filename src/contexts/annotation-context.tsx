@@ -1,21 +1,29 @@
 
 "use client";
 
-import { createContext, useContext, ReactNode, useState, Dispatch, SetStateAction, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useState, Dispatch, SetStateAction, useCallback, useMemo } from 'react';
 import type { Annotation, BibleChapterResponse } from '@/lib/bible';
-import { useUser, useFirestore, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, setDocumentNonBlocking, deleteDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 
 export type FontSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
+export type SelectionInfo = { range: Range, verseElements: HTMLElement[] };
+
+interface AnnotationMap {
+    [verseNumber: string]: Annotation[];
+}
+
 interface AnnotationContextType {
-    selection: { range: Range, verseNum: string } | null;
-    setSelection: Dispatch<SetStateAction<{ range: Range, verseNum: string } | null>>;
+    selection: SelectionInfo | null;
+    setSelection: Dispatch<SetStateAction<SelectionInfo | null>>;
     activeAnnotation: Annotation | null;
     setActiveAnnotation: Dispatch<SetStateAction<Annotation | null>>;
+    chapterAnnotations: AnnotationMap;
+    chapterData: BibleChapterResponse | null;
     fontSize: FontSize;
     setFontSize: Dispatch<SetStateAction<FontSize>>;
-    createOrUpdateAnnotation: (data: Partial<Omit<Annotation, 'id' | 'userId'>>, chapterData: BibleChapterResponse) => void;
+    createOrUpdateAnnotation: (data: Partial<Omit<Annotation, 'id' | 'userId'>>) => void;
     deleteAnnotation: (annotation: Annotation) => void;
     resetAnnotationState: () => void;
 }
@@ -24,14 +32,37 @@ const AnnotationContext = createContext<AnnotationContextType | undefined>(undef
 
 interface AnnotationProviderProps {
     children: ReactNode;
+    chapterData: BibleChapterResponse;
 }
 
-export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
+export const AnnotationProvider = ({ children, chapterData }: AnnotationProviderProps) => {
     const { user } = useUser();
     const firestore = useFirestore();
-    const [selection, setSelection] = useState<{ range: Range, verseNum: string } | null>(null);
+    const [selection, setSelection] = useState<SelectionInfo | null>(null);
     const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
     const [fontSize, setFontSize] = useState<FontSize>('md');
+    
+    const annotationsQuery = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return collection(firestore, `users/${user.uid}/annotations`);
+    }, [user, firestore]);
+
+    const { data: allUserAnnotations } = useCollection<Annotation>(annotationsQuery);
+
+    const chapterAnnotations = useMemo(() => {
+        if (!allUserAnnotations) return {};
+        const annotationMap: AnnotationMap = {};
+        allUserAnnotations.filter(a => a.book === chapterData.book.id && a.chapter === chapterData.chapter.number && a.translation === chapterData.translation.id)
+        .forEach(a => {
+            const key = String(a.verse);
+            if (!annotationMap[key]) {
+                annotationMap[key] = [];
+            }
+            annotationMap[key].push(a);
+        });
+        return annotationMap;
+    }, [allUserAnnotations, chapterData.book.id, chapterData.chapter.number, chapterData.translation.id]);
+
 
     const resetAnnotationState = useCallback(() => {
         setActiveAnnotation(null);
@@ -39,75 +70,121 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
         if (window.getSelection) window.getSelection()?.removeAllRanges();
     }, []);
 
-    const createOrUpdateAnnotation = useCallback((data: Partial<Omit<Annotation, 'id' | 'userId'>>, chapterData: BibleChapterResponse) => {
+    const createOrUpdateAnnotation = useCallback((data: Partial<Omit<Annotation, 'id' | 'userId'>>) => {
         if (!user || !firestore) return;
 
         const { book: { id: bookId }, chapter: { number: chapterNum }, translation: { id: translationId } } = chapterData;
 
-        // SCENARIO 1: UPDATE existing annotation
+        // SCENARIO 1: UPDATE existing annotation(s)
         if (activeAnnotation) {
-             const docRef = doc(firestore, `users/${user.uid}/annotations`, activeAnnotation.id);
-             setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
-             // After update, if it was a text annotation, we might want to refresh its state
-             if (data.note !== undefined || data.highlight || data.underline) {
-                 setActiveAnnotation(prev => prev ? { ...prev, ...data } : null);
+             const annotationsToUpdate: Annotation[] = [];
+             if (activeAnnotation.groupId) {
+                 Object.values(chapterAnnotations).flat().forEach(ann => {
+                     if (ann.groupId === activeAnnotation.groupId) {
+                         annotationsToUpdate.push(ann);
+                     }
+                 });
+             } else {
+                 annotationsToUpdate.push(activeAnnotation);
              }
+
+             annotationsToUpdate.forEach(ann => {
+                const docRef = doc(firestore, `users/${user.uid}/annotations`, ann.id);
+                setDocumentNonBlocking(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+             });
+             
+             setActiveAnnotation(prev => prev ? { ...prev, ...data } : null);
         
-        // SCENARIO 2: CREATE new TEXT annotation from a selection
+        // SCENARIO 2: CREATE new annotation from a selection
         } else if (selection) {
-            const { range, verseNum } = selection;
-            const verseElement = range.startContainer.parentElement?.closest('[data-verse-number]');
-            if (!verseElement) return;
-
-            const verseTextWrapper = verseElement.querySelector('.verse-text-wrapper');
-            if (!verseTextWrapper) {
-                console.error("Could not find .verse-text-wrapper to calculate annotation offset.");
-                return;
-            }
+            const { range, verseElements } = selection;
             
-            const preSelectionRange = document.createRange();
-            preSelectionRange.selectNodeContents(verseTextWrapper);
-            preSelectionRange.setEnd(range.startContainer, range.startOffset);
-            const start = preSelectionRange.toString().length;
-            
-            const text = range.toString();
-            if (!text.trim() && data.note === undefined) return;
+            const groupId = verseElements.length > 1 ? doc(collection(firestore, `users/${user.uid}/annotations`)).id : undefined;
 
-            const end = start + text.length;
+            verseElements.forEach((verseEl, index) => {
+                const verseNum = verseEl.getAttribute('data-verse-number');
+                if (!verseNum) return;
 
-            const newAnnotation: Omit<Annotation, 'id'> = {
-                userId: user.uid,
-                translation: translationId,
-                book: bookId,
-                chapter: chapterNum,
-                verse: parseInt(verseNum),
-                start: start,
-                end: end,
-                text: text,
-                ...data,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-            };
-            const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
-            setDocumentNonBlocking(newDocRef, newAnnotation);
+                const verseTextWrapper = verseEl.querySelector<HTMLElement>('.verse-text-wrapper');
+                if (!verseTextWrapper) return;
+                
+                const isFirstVerse = index === 0;
+                const isLastVerse = index === verseElements.length - 1;
+
+                const fullVerseRange = document.createRange();
+                fullVerseRange.selectNodeContents(verseTextWrapper);
+
+                const startPoint = isFirstVerse ? range.startContainer : fullVerseRange.startContainer;
+                const startOffset = isFirstVerse ? range.startOffset : fullVerseRange.startOffset;
+                const endPoint = isLastVerse ? range.endContainer : fullVerseRange.endContainer;
+                const endOffset = isLastVerse ? range.endOffset : fullVerseRange.endOffset;
+
+                const segmentRange = document.createRange();
+                segmentRange.setStart(startPoint, startOffset);
+                segmentRange.setEnd(endPoint, endOffset);
+
+                const text = segmentRange.toString();
+                if (!text.trim() && data.note === undefined) return;
+
+                const preSegmentRange = document.createRange();
+                preSegmentRange.selectNodeContents(verseTextWrapper);
+                preSegmentRange.setEnd(startPoint, startOffset);
+                const start = preSegmentRange.toString().length;
+                const end = start + text.length;
+
+                if (start >= end) return;
+
+                const newAnnotation: Omit<Annotation, 'id'> = {
+                    userId: user.uid,
+                    translation: translationId,
+                    book: bookId,
+                    chapter: chapterNum,
+                    verse: parseInt(verseNum),
+                    start: start,
+                    end: end,
+                    text: text,
+                    groupId: groupId,
+                    ...data,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                };
+                
+                const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
+                setDocumentNonBlocking(newDocRef, newAnnotation);
+            });
             resetAnnotationState();
         }
-
-    }, [user, firestore, activeAnnotation, selection, resetAnnotationState]);
+    }, [user, firestore, activeAnnotation, selection, chapterData, resetAnnotationState, chapterAnnotations]);
 
     const deleteAnnotation = useCallback((annotationToDelete: Annotation) => {
-         if (annotationToDelete && firestore && user) {
-            const docRef = doc(firestore, `users/${user.uid}/annotations`, annotationToDelete.id);
+         if (!annotationToDelete || !firestore || !user) return;
+         
+         const annotationsToDelete: Annotation[] = [];
+         if (annotationToDelete.groupId) {
+             Object.values(chapterAnnotations).flat().forEach(ann => {
+                 if (ann.groupId === annotationToDelete.groupId) {
+                     annotationsToDelete.push(ann);
+                 }
+             });
+         } else {
+             annotationsToDelete.push(annotationToDelete);
+         }
+
+         annotationsToDelete.forEach(ann => {
+            const docRef = doc(firestore, `users/${user.uid}/annotations`, ann.id);
             deleteDocumentNonBlocking(docRef);
-            resetAnnotationState();
-        }
-    }, [user, firestore, resetAnnotationState]);
+         });
+
+        resetAnnotationState();
+    }, [user, firestore, resetAnnotationState, chapterAnnotations]);
 
     const value = {
         selection,
         setSelection,
         activeAnnotation,
         setActiveAnnotation,
+        chapterAnnotations,
+        chapterData,
         fontSize,
         setFontSize,
         createOrUpdateAnnotation,
