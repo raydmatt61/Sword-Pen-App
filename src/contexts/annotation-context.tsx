@@ -143,11 +143,14 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
                     start: start,
                     end: end,
                     text: text,
-                    groupId: groupId,
                     ...data,
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
                 };
+
+                if (groupId) {
+                    newAnnotation.groupId = groupId;
+                }
                 
                 const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
                 setDocumentNonBlocking(newDocRef, newAnnotation);
