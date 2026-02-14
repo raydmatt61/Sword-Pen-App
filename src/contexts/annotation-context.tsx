@@ -32,7 +32,7 @@ const AnnotationContext = createContext<AnnotationContextType | undefined>(undef
 
 interface AnnotationProviderProps {
     children: ReactNode;
-    chapterData: BibleChapterResponse;
+    chapterData: BibleChapterResponse | null;
 }
 
 export const AnnotationProvider = ({ children, chapterData }: AnnotationProviderProps) => {
@@ -50,7 +50,7 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
     const { data: allUserAnnotations } = useCollection<Annotation>(annotationsQuery);
 
     const chapterAnnotations = useMemo(() => {
-        if (!allUserAnnotations) return {};
+        if (!allUserAnnotations || !chapterData) return {};
         const annotationMap: AnnotationMap = {};
         allUserAnnotations.filter(a => a.book === chapterData.book.id && a.chapter === chapterData.chapter.number && a.translation === chapterData.translation.id)
         .forEach(a => {
@@ -61,7 +61,7 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
             annotationMap[key].push(a);
         });
         return annotationMap;
-    }, [allUserAnnotations, chapterData.book.id, chapterData.chapter.number, chapterData.translation.id]);
+    }, [allUserAnnotations, chapterData]);
 
 
     const resetAnnotationState = useCallback(() => {
@@ -71,7 +71,7 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
     }, []);
 
     const createOrUpdateAnnotation = useCallback((data: Partial<Omit<Annotation, 'id' | 'userId'>>) => {
-        if (!user || !firestore) return;
+        if (!user || !firestore || !chapterData) return;
 
         const { book: { id: bookId }, chapter: { number: chapterNum }, translation: { id: translationId } } = chapterData;
 
