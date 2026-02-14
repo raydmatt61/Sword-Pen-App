@@ -173,13 +173,14 @@ function VerseComponent({
 
         const range = document.createRange();
         range.selectNodeContents(pElement);
-
+        
         // Find all icons between the verse number and the verse text
-        const iconNodes = Array.from(pElement.querySelectorAll('sup ~ button'));
+        const iconNodes = Array.from(pElement.querySelectorAll('sup ~ button, sup ~ span[data-dialog-trigger]'));
 
         if (iconNodes.length > 0) {
             // Set the start of the range to be after the last icon
-            range.setStartAfter(iconNodes[iconNodes.length - 1]);
+            const lastIcon = iconNodes[iconNodes.length - 1];
+            range.setStartAfter(lastIcon);
         } else {
             // If no icons, start the range after the verse number itself
             range.setStartAfter(supElement);
@@ -190,15 +191,11 @@ function VerseComponent({
         document.dispatchEvent(new Event('selectionchange'));
     };
 
-    const handleRefClick = (refString: string) => {
-        const match = refString.match(/^([1-3]?[A-Z]{2,3})\s(\d+):(\d+)/);
-        if (match) {
-            const [, bookAbbr, chapter] = match;
-            const bookName = BIBLE_ABBR_BOOKS[bookAbbr];
-            if (bookName) {
-                navigate({ book: bookName, chapter: chapter });
-                setIsCrossRefOpen(false); // Close dialog on navigation
-            }
+    const handleRefClick = (bookAbbr: string, chapter: number) => {
+        const bookName = BIBLE_ABBR_BOOKS[bookAbbr];
+        if (bookName) {
+            navigate({ book: bookName, chapter: String(chapter) });
+            setIsCrossRefOpen(false); // Close dialog on navigation
         }
     };
 
@@ -254,19 +251,22 @@ function VerseComponent({
                             </DialogHeader>
                              <ScrollArea className="py-4 text-sm max-h-[60vh] -mx-6">
                                  <div className="px-6 space-y-2">
-                                    {crossReferences.sort((a, b) => b.rank - a.rank).map((cr, index) => (
-                                        <div key={index} className="flex items-center gap-4">
-                                            <Button
-                                                variant="link"
-                                                className="p-0 h-auto font-body"
-                                                onClick={() => handleRefClick(cr.ref)}
-                                            >
-                                                {cr.ref}
-                                            </Button>
-                                            <div className="flex-1 h-px bg-border"></div>
-                                            <span className="text-xs text-muted-foreground">{cr.rank.toFixed(2)}</span>
-                                        </div>
-                                    ))}
+                                    {crossReferences.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((cr, index) => {
+                                        const refString = `${cr.book} ${cr.chapter}:${cr.verse}${cr.endVerse ? `-${cr.endVerse}` : ''}`;
+                                        return (
+                                            <div key={index} className="flex items-center gap-4">
+                                                <Button
+                                                    variant="link"
+                                                    className="p-0 h-auto font-body"
+                                                    onClick={() => handleRefClick(cr.book, cr.chapter)}
+                                                >
+                                                    {refString}
+                                                </Button>
+                                                <div className="flex-1 h-px bg-border"></div>
+                                                <span className="text-xs text-muted-foreground">{(cr.score ?? 0).toFixed(2)}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </ScrollArea>
                         </DialogContent>
@@ -344,9 +344,9 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     }, [annotations, bookId, chapterNum, translationId]);
 
     const crossRefMap = useMemo(() => {
-        if (!crossRefs || !crossRefs.verses) return {};
+        if (!crossRefs || !crossRefs.chapter || !crossRefs.chapter.content) return {};
         const map: Record<string, CrossRef[]> = {};
-        crossRefs.verses.forEach(v => {
+        crossRefs.chapter.content.forEach(v => {
             map[String(v.verse)] = v.references;
         });
         return map;
@@ -495,7 +495,11 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                     <p className="text-xs text-muted-foreground">
                                         The Berean Bible and Majority Bible texts are officially dedicated to the public domain as of April 30, 2023.
                                     </p>
-                                ) : chapterData.translation.id === 'ENGWEBP' ? (
+                                ) : chapterData.translation.id === 'KJV' || chapterData.translation.id === 'ASV' ? (
+                                     <p className="text-xs text-muted-foreground">
+                                        This work is in the Public Domain.
+                                    </p>
+                                ) : chapterData.translation.id === 'WEB' ? (
                                     <p className="text-xs text-muted-foreground">
                                         The World English Bible is in the Public Domain. That means that it is not copyrighted. However, "World English Bible" is a Trademark of{' '}
                                         <a href="https://eBible.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">

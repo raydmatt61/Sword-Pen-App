@@ -6,8 +6,9 @@ export type Translation = {
 
 export const TRANSLATIONS: Translation[] = [
     { id: 'BSB', name: 'Berean Standard Bible' },
-    { id: 'ENGWEBP', name: 'World English Bible' },
-    { id: 'engnet', name: 'New English Translation' },
+    { id: 'KJV', name: 'King James Version' },
+    { id: 'WEB', name: 'World English Bible' },
+    { id: 'ASV', name: 'American Standard Version' },
 ];
 
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
@@ -83,8 +84,11 @@ export type Annotation = {
 };
 
 export type CrossRef = {
-    ref: string; // e.g. "GEN 1:3"
-    rank: number;
+    book: string;
+    chapter: number;
+    verse: number;
+    endVerse?: number;
+    score?: number;
 };
 
 export type CrossRefVerse = {
@@ -99,8 +103,8 @@ export type CrossRefChapterResponse = {
     };
     chapter: {
         number: number;
+        content: CrossRefVerse[];
     };
-    verses: CrossRefVerse[];
 };
 
 export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
