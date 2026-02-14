@@ -14,6 +14,7 @@ import { QrCodeGenerator } from '@/components/qr-code-generator';
 import { AnnotationWrapper } from '@/components/annotation-wrapper';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
+import { useToast } from '@/hooks/use-toast';
 
 async function getCrossReferences(
   book: string,
@@ -60,6 +61,7 @@ async function getChapter(
   book: string,
   chapter: string,
   translationId: string,
+  isFallbackAttempt = false
 ): Promise<BibleChapterResponse | null> {
   const bookNameAliases: Record<string, string> = {
     'Song of Songs': 'Song of Solomon',
@@ -128,6 +130,15 @@ async function getChapter(
     }
     // If all retries fail
     console.error(`Failed to fetch chapter from labs.bible.org after ${maxRetries} attempts.`);
+    
+    if (!isFallbackAttempt) {
+        console.warn(`Attempting to fall back to BSB translation for ${book} ${chapter}.`);
+        const fallbackChapter = await getChapter(book, chapter, 'BSB', true);
+        if (fallbackChapter) {
+            return fallbackChapter;
+        }
+    }
+    
     return null;
   }
 
@@ -217,11 +228,21 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
 
   const maxChapters = useMemo(() => {
     return books.find(b => b.commonName === initialBook)?.numberOfChapters || 1;
   }, [books, initialBook]);
   
+  useEffect(() => {
+    if (chapterData && chapterData.translation.id !== initialTranslationId) {
+        toast({
+            title: "Translation Fallback",
+            description: `Could not load ${initialBook} ${initialChapter} in ${initialTranslationId}. Displaying in BSB instead.`,
+        });
+    }
+  }, [chapterData, initialTranslationId, initialBook, initialChapter, toast]);
+
   const searchParamsString = searchParams.toString();
   const navigate = useCallback((newValues: Partial<{ book: string; chapter: string; translation: string }>) => {
     const current = new URLSearchParams(searchParamsString);
@@ -467,7 +488,6 @@ function FullPageSkeleton() {
     </main>
   );
 }
-
     
 
     
