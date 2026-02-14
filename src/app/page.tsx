@@ -5,8 +5,8 @@ import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'rea
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book, Translation, ChapterContentItem } from '@/lib/bible';
-import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
+import type { BibleChapterResponse, Book, Translation, ChapterContentItem, CrossRefChapterResponse } from '@/lib/bible';
+import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES, BIBLE_ABBR_BOOKS } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
@@ -14,6 +14,31 @@ import { QrCodeGenerator } from '@/components/qr-code-generator';
 import { AnnotationWrapper } from '@/components/annotation-wrapper';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
+
+async function getCrossReferences(
+  book: string,
+  chapter: string,
+): Promise<CrossRefChapterResponse | null> {
+  const bookId = BIBLE_BOOKS_ABBR[book] || book;
+  try {
+    const response = await fetch(
+      `https://bible.helloao.org/api/d/open-cross-ref/${bookId}/${chapter}.json`
+    );
+
+    if (response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            const text = await response.text();
+            if(!text) return null; // handle empty response
+            return JSON.parse(text) as CrossRefChapterResponse;
+        }
+    }
+  } catch (error) {
+    console.error(`Failed to fetch cross-references for ${bookId} ${chapter}:`, error);
+  }
+  return null;
+}
+
 
 async function getChapter(
   book: string,
@@ -155,7 +180,7 @@ async function getBooks(): Promise<Book[]> {
     }).filter(book => !!book.testament) as Book[];
 }
 
-function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslationId }) {
+function PageContent({ books, chapterData, crossRefs, initialBook, initialChapter, initialTranslationId }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const providerKey = `${initialBook}-${initialChapter}-${initialTranslationId}`;
   const router = useRouter();
@@ -246,7 +271,9 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
           ) : (
             <BibleDisplay
               chapterData={chapterData}
+              crossRefs={crossRefs}
               onChapterNav={handleChapterNav}
+              navigate={navigate}
               currentChapter={parseInt(initialChapter)}
               maxChapters={maxChapters}
             />
@@ -260,15 +287,20 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
 function ChapterLoader({ book, chapter, translationId }) {
   const [books, setBooks] = useState<Book[]>([]);
   const [chapterData, setChapterData] = useState<BibleChapterResponse | null>(null);
+  const [crossRefs, setCrossRefs] = useState<CrossRefChapterResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const booksData = await getBooks();
-      const chapterContent = await getChapter(book, chapter, translationId);
+      const [booksData, chapterContent, crossRefData] = await Promise.all([
+        getBooks(),
+        getChapter(book, chapter, translationId),
+        getCrossReferences(book, chapter),
+      ]);
       setBooks(booksData);
       setChapterData(chapterContent);
+      setCrossRefs(crossRefData);
       setIsLoading(false);
     }
     loadData();
@@ -278,7 +310,7 @@ function ChapterLoader({ book, chapter, translationId }) {
     return <FullPageSkeleton />;
   }
 
-  return <PageContent books={books} chapterData={chapterData} initialBook={book} initialChapter={chapter} initialTranslationId={translationId} />;
+  return <PageContent books={books} chapterData={chapterData} crossRefs={crossRefs} initialBook={book} initialChapter={chapter} initialTranslationId={translationId} />;
 }
 
 const LAST_LOCATION_KEY = 'verse-insights-last-location';

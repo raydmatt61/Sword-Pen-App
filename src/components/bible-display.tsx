@@ -1,8 +1,9 @@
+
 "use client";
 
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { type Annotation, type BibleChapterResponse, type ChapterContentItem } from '@/lib/bible';
+import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Balancer from 'react-wrap-balancer';
@@ -10,23 +11,30 @@ import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, StickyNote } from 'lucide-react';
+import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from './ui/scroll-area';
+import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
 
 
 function VerseComponent({
     verse,
     annotations,
+    crossReferences,
     onAnnotationClick,
     chapterData,
+    navigate,
 }: {
     verse: Extract<ChapterContentItem, { type: 'verse' }>;
     annotations: Annotation[];
+    crossReferences: CrossRef[];
     onAnnotationClick: (annotation: Annotation) => void;
     chapterData: BibleChapterResponse;
+    navigate: (newValues: Partial<{ book: string; chapter: string; translation: string }>) => void;
 }) {
     const { fontSize } = useAnnotationContext();
+    const [isCrossRefOpen, setIsCrossRefOpen] = useState(false);
 
     const verseNotes = useMemo(() => {
         const notes = new Set<string>();
@@ -178,6 +186,18 @@ function VerseComponent({
         document.dispatchEvent(new Event('selectionchange'));
     };
 
+    const handleRefClick = (refString: string) => {
+        const match = refString.match(/^([1-3]?[A-Z]{2,3})\s(\d+):(\d+)/);
+        if (match) {
+            const [, bookAbbr, chapter] = match;
+            const bookName = BIBLE_ABBR_BOOKS[bookAbbr];
+            if (bookName) {
+                navigate({ book: bookName, chapter: chapter });
+                setIsCrossRefOpen(false); // Close dialog on navigation
+            }
+        }
+    };
+
     const textClasses = cn(
         "font-body",
         fontSize === 'sm' && 'text-sm leading-relaxed',
@@ -216,15 +236,49 @@ function VerseComponent({
                         </DialogContent>
                     </Dialog>
                 )}
+                {crossReferences && crossReferences.length > 0 && (
+                     <Dialog open={isCrossRefOpen} onOpenChange={setIsCrossRefOpen}>
+                        <DialogTrigger asChild>
+                             <button className="relative -top-1 mx-1 p-1 align-middle text-muted-foreground hover:text-primary rounded-full hover:bg-secondary">
+                                <LinkIcon className="h-4 w-4" />
+                                <span className="sr-only">View cross-references for verse {verse.number}</span>
+                            </button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-lg">
+                            <DialogHeader>
+                                <DialogTitle>Cross-References for {chapterData.book.name} {chapterData.chapter.number}:{verse.number}</DialogTitle>
+                            </DialogHeader>
+                             <ScrollArea className="py-4 text-sm max-h-[60vh] -mx-6">
+                                 <div className="px-6 space-y-2">
+                                    {crossReferences.sort((a, b) => b.rank - a.rank).map((cr, index) => (
+                                        <div key={index} className="flex items-center gap-4">
+                                            <Button
+                                                variant="link"
+                                                className="p-0 h-auto font-body"
+                                                onClick={() => handleRefClick(cr.ref)}
+                                            >
+                                                {cr.ref}
+                                            </Button>
+                                            <div className="flex-1 h-px bg-border"></div>
+                                            <span className="text-xs text-muted-foreground">{cr.rank.toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </DialogContent>
+                    </Dialog>
+                )}
                 {renderedContent}
             </p>
         </div>
     );
 }
 
-export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxChapters }: { 
+export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, currentChapter, maxChapters }: { 
     chapterData: BibleChapterResponse, 
+    crossRefs: CrossRefChapterResponse | null,
     onChapterNav: (direction: 'prev' | 'next') => void,
+    navigate: (newValues: Partial<{ book: string, chapter: string, translation: string }>) => void,
     currentChapter: number,
     maxChapters: number
 }) {
@@ -284,6 +338,15 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
         });
         return annotationMap;
     }, [annotations, bookId, chapterNum, translationId]);
+
+    const crossRefMap = useMemo(() => {
+        if (!crossRefs || !crossRefs.verses) return {};
+        const map: Record<string, CrossRef[]> = {};
+        crossRefs.verses.forEach(v => {
+            map[String(v.verse)] = v.references;
+        });
+        return map;
+    }, [crossRefs]);
 
 
     const handleTextSelect = () => {
@@ -346,8 +409,10 @@ export function BibleDisplay({ chapterData, onChapterNav, currentChapter, maxCha
                         key={item.number} 
                         verse={item} 
                         annotations={chapterAnnotations[item.number] || []}
+                        crossReferences={crossRefMap[item.number] || []}
                         onAnnotationClick={handleAnnotationClick}
                         chapterData={chapterData}
+                        navigate={navigate}
                     />;
         }
         if (item.type === 'para-break' || item['para-break']) {

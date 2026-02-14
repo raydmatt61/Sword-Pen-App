@@ -81,6 +81,29 @@ export type Annotation = {
   updatedAt?: any;
   groupId?: string;
 };
-    
 
+export type CrossRef = {
+    ref: string; // e.g. "GEN 1:3"
+    rank: number;
+};
+
+export type CrossRefVerse = {
+    verse: number;
+    references: CrossRef[];
+};
+
+export type CrossRefChapterResponse = {
+    book: {
+        id: string;
+        name: string;
+    };
+    chapter: {
+        number: number;
+    };
+    verses: CrossRefVerse[];
+};
+
+export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
+    Object.entries(BIBLE_BOOKS_ABBR).map(([name, abbr]) => [abbr, name])
+);
     
