@@ -120,7 +120,7 @@ async function getChapter(
           console.warn(`labs.bible.org API Error on attempt ${attempts + 1} for ${canonicalBook} ${chapter} (${translationId}): ${response.status} ${response.statusText}`);
         }
       } catch (error) {
-        console.error(`Failed to fetch/parse chapter from labs.bible.org (attempt ${attempts + 1}):`, error);
+        console.warn(`Failed to fetch/parse chapter from labs.bible.org (attempt ${attempts + 1}):`, error);
       }
 
       attempts++;
@@ -128,9 +128,8 @@ async function getChapter(
         await new Promise(res => setTimeout(res, delay));
       }
     }
-    // If all retries fail
-    console.error(`Failed to fetch chapter from labs.bible.org after ${maxRetries} attempts.`);
     
+    // If all retries fail, attempt to fall back to a more reliable translation.
     if (!isFallbackAttempt) {
         console.warn(`Attempting to fall back to BSB translation for ${book} ${chapter}.`);
         const fallbackChapter = await getChapter(book, chapter, 'BSB', true);
@@ -139,6 +138,8 @@ async function getChapter(
         }
     }
     
+    // If all attempts (including fallback) fail, return null.
+    // The UI will handle displaying an error message.
     return null;
   }
 
@@ -162,14 +163,13 @@ async function getChapter(
                 return data;
             }
         } else {
-             console.error(`API Error: Expected JSON but received ${contentType} for ${translationId}/${bookId}/${chapter}`);
-             break;
+             console.warn(`API Warning: Expected JSON but received ${contentType} for ${translationId}/${bookId}/${chapter}. Will retry.`);
         }
       } else {
-        console.error(`API Error for ${translationId}/${bookId}/${chapter}: ${response.status} ${response.statusText}`);
+        console.warn(`API Warning for ${translationId}/${bookId}/${chapter}: ${response.status} ${response.statusText}. Will retry.`);
       }
     } catch (error) {
-      console.error('Failed to fetch chapter (attempt ' + (attempts + 1) + '):', error);
+      console.warn('Failed to fetch chapter (attempt ' + (attempts + 1) + '):', error);
     }
     
     attempts++;
@@ -178,7 +178,7 @@ async function getChapter(
     }
   }
 
-  console.error(`Failed to fetch chapter after ${maxRetries} attempts.`);
+  // If all attempts fail for this API too, return null.
   return null;
 }
 
@@ -238,7 +238,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     if (chapterData && chapterData.translation.id !== initialTranslationId) {
         toast({
             title: "Translation Fallback",
-            description: `Could not load ${initialBook} ${initialChapter} in ${initialTranslationId}. Displaying in BSB instead.`,
+            description: `Could not load ${initialBook} ${initialChapter} in ${TRANSLATIONS.find(t=>t.id === initialTranslationId)?.name || initialTranslationId}. Displaying in BSB instead.`,
         });
     }
   }, [chapterData, initialTranslationId, initialBook, initialChapter, toast]);
@@ -495,5 +495,8 @@ function FullPageSkeleton() {
 
 
     
+
+    
+
 
     
