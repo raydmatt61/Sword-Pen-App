@@ -58,12 +58,17 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
             const { range, verseNum } = selection;
             const verseElement = range.startContainer.parentElement?.closest('[data-verse-number]');
             if (!verseElement) return;
+
+            const verseTextWrapper = verseElement.querySelector('.verse-text-wrapper');
+            if (!verseTextWrapper) {
+                console.error("Could not find .verse-text-wrapper to calculate annotation offset.");
+                return;
+            }
             
-            const supLength = verseElement.querySelector('sup')?.textContent?.length || 0;
             const preSelectionRange = document.createRange();
-            preSelectionRange.selectNodeContents(verseElement);
+            preSelectionRange.selectNodeContents(verseTextWrapper);
             preSelectionRange.setEnd(range.startContainer, range.startOffset);
-            const start = preSelectionRange.toString().length - supLength;
+            const start = preSelectionRange.toString().length;
             
             const text = range.toString();
             if (!text.trim() && data.note === undefined) return;
@@ -76,7 +81,7 @@ export const AnnotationProvider = ({ children }: AnnotationProviderProps) => {
                 book: bookId,
                 chapter: chapterNum,
                 verse: parseInt(verseNum),
-                start: start >= 0 ? start : 0,
+                start: start,
                 end: end,
                 text: text,
                 ...data,

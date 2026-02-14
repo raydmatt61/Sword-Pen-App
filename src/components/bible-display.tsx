@@ -272,7 +272,7 @@ function VerseComponent({
                         </DialogContent>
                     </Dialog>
                 )}
-                {renderedContent}
+                <span className="verse-text-wrapper">{renderedContent}</span>
             </p>
         </div>
     );
