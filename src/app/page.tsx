@@ -1,12 +1,12 @@
 
 "use client";
 
-import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
+import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book, Translation, ChapterContentItem } from '@/lib/bible';
-import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
+import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
@@ -141,10 +141,18 @@ async function getBooks(): Promise<Book[]> {
     const booksFromApi = await fetchBooksForTranslation();
     if (!booksFromApi) return [];
     
-    return booksFromApi.map(book => ({
-        ...book,
-        testament: OLD_TESTAMENT_BOOK_NAMES.includes(book.commonName) ? 'OT' : 'NT'
-    }));
+    return booksFromApi.map(book => {
+        let testament: 'OT' | 'NT' | undefined = undefined;
+        if (OLD_TESTAMENT_BOOK_NAMES.includes(book.commonName)) {
+            testament = 'OT';
+        } else if (NEW_TESTAMENT_BOOK_NAMES.includes(book.commonName)) {
+            testament = 'NT';
+        }
+        return {
+            ...book,
+            testament: testament
+        };
+    }).filter(book => !!book.testament) as Book[];
 }
 
 function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslationId }) {
@@ -154,10 +162,13 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const maxChapters = books.find(b => b.commonName === initialBook)?.numberOfChapters || 1;
-
+  const maxChapters = useMemo(() => {
+    return books.find(b => b.commonName === initialBook)?.numberOfChapters || 1;
+  }, [books, initialBook]);
+  
+  const searchParamsString = searchParams.toString();
   const navigate = useCallback((newValues: Partial<{ book: string; chapter: string; translation: string }>) => {
-    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    const current = new URLSearchParams(searchParamsString);
     for (const [key, value] of Object.entries(newValues)) {
         if (value) {
             current.set(key, value);
@@ -165,7 +176,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
     }
     const newSearch = current.toString();
     router.push(`${pathname}?${newSearch}`);
-  }, [router, pathname, searchParams]);
+  }, [router, pathname, searchParamsString]);
 
   const handleChapterNav = useCallback((direction: 'prev' | 'next') => {
     let currentChapter = parseInt(initialChapter);
@@ -393,5 +404,7 @@ function FullPageSkeleton() {
     </main>
   );
 }
+
+    
 
     

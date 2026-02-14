@@ -23,7 +23,7 @@ export const BIBLE_BOOKS_ABBR: Record<string, string> = {
 export const OLD_TESTAMENT_BOOK_NAMES = [
     "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
     "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
-    "Ecclesiastes", "Song of Songs", "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel",
+    "Ecclesiastes", "Song of Solomon", "Song of Songs", "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel",
     "Amos", "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi"
 ];
 
@@ -61,7 +61,7 @@ export type Book = {
     id: string;
     commonName: string;
     numberOfChapters: number;
-    testament?: 'OT' | 'NT';
+    testament: 'OT' | 'NT';
 };
 
 export type Annotation = {
@@ -81,4 +81,6 @@ export type Annotation = {
   updatedAt?: any;
   groupId?: string;
 };
+    
+
     
