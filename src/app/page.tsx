@@ -69,7 +69,7 @@ async function getChapter(
   const canonicalBook = bookNameAliases[book] || book;
 
   // Use labs.bible.org for NET, KJV, ASV. It is less reliable but has these translations.
-  if (['engnet', 'KJV', 'ASV'].includes(translationId)) {
+  if (['engnet', 'ASV'].includes(translationId)) {
     let attempts = 0;
     const maxRetries = 3;
     const delay = 1000; // 1 second
