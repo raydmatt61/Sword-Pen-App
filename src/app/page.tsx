@@ -66,24 +66,33 @@ async function getChapter(
   };
   const canonicalBook = bookNameAliases[book] || book;
 
-  // Use labs.bible.org for NET translation, but without notes/full formatting.
-  if (translationId === 'engnet') {
+  // Use labs.bible.org for NET, KJV, ASV. It is less reliable but has these translations.
+  if (['engnet', 'KJV', 'ASV'].includes(translationId)) {
     try {
-      const response = await fetch(`https://labs.bible.org/api/?passage=${canonicalBook}+${chapter}&type=json`);
+      const apiTranslation = translationId === 'engnet' ? 'NET' : translationId;
+      const response = await fetch(`https://labs.bible.org/api/?passage=${canonicalBook}+${chapter}&type=json&translation=${apiTranslation}`);
+
       if (!response.ok) {
-        console.error(`labs.bible.org API Error for ${canonicalBook} ${chapter}: ${response.status} ${response.statusText}`);
+        console.error(`labs.bible.org API Error for ${canonicalBook} ${chapter} (${translationId}): ${response.status} ${response.statusText}`);
         return null;
       }
-      const netData = await response.json();
-      if (!netData || !Array.isArray(netData) || netData.length === 0) {
-        console.error(`labs.bible.org returned no data for ${canonicalBook} ${chapter}`);
+      const responseText = await response.text();
+      if (!responseText) {
+        console.error(`labs.bible.org returned an empty response for ${canonicalBook} ${chapter} (${translationId})`);
         return null;
       }
       
-      const translationInfo = TRANSLATIONS.find(t => t.id === 'engnet');
+      const dataFromApi = JSON.parse(responseText);
+
+      if (!dataFromApi || !Array.isArray(dataFromApi) || dataFromApi.length === 0) {
+        console.error(`labs.bible.org returned no data for ${canonicalBook} ${chapter} (${translationId})`);
+        return null;
+      }
+      
+      const translationInfo = TRANSLATIONS.find(t => t.id === translationId);
       const bookAbbr = BIBLE_BOOKS_ABBR[canonicalBook];
 
-      const chapterContent: ChapterContentItem[] = netData.map((verse: any) => {
+      const chapterContent: ChapterContentItem[] = dataFromApi.map((verse: any) => {
         // Strip any lingering HTML tags from the basic text response
         const cleanText = verse.text.replace(/<[^>]*>/g, '');
         return {
@@ -96,22 +105,22 @@ async function getChapter(
 
       const result: BibleChapterResponse = {
         book: {
-          name: netData[0].bookname,
+          name: dataFromApi[0].bookname,
           id: bookAbbr || canonicalBook,
         },
         chapter: {
-          number: parseInt(netData[0].chapter, 10),
+          number: parseInt(dataFromApi[0].chapter, 10),
           content: chapterContent,
         },
         translation: {
-          id: 'engnet',
-          name: translationInfo?.name || 'New English Translation',
+          id: translationId,
+          name: translationInfo?.name || translationId,
         },
         // No copyright info in this simplified response
       };
       return result;
     } catch (error) {
-      console.error('Failed to fetch NET chapter from labs.bible.org:', error);
+      console.error('Failed to fetch/parse chapter from labs.bible.org:', error);
       return null;
     }
   }
@@ -457,3 +466,6 @@ function FullPageSkeleton() {
 
     
 
+
+
+    

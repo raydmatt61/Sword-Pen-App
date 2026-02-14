@@ -9,6 +9,7 @@ export const TRANSLATIONS: Translation[] = [
     { id: 'KJV', name: 'King James Version' },
     { id: 'WEB', name: 'World English Bible' },
     { id: 'ASV', name: 'American Standard Version' },
+    { id: 'engnet', name: 'New English Translation' },
 ];
 
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
@@ -110,4 +111,6 @@ export type CrossRefChapterResponse = {
 export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
     Object.entries(BIBLE_BOOKS_ABBR).map(([name, abbr]) => [abbr, name])
 );
+    
+
     
