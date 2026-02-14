@@ -10,12 +10,6 @@ export const TRANSLATIONS: Translation[] = [
     { id: 'engnet', name: 'New English Translation' },
 ];
 
-export type Book = {
-    id: string;
-    commonName: string;
-    numberOfChapters: number;
-};
-
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
     "Genesis": "GEN", "Exodus": "EXO", "Leviticus": "LEV", "Numbers": "NUM", "Deuteronomy": "DEU", "Joshua": "JOS", "Judges": "JDG", "Ruth": "RUT", "1 Samuel": "1SA", "2 Samuel": "2SA",
     "1 Kings": "1KI", "2 Kings": "2KI", "1 Chronicles": "1CH", "2 Chronicles": "2CH", "Ezra": "EZR", "Nehemiah": "NEH", "Esther": "EST", "Job": "JOB", "Psalms": "PSA", "Proverbs": "PRO",
@@ -26,12 +20,26 @@ export const BIBLE_BOOKS_ABBR: Record<string, string> = {
     "Hebrews": "HEB", "James": "JAS", "1 Peter": "1PE", "2 Peter": "2PE", "1 John": "1JN", "2 John": "2JN", "3 John": "3JN", "Jude": "JUD", "Revelation": "REV"
 };
 
+export const OLD_TESTAMENT_BOOK_NAMES = [
+    "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
+    "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
+    "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel",
+    "Amos", "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi"
+];
+
+export const NEW_TESTAMENT_BOOK_NAMES = [
+    "Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians",
+    "Philippians", "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon",
+    "Hebrews", "James", "1 Peter", "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"
+];
+
+
 export const BIBLE_BOOKS = Object.keys(BIBLE_BOOKS_ABBR);
 
 export type VerseContent = string | { type: 'word'; text: string };
 export type ChapterContentItem = 
     | { type: 'heading'; content: string[] }
-    | { type: 'verse'; number: string; content: VerseContent[]; 'para-break'?: boolean; notes?: string | null; };
+    | { type: 'verse'; number: string; content: VerseContent[]; 'para-break'?: boolean; notes?: any; };
 
 export type BibleChapterResponse = {
     book: {
@@ -49,6 +57,13 @@ export type BibleChapterResponse = {
     copyright?: string;
 };
 
+export type Book = {
+    id: string;
+    commonName: string;
+    numberOfChapters: number;
+    testament?: 'OT' | 'NT';
+};
+
 export type Annotation = {
   id: string;
   userId: string;
@@ -64,6 +79,6 @@ export type Annotation = {
   underline?: string;
   createdAt?: any;
   updatedAt?: any;
+  groupId?: string;
 };
-
     

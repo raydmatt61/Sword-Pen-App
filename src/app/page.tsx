@@ -6,7 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book, Translation, ChapterContentItem } from '@/lib/bible';
-import { BIBLE_BOOKS_ABBR, TRANSLATIONS } from '@/lib/bible';
+import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
@@ -115,7 +115,7 @@ async function getChapter(
   return null;
 }
 
-async function fetchBooksForTranslation(): Promise<Book[] | null> {
+async function fetchBooksForTranslation(): Promise<Omit<Book, 'testament'>[] | null> {
     const bookListTranslation = 'BSB'; // Always use BSB for a reliable book list
     try {
         const booksRes = await fetch(`https://bible.helloao.org/api/${bookListTranslation}/books.json`);
@@ -138,8 +138,13 @@ async function fetchBooksForTranslation(): Promise<Book[] | null> {
 }
 
 async function getBooks(): Promise<Book[]> {
-    const books = await fetchBooksForTranslation();
-    return books || [];
+    const booksFromApi = await fetchBooksForTranslation();
+    if (!booksFromApi) return [];
+    
+    return booksFromApi.map(book => ({
+        ...book,
+        testament: OLD_TESTAMENT_BOOK_NAMES.includes(book.commonName) ? 'OT' : 'NT'
+    }));
 }
 
 function PageContent({ books, chapterData, initialBook, initialChapter, initialTranslationId }) {
@@ -162,7 +167,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
     router.push(`${pathname}?${newSearch}`);
   }, [router, pathname, searchParams]);
 
-  const handleChapterNav = (direction: 'prev' | 'next') => {
+  const handleChapterNav = useCallback((direction: 'prev' | 'next') => {
     let currentChapter = parseInt(initialChapter);
     if (direction === 'prev' && currentChapter > 1) {
         currentChapter--;
@@ -172,7 +177,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
     }
     const newChapter = currentChapter.toString();
     navigate({ chapter: newChapter });
-  };
+  }, [initialChapter, maxChapters, navigate]);
   
   useEffect(() => {
     // Scroll to top when book or chapter changes
@@ -188,7 +193,7 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
           <div className="flex items-center gap-2">
             <div>
               <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
-                The Sword & Pen
+                Sword and Pen Bible
               </h1>
               <p className="text-xs text-muted-foreground mt-1 font-headline">
                 Deepen your Bible study with annotations, notes and AI-powered insights.
@@ -209,7 +214,6 @@ function PageContent({ books, chapterData, initialBook, initialChapter, initialT
                 books={books}
                 translations={TRANSLATIONS}
                 onChapterNav={handleChapterNav}
-                maxChapters={maxChapters}
                 navigate={navigate}
             />
           </div>
@@ -272,37 +276,36 @@ function PageWithSearchParams() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-
-  // On first client-side render, check if we need to load from localStorage.
-  useEffect(() => {
-    // Only run if there are no query params in the URL.
-    if (isInitialLoad && !searchParams.has('book')) {
-      const savedLocationRaw = localStorage.getItem(LAST_LOCATION_KEY);
-      if (savedLocationRaw) {
-        try {
-            const savedLocation = JSON.parse(savedLocationRaw);
-            // Replace the current URL with the one from storage.
-            // This will trigger a re-render where searchParams will have a value.
-            router.replace(`${pathname}?book=${savedLocation.book}&chapter=${savedLocation.chapter}&translation=${savedLocation.translationId}`);
-        } catch (e) {
-            console.error("Failed to parse last location from localStorage", e);
-            setIsInitialLoad(false);
-        }
-      } else {
-        // If no saved location, we are done with initial load checks.
-        setIsInitialLoad(false);
-      }
-    } else if (isInitialLoad && searchParams.has('book')) {
-       // If params exist on initial load, we are also done.
-      setIsInitialLoad(false);
-    }
-  }, [isInitialLoad, searchParams, router, pathname]);
-
+  
   const book = searchParams.get('book') || 'John';
   const chapter = searchParams.get('chapter') || '1';
   const translationUrlParam = searchParams.get('translation') || 'BSB';
+  const queryKey = `${book}-${chapter}-${translationUrlParam}`;
+  
+  // This state is just to prevent a flash of default content on initial load
+  // if there are no search params and we need to load from local storage.
+  const [isReady, setIsReady] = useState(false);
 
+  useEffect(() => {
+    if (!searchParams.has('book')) {
+      const savedLocationRaw = localStorage.getItem(LAST_LOCATION_KEY);
+      if (savedLocationRaw) {
+        try {
+          const savedLocation = JSON.parse(savedLocationRaw);
+          // Replace URL and let the component re-render with new params.
+          router.replace(`${pathname}?book=${savedLocation.book}&chapter=${savedLocation.chapter}&translation=${savedLocation.translationId}`);
+        } catch (e) {
+          console.error("Failed to parse last location from localStorage", e);
+          setIsReady(true);
+        }
+      } else {
+        setIsReady(true);
+      }
+    } else {
+      setIsReady(true);
+    }
+  }, [searchParams, router, pathname]);
+  
   // Save to localStorage whenever the effective location changes.
   useEffect(() => {
     // Only save if the book param is present, to avoid overwriting on initial load before redirect.
@@ -310,17 +313,15 @@ function PageWithSearchParams() {
       const location = { book, chapter, translationId: translationUrlParam };
       localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify(location));
     }
-  }, [book, chapter, translationUrlParam]);
+  }, [book, chapter, translationUrlParam, searchParams]);
   
   const translation = TRANSLATIONS.find(t => t.id === translationUrlParam) || TRANSLATIONS[0];
-  
-  // If we are on the initial load and there are no search params, we are about to redirect.
-  // Show the skeleton to prevent rendering the default content ("John 1") for a split second.
-  if (isInitialLoad && !searchParams.has('book')) {
+
+  if (!isReady) {
     return <FullPageSkeleton />;
   }
   
-  return <ChapterLoader book={book} chapter={chapter} translationId={translation.id} />
+  return <ChapterLoader key={queryKey} book={book} chapter={chapter} translationId={translation.id} />
 }
 
 
@@ -363,7 +364,7 @@ function FullPageSkeleton() {
         <div className="flex items-center gap-2">
           <div>
             <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
-              The Sword & Pen
+              Sword and Pen Bible
             </h1>
             <p className="text-xs text-muted-foreground mt-1 font-headline">
               Deepen your Bible study with annotations, notes and AI-powered insights.
