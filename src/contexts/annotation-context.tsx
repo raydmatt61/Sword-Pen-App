@@ -50,7 +50,7 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
     const { data: allUserAnnotations } = useCollection<Annotation>(annotationsQuery);
 
     const chapterAnnotations = useMemo(() => {
-        if (!allUserAnnotations || !chapterData) return {};
+        if (!allUserAnnotations) return {};
         const annotationMap: AnnotationMap = {};
         allUserAnnotations.filter(a => a.book === chapterData.book.id && a.chapter === chapterData.chapter.number && a.translation === chapterData.translation.id)
         .forEach(a => {
@@ -61,7 +61,7 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
             annotationMap[key].push(a);
         });
         return annotationMap;
-    }, [allUserAnnotations, chapterData]);
+    }, [allUserAnnotations, chapterData.book.id, chapterData.chapter.number, chapterData.translation.id]);
 
 
     const resetAnnotationState = useCallback(() => {
@@ -147,11 +147,11 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
                 };
-
+                
                 if (groupId) {
                     newAnnotation.groupId = groupId;
                 }
-                
+
                 const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
                 setDocumentNonBlocking(newDocRef, newAnnotation);
             });
