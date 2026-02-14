@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useEffect, useRef, useState } from 'react';
+import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -317,7 +317,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     }, [crossRefs]);
 
 
-    const handleTextSelect = () => {
+    const handleTextSelect = useCallback(() => {
         if (!user) {
              if (window.getSelection()) window.getSelection()?.removeAllRanges();
              setSelection(null);
@@ -365,24 +365,29 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                  setSelection({ range, verseElements: selectedVerseElements });
                  setActiveAnnotation(null);
             }
-
-        } else {
-             // Only clear selection if there's no text selected anywhere on the page
-             if (sel && sel.isCollapsed) {
-                setSelection(null);
-             }
+        } else if (sel && sel.isCollapsed) {
+            // When the selection is collapsed (e.g., user taps away), clear the selection state.
+            // We need to be careful not to clear it if the user is interacting with the annotation toolbar.
+            const toolbar = document.getElementById('annotation-toolbar');
+            if (toolbar && sel.anchorNode && toolbar.contains(sel.anchorNode)) {
+                // The click was inside the toolbar, so don't clear the selection.
+                return;
+            }
+            setSelection(null);
         }
-    };
+    }, [user, setSelection, setActiveAnnotation]);
     
     useEffect(() => {
-        // Use a more reliable event for selections
-        document.addEventListener('mouseup', handleTextSelect);
-        document.addEventListener('keyup', handleTextSelect);
+        // Using `selectionchange` is more reliable for tracking text selection,
+        // especially on mobile devices. `touchend` is a fallback to ensure the
+        // final selection state is captured after a drag gesture.
+        document.addEventListener('selectionchange', handleTextSelect);
+        document.addEventListener('touchend', handleTextSelect);
         return () => {
-            document.removeEventListener('mouseup', handleTextSelect);
-            document.removeEventListener('keyup', handleTextSelect);
+            document.removeEventListener('selectionchange', handleTextSelect);
+            document.removeEventListener('touchend', handleTextSelect);
         };
-    }, [user, setSelection, setActiveAnnotation]);
+    }, [handleTextSelect]);
     
     const handleAnnotationClick = (annotation: Annotation) => {
         setActiveAnnotation(annotation);

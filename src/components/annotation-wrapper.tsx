@@ -101,7 +101,7 @@ export function AnnotationWrapper() {
                         {!user ? "Sign in to annotate verses." : "Select text in the chapter to annotate."}
                     </p>
                 ) : (
-                   <div ref={toolbarRef} className="w-full">
+                   <div ref={toolbarRef} id="annotation-toolbar" className="w-full">
                        <div className="flex items-center justify-center gap-1 p-1 bg-background border rounded-lg shadow-md w-full">
                             <Popover>
                                 <PopoverTrigger asChild>
