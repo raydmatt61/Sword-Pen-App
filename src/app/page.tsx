@@ -15,6 +15,7 @@ import { AnnotationWrapper } from '@/components/annotation-wrapper';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
+import { SearchDialog } from '@/components/search-dialog';
 
 const API_BIBLE_IDS = {
     CSB: 'a556c5305ee15c3f-01',
@@ -415,6 +416,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <SearchDialog translationId={initialTranslationId} navigate={navigate} />
             <FontSizeAdjuster />
             <QrCodeGenerator />
             <AuthManager />
@@ -593,6 +595,7 @@ function FullPageSkeleton() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8" />
             <Skeleton className="h-8 w-8" />
             <Skeleton className="h-8 w-8" />
             <Skeleton className="h-10 w-24" />
