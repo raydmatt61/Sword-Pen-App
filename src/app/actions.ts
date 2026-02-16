@@ -87,3 +87,63 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
     throw new Error("Failed to generate AI insights.");
   }
 }
+
+export interface StrongsDetail {
+    strongsNumber: string;
+    lemma: string;
+    transliteration: string;
+    pronunciation: string;
+    shortDefinition: string;
+    longDefinition: string;
+    kjvDefinition: string;
+    strongsDerivation: string;
+}
+
+export async function getStrongsDetail(strongsId: string): Promise<StrongsDetail[] | null> {
+    const apiKey = process.env.RAPIDAPI_KEY;
+    if (!apiKey) {
+        throw new Error("RapidAPI key for Complete Study Bible API is not configured.");
+    }
+    
+    const url = `https://complete-study-bible.p.rapidapi.com/strongs-detail/${strongsId}/`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'x-rapidapi-host': 'complete-study-bible.p.rapidapi.com',
+                'x-rapidapi-key': apiKey,
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            const message = errorData?.message || `The Strong's lookup service returned an error (${response.status}).`;
+            throw new Error(message);
+        }
+
+        const json = await response.json();
+        
+        if (json && json.data) {
+            return json.data.map((item: any) => ({
+                strongsNumber: item.strongs_number,
+                lemma: item.lemma,
+                transliteration: item.transliteration,
+                pronunciation: item.pronunciation,
+                shortDefinition: item.short_definition,
+                longDefinition: item.long_definition,
+                kjvDefinition: item.kjv_definition,
+                strongsDerivation: item.strongs_derivation,
+            }));
+        }
+        
+        return null;
+
+    } catch (error) {
+        console.error("Error in getStrongsDetail action:", error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error("Failed to perform Strong's lookup due to an unexpected error.");
+    }
+}
