@@ -54,6 +54,26 @@ const BookSelectorGrid = ({ books, currentBook, onSelect }: { books: Book[], cur
     );
 };
 
+const ChapterSelectorGrid = ({ numberOfChapters, onSelect }: { numberOfChapters: number, onSelect: (chapter: number) => void }) => {
+    return (
+        <ScrollArea className="h-96">
+            <div className="grid grid-cols-7 gap-1 p-2">
+                {Array.from({ length: numberOfChapters }, (_, i) => i + 1).map(chapNum => (
+                    <Button
+                        key={chapNum}
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto px-2 py-1.5 justify-center"
+                        onClick={() => onSelect(chapNum)}
+                    >
+                        {chapNum}
+                    </Button>
+                ))}
+            </div>
+        </ScrollArea>
+    );
+};
+
 
 export function VerseSelector({ 
     defaultValues, 
@@ -71,6 +91,8 @@ export function VerseSelector({
   
   const [tempBook, setTempBook] = useState(defaultValues.book);
   const [isBookSelectorOpen, setIsBookSelectorOpen] = useState(false);
+  const [selectionStep, setSelectionStep] = useState<'book' | 'chapter'>('book');
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   
   const isMobile = useIsMobile();
   const [isClient, setIsClient] = useState(false);
@@ -80,17 +102,24 @@ export function VerseSelector({
   }, []);
   
   useEffect(() => {
-    setTempBook(defaultValues.book);
-  }, [defaultValues.book]);
+    if (!isBookSelectorOpen) {
+        // Reset state when popover/dialog is closed
+        setTimeout(() => {
+            setSelectionStep('book');
+            setTempBook(defaultValues.book);
+        }, 200);
+    }
+  }, [isBookSelectorOpen, defaultValues.book]);
   
   const handleBookSelect = (newBook: string) => {
-    if (isMobile) {
-        setTempBook(newBook);
-        setIsBookSelectorOpen(false);
-    } else {
-        navigate({ book: newBook, chapter: '1' });
-        setIsBookSelectorOpen(false);
-    }
+    setTempBook(newBook);
+    setSelectionStep('chapter');
+  };
+
+  const handleChapterSelect = (newChapter: number) => {
+    navigate({ book: tempBook, chapter: String(newChapter) });
+    setIsBookSelectorOpen(false); // closes popover/dialog
+    setIsMobileSheetOpen(false); // closes sheet on mobile
   };
 
   const handleGoBack = () => {
@@ -105,12 +134,7 @@ export function VerseSelector({
     }
   };
   
-  const currentBookData = useMemo(() => books.find(b => b.commonName === (isMobile ? tempBook : defaultValues.book)), [books, tempBook, defaultValues.book, isMobile]);
-  const maxChaptersForCurrentBook = currentBookData?.numberOfChapters || 1;
-
-  const handleSubmitMobile = () => {
-    navigate({ book: tempBook, chapter: '1' });
-  };
+  const maxChaptersForCurrentBook = useMemo(() => books.find(b => b.commonName === defaultValues.book)?.numberOfChapters || 1, [books, defaultValues.book]);
   
   const renderDesktopControls = () => (
     <Card className="animate-in fade-in duration-500">
@@ -118,20 +142,28 @@ export function VerseSelector({
          <div className="flex items-center gap-2">
             <Popover open={isBookSelectorOpen} onOpenChange={setIsBookSelectorOpen}>
                 <PopoverTrigger asChild>
-                     <Button variant="outline" className="w-[180px] justify-between">
-                        <span>{defaultValues.book}</span>
+                     <Button variant="outline" className="w-[270px] justify-between">
+                        <span>{defaultValues.book} {defaultValues.chapter}</span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[340px] p-0">
-                    <BookSelectorGrid books={books} currentBook={defaultValues.book} onSelect={handleBookSelect} />
+                    {selectionStep === 'book' ? (
+                        <BookSelectorGrid books={books} currentBook={defaultValues.book} onSelect={handleBookSelect} />
+                    ) : (
+                        <div>
+                            <div className="p-2 border-b flex items-center gap-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectionStep('book')}><ChevronLeft /></Button>
+                                <p className="font-medium">{tempBook}</p>
+                            </div>
+                            <ChapterSelectorGrid 
+                                numberOfChapters={books.find(b => b.commonName === tempBook)?.numberOfChapters || 1} 
+                                onSelect={handleChapterSelect} 
+                            />
+                        </div>
+                    )}
                 </PopoverContent>
             </Popover>
-
-            <Select value={defaultValues.chapter} onValueChange={(c) => navigate({ chapter: c })}>
-                <SelectTrigger id="chapter" aria-label="Chapter" className="w-[80px]"><SelectValue placeholder="Ch." /></SelectTrigger>
-                <SelectContent>{Array.from({ length: maxChaptersForCurrentBook }, (_, i) => i + 1).map(chapNum => <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>)}</SelectContent>
-            </Select>
 
             <Select value={defaultValues.translation} onValueChange={(t) => navigate({ translation: t })}>
                 <SelectTrigger id="translation" aria-label="Translation" className="w-[90px]"><SelectValue placeholder="Translation" /></SelectTrigger>
@@ -153,13 +185,13 @@ export function VerseSelector({
   );
 
   const renderMobileControls = () => (
-    <Sheet>
+    <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
         <SheetTrigger asChild>
             <Button variant="outline" className="w-full">
                 {defaultValues.book} {defaultValues.chapter} ({defaultValues.translation.toUpperCase()})
             </Button>
         </SheetTrigger>
-        <SheetContent side="bottom">
+        <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
             <SheetHeader>
                 <SheetTitle>Select a Verse</SheetTitle>
             </SheetHeader>
@@ -167,37 +199,45 @@ export function VerseSelector({
                  <Dialog open={isBookSelectorOpen} onOpenChange={setIsBookSelectorOpen}>
                     <DialogTrigger asChild>
                         <Button variant="outline" className="w-full justify-between">
-                            {tempBook}
+                            Book & Chapter
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Select a Book</DialogTitle>
-                        </DialogHeader>
-                        <BookSelectorGrid books={books} currentBook={tempBook} onSelect={handleBookSelect} />
+                        {selectionStep === 'book' ? (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>Select a Book</DialogTitle>
+                                </DialogHeader>
+                                <BookSelectorGrid books={books} currentBook={defaultValues.book} onSelect={handleBookSelect} />
+                            </>
+                        ) : (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle className="flex items-center gap-2">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectionStep('book')}><ChevronLeft /></Button>
+                                        <span>{tempBook}</span>
+                                    </DialogTitle>
+                                </DialogHeader>
+                                <ChapterSelectorGrid 
+                                    numberOfChapters={books.find(b => b.commonName === tempBook)?.numberOfChapters || 1} 
+                                    onSelect={handleChapterSelect} 
+                                />
+                            </>
+                        )}
                     </DialogContent>
                 </Dialog>
 
-                <div className="grid grid-cols-2 gap-2">
-                    <Select value={defaultValues.chapter} onValueChange={(c) => navigate({ chapter: c })}>
-                        <SelectTrigger><SelectValue placeholder="Chapter" /></SelectTrigger>
-                        <SelectContent>{Array.from({ length: maxChaptersForCurrentBook }, (_, i) => i + 1).map(chapNum => <SelectItem key={chapNum} value={String(chapNum)}>{chapNum}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Select value={defaultValues.translation} onValueChange={(t) => navigate({ translation: t })}>
-                        <SelectTrigger><SelectValue placeholder="Translation" /></SelectTrigger>
-                        <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id.toUpperCase()}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
+                <Select value={defaultValues.translation} onValueChange={(t) => { navigate({ translation: t }); setIsMobileSheetOpen(false); }}>
+                    <SelectTrigger><SelectValue placeholder="Translation" /></SelectTrigger>
+                    <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id.toUpperCase()}</SelectItem>)}</SelectContent>
+                </Select>
+                
                  <div className="flex gap-2 w-full">
                     <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} aria-label="Previous Chapter"><ChevronLeft className="h-4 w-4" /></Button>
                     <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook} aria-label="Next Chapter"><ChevronRight className="h-4 w-4" /></Button>
                     <Button variant="outline" size="icon" type="button" onClick={handleGoBack} aria-label="Go to last location">
                         <History className="h-4 w-4" />
-                    </Button>
-                    <Button onClick={handleSubmitMobile} className="flex-grow" disabled={books.length === 0 || tempBook === defaultValues.book}>
-                        Go to {tempBook}
-                        <ChevronsRight className="ml-2 h-4 w-4" />
                     </Button>
                 </div>
             </div>
