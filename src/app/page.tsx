@@ -418,7 +418,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
           </div>
           <div className="flex items-center gap-2">
             <SearchDialog translationId={initialTranslationId} navigate={navigate} />
-            <StrongsLookupDialog />
+            <StrongsLookupDialog navigate={navigate} />
             <FontSizeAdjuster />
             <QrCodeGenerator />
             <AuthManager />
@@ -625,10 +625,9 @@ function FullPageSkeleton() {
 
     
 
-
-
     
 
     
 
     
+

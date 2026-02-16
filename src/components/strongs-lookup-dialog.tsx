@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/button';
 import { BookMarked, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -10,8 +10,42 @@ import { ScrollArea } from './ui/scroll-area';
 import { getStrongsDetail } from '@/app/actions';
 import type { StrongsDetail } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
 
-export function StrongsLookupDialog() {
+interface StrongsLookupDialogProps {
+  navigate: (newValues: Partial<{ book: string; chapter: string; translation: string; }>) => void;
+}
+
+const RenderHtmlWithNavigation = ({ htmlString, onNavigate }: { htmlString: string; onNavigate: (bookAbbr: string, chapter: string) => void; }) => {
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (contentRef.current) {
+            const element = contentRef.current;
+            element.innerHTML = htmlString;
+            const links = element.querySelectorAll('a');
+            links.forEach(link => {
+                const href = link.getAttribute('href');
+                if (href && href.startsWith('/Bible/')) {
+                    link.addEventListener('click', e => {
+                        e.preventDefault();
+                        const parts = href.split('/');
+                        if (parts.length >= 4) { // e.g., ['', 'Bible', 'JHN', '3']
+                            onNavigate(parts[2], parts[3]);
+                        }
+                    });
+                } else {
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                }
+            });
+        }
+    }, [htmlString, onNavigate]);
+
+    return <div ref={contentRef} className="strongs-html-content" />;
+};
+
+export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<StrongsDetail[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +79,14 @@ export function StrongsLookupDialog() {
     }
   };
   
-  // Reset state when dialog is closed
+  const handleLinkNavigate = (bookAbbr: string, chapter: string) => {
+    const bookName = BIBLE_ABBR_BOOKS[bookAbbr.toUpperCase()];
+    if (bookName) {
+      navigate({ book: bookName, chapter: chapter });
+      onOpenChange(false); // Close dialog
+    }
+  };
+
   const onOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
@@ -101,7 +142,7 @@ export function StrongsLookupDialog() {
                     <p><span className="font-bold">Short Definition:</span> {item.shortDefinition}</p>
                     <div>
                         <p className="font-bold">Long Definition:</p>
-                        <p>{item.longDefinition}</p>
+                        <RenderHtmlWithNavigation htmlString={item.longDefinition} onNavigate={handleLinkNavigate} />
                     </div>
                      <div>
                         <p className="font-bold">KJV Definition:</p>
@@ -110,7 +151,7 @@ export function StrongsLookupDialog() {
                     {item.strongsDerivation && (
                         <div>
                             <p className="font-bold">Derivation:</p>
-                            <p className="text-sm text-muted-foreground">{item.strongsDerivation}</p>
+                            <RenderHtmlWithNavigation htmlString={item.strongsDerivation} onNavigate={handleLinkNavigate} />
                         </div>
                     )}
                 </CardContent>
