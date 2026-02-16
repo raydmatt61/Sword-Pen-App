@@ -86,7 +86,7 @@ async function getChapterFromApiBible(
 
   try {
     const response = await fetch(
-      `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=true`,
+      `https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=true`,
       {
         headers: {
           'api-key': apiKey,
@@ -554,6 +554,8 @@ function FullPageSkeleton() {
 
     
 
+
+    
 
     
 
