@@ -124,16 +124,26 @@ export async function getStrongsDetail(strongsId: string): Promise<StrongsDetail
 
         const json = await response.json();
         
-        if (json && json.data) {
-            return json.data.map((item: any) => ({
-                strongsNumber: item.strongs_number,
-                lemma: item.lemma,
+        let dataToParse = null;
+
+        if (json && json.data && Array.isArray(json.data)) {
+            // Handles { "data": [...] } structure
+            dataToParse = json.data;
+        } else if (Array.isArray(json)) {
+            // Handles [ ... ] structure
+            dataToParse = json;
+        }
+        
+        if (dataToParse && dataToParse.length > 0) {
+            return dataToParse.map((item: any) => ({
+                strongsNumber: item.number || item.strongs_number,
+                lemma: item.original_word || item.lemma,
                 transliteration: item.transliteration,
-                pronunciation: item.pronunciation,
-                shortDefinition: item.short_definition,
-                longDefinition: item.long_definition,
-                kjvDefinition: item.kjv_definition,
-                strongsDerivation: item.strongs_derivation,
+                pronunciation: item.phonetics || item.pronunciation,
+                shortDefinition: item.strong_definition || item.short_definition,
+                longDefinition: item.thayers_definition || item.long_definition || '',
+                kjvDefinition: item.kjv_usage || item.kjv_definition,
+                strongsDerivation: item.linked_derivation || item.strongs_derivation || '',
             }));
         }
         
