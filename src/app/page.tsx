@@ -75,54 +75,48 @@ async function getChapterFromApiBible(
   }
 
   // Helper function to recursively parse the content items from api.bible
-  const processApiBibleItems = (items: any[]): VerseContent[] => {
+  const processApiBibleItems = (items: any[], isWoc = false): VerseContent[] => {
     if (!items || !Array.isArray(items)) return [];
 
     let results: VerseContent[] = [];
 
     items.forEach(item => {
         if (item.type === 'text' && typeof item.text === 'string') {
-            results.push(item.text);
-        } else if (item.type === 'tag' && item.name === 'char' && item.attrs?.style === 'woc') {
-            // Recursively process "Words of Christ" content
-            const wocContent = processApiBibleItems(item.items);
-            wocContent.forEach(contentItem => {
-                if (typeof contentItem === 'string') {
-                    results.push({ text: contentItem, wordsOfJesus: true });
-                } else if (typeof contentItem === 'object' && 'text' in contentItem && !('wordsOfJesus' in contentItem)) {
-                    // This case handles nested structures
-                    results.push({ ...contentItem, wordsOfJesus: true });
-                } else {
-                    results.push(contentItem); // Already has wordsOfJesus or is not a text node
-                }
-            });
+            if (isWoc) {
+                results.push({ text: item.text, wordsOfJesus: true });
+            } else {
+                results.push(item.text);
+            }
+        } else if (item.type === 'tag' && Array.isArray(item.items)) {
+            // Recursively process children, inheriting the woc status
+            const isNewWoc = isWoc || (item.name === 'char' && item.attrs?.style === 'woc');
+            results.push(...processApiBibleItems(item.items, isNewWoc));
         }
-        // Note: This parser is simplified and doesn't handle all possible USX tags like footnotes.
-        // It's focused on text and "Words of Jesus".
+        // Note: This simplified parser handles text and "Words of Jesus" but may ignore other complex USX tags.
     });
-    
-    // Collapse adjacent strings and FormattedText objects
+
+    // Post-processing to merge adjacent text nodes of the same type.
     if (results.length < 2) {
         return results;
     }
 
-    const collapsed: VerseContent[] = [];
-    if (results.length > 0) {
-        collapsed.push(results[0]);
-    }
-    
+    const collapsed: VerseContent[] = [results[0]];
     for (let i = 1; i < results.length; i++) {
         const current = results[i];
         const last = collapsed[collapsed.length - 1];
 
+        // Merge adjacent plain strings
         if (typeof current === 'string' && typeof last === 'string') {
             collapsed[collapsed.length - 1] = last + current;
-        } else if (
-            typeof current === 'object' && 'text' in current && (current as any).wordsOfJesus &&
-            typeof last === 'object' && 'text' in last && (last as any).wordsOfJesus
+        } 
+        // Merge adjacent "Words of Jesus" text objects
+        else if (
+            typeof current === 'object' && 'text' in current && (current as FormattedText).wordsOfJesus &&
+            typeof last === 'object' && 'text' in last && (last as FormattedText).wordsOfJesus
         ) {
             (last as FormattedText).text += (current as FormattedText).text;
-        } else {
+        }
+        else {
             collapsed.push(current);
         }
     }
@@ -607,5 +601,7 @@ function FullPageSkeleton() {
     
 
 
+
+    
 
     
