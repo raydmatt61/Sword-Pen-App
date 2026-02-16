@@ -21,6 +21,7 @@ const API_BIBLE_IDS = {
     NIV: '78a9f6124f344018-01',
     NASB: 'b8ee27bcd1cae43a-01',
     KJV: 'de4e12af7f28f599-01',
+    WEB: '9879dbb7cfe39e4d-04',
 };
 const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
 
