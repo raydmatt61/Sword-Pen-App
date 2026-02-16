@@ -44,21 +44,13 @@ async function getCrossReferences(
         if (contentType && contentType.includes("application/json")) {
             const text = await response.text();
             if(!text) {
-                // The API returned a 200 OK but the body was empty.
-                console.warn(`Cross-reference API returned an empty response for ${bookId} ${chapter}.`);
                 return null;
             }
             return JSON.parse(text) as CrossRefChapterResponse;
-        } else {
-            // The API returned a 200 OK but the content-type was not JSON.
-            console.warn(`Cross-reference API returned an unexpected content type (${contentType}) for ${bookId} ${chapter}.`);
         }
-    } else {
-        // The API returned a non-200 status code.
-        console.warn(`Cross-reference API returned status ${response.status} for ${bookId} ${chapter}.`);
     }
   } catch (error) {
-    console.error(`Failed to fetch cross-references for ${bookId} ${chapter}:`, error);
+    // Silently fail
   }
   return null;
 }
@@ -72,7 +64,6 @@ async function getChapterFromApiBible(
   const bibleId = API_BIBLE_IDS[translationId];
   const bookAbbr = BIBLE_BOOKS_ABBR[book];
   if (!bookAbbr) {
-    console.error(`Invalid book name for api.bible: ${book}`);
     return null;
   }
 
@@ -80,7 +71,6 @@ async function getChapterFromApiBible(
   const apiKey = process.env.NEXT_PUBLIC_API_BIBLE_KEY;
 
   if (!apiKey) {
-    console.error("API key for api.bible is not configured.");
     return null;
   }
 
@@ -95,9 +85,7 @@ async function getChapterFromApiBible(
     );
 
     if (!response.ok) {
-      console.error(`api.bible request failed for ${chapterId}: ${response.status} ${response.statusText}`);
-      const errorText = await response.text();
-      console.error(errorText);
+      // Fail silently, fallback logic in getChapter will handle it.
       return null;
     }
 
@@ -163,7 +151,7 @@ async function getChapterFromApiBible(
     return result;
 
   } catch (error) {
-    console.error(`Failed to fetch or parse from api.bible for ${chapterId}:`, error);
+    // Fail silently
     return null;
   }
 }
@@ -175,59 +163,57 @@ async function getChapter(
   translationId: string,
   isFallbackAttempt = false
 ): Promise<BibleChapterResponse | null> {
+  let chapterData: BibleChapterResponse | null = null;
+
   if (API_BIBLE_TRANSLATIONS.includes(translationId)) {
-    return getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
-  }
-  
-  const bookNameAliases: Record<string, string> = {
-    'Song of Songs': 'Song of Solomon',
-  };
-  const canonicalBook = bookNameAliases[book] || book;
-  const bookId = BIBLE_BOOKS_ABBR[canonicalBook] || canonicalBook;
+    chapterData = await getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
+  } else {
+    const bookNameAliases: Record<string, string> = {
+      'Song of Songs': 'Song of Solomon',
+    };
+    const canonicalBook = bookNameAliases[book] || book;
+    const bookId = BIBLE_BOOKS_ABBR[canonicalBook] || canonicalBook;
 
-  let attempts = 0;
-  const maxRetries = 3;
-  const delay = 1000; // 1 second
-  
-  while (attempts < maxRetries) {
-    try {
-      const response = await fetch(
-        `https://bible.helloao.org/api/${translationId}/${bookId}/${chapter}.json`
-      );
-
-      if (response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-            const text = await response.text();
-            if(!text) {
-                console.warn(`API returned an empty response for ${translationId}/${bookId}/${chapter}. Will retry.`);
-            } else {
-                const data = JSON.parse(text);
-                if (data && data.chapter && data.chapter.content) {
-                    return data as BibleChapterResponse;
-                }
-            }
-        } else {
-             console.warn(`API Warning: Expected JSON but received ${contentType} for ${translationId}/${bookId}/${chapter}. Will retry.`);
-        }
-      } else {
-        if (response.status !== 404) { // Don't warn for 404s, which are expected for some translation/book combos
-          console.warn(`API Error for ${translationId}/${bookId}/${chapter}: ${response.status} ${response.statusText}. Will retry.`);
-        }
-      }
-    } catch (error) {
-      console.warn(`Failed to fetch chapter (attempt ${attempts + 1}):`, error);
-    }
+    let attempts = 0;
+    const maxRetries = 3;
+    const delay = 1000; // 1 second
     
-    attempts++;
-    if (attempts < maxRetries) {
-      await new Promise(res => setTimeout(res, delay));
+    while (attempts < maxRetries && !chapterData) {
+      try {
+        const response = await fetch(
+          `https://bible.helloao.org/api/${translationId}/${bookId}/${chapter}.json`
+        );
+
+        if (response.ok) {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+              const text = await response.text();
+              if(text) {
+                  const data = JSON.parse(text);
+                  if (data && data.chapter && data.chapter.content) {
+                      chapterData = data as BibleChapterResponse;
+                  }
+              }
+          }
+        }
+      } catch (error) {
+        // Silently catch fetch errors
+      }
+      
+      attempts++;
+      if (attempts < maxRetries && !chapterData) {
+        await new Promise(res => setTimeout(res, delay));
+      }
     }
   }
 
-  // If all attempts fail, try to fall back to a more reliable translation if this wasn't already a fallback attempt.
+  // If we got data, return it
+  if (chapterData) {
+      return chapterData;
+  }
+
+  // If we don't have data, and it's not already a fallback attempt, try falling back to BSB.
   if (!isFallbackAttempt && translationId !== 'BSB') {
-      console.warn(`Failed to load ${book} ${chapter} in ${translationId}. Attempting to fall back to BSB translation.`);
       const fallbackChapter = await getChapter(book, chapter, 'BSB', true);
       if (fallbackChapter) {
           return fallbackChapter;
@@ -243,7 +229,6 @@ async function fetchBooksForTranslation(): Promise<Omit<Book, 'testament'>[] | n
     try {
         const booksRes = await fetch(`https://bible.helloao.org/api/${bookListTranslation}/books.json`);
         if (!booksRes.ok) {
-            console.error(`Failed to fetch books for ${bookListTranslation}: ${booksRes.status}`);
             return null;
         }
         const contentType = booksRes.headers.get("content-type");
@@ -251,11 +236,9 @@ async function fetchBooksForTranslation(): Promise<Omit<Book, 'testament'>[] | n
             const booksData = await booksRes.json();
             return booksData.books || null;
         } else {
-            console.error(`Expected JSON for books list but received ${contentType} for ${bookListTranslation}`);
             return null;
         }
     } catch (error) {
-        console.error(`Error fetching books for ${bookListTranslation}:`, error);
         return null;
     }
 }
@@ -291,13 +274,17 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   }, [books, initialBook]);
   
   useEffect(() => {
-    if (chapterData && chapterData.translation.id !== initialTranslationId && !API_BIBLE_TRANSLATIONS.includes(initialTranslationId)) {
+    if (chapterData && chapterData.translation.id !== initialTranslationId && !isFallbackFromApiBible()) {
         toast({
             title: "Translation Fallback",
             description: `Could not load ${initialBook} ${initialChapter} in ${TRANSLATIONS.find(t=>t.id === initialTranslationId)?.name || initialTranslationId}. Displaying in BSB instead.`,
         });
     }
   }, [chapterData, initialTranslationId, initialBook, initialChapter, toast]);
+
+  const isFallbackFromApiBible = () => {
+    return API_BIBLE_TRANSLATIONS.includes(initialTranslationId) && chapterData?.translation.id === 'BSB'
+  }
 
   const searchParamsString = searchParams.toString();
   const navigate = useCallback((newValues: Partial<{ book: string; chapter: string; translation: string }>) => {
