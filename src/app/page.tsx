@@ -85,6 +85,9 @@ async function getChapterFromApiBible(
     );
 
     if (!response.ok) {
+      if (response.status === 403) {
+        console.warn(`API.bible request failed with 403 Forbidden for translation ${translationId}. This likely means the API key is not authorized for this translation. Please visit https://api.bible to accept the terms for the translation.`);
+      }
       // The API key may be invalid or lack permissions for this translation.
       // We fail silently here and let the fallback logic in `getChapter` handle it.
       return null;
