@@ -479,9 +479,9 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                     </p>
                                 ) : chapterData.translation.id === 'NIV' ? (
                                     <div className="citation-box text-xs">
-                                        <p className="citation-text">The Holy Bible, New International Version® NIV® Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by Permission of Biblica, Inc.® All rights reserved worldwide. To learn more, visit http://biblica.com and http://facebook.com/Biblica.</p>
+                                        <p className="citation-text">The Holy Bible, New International Version® NIV® Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by Permission of Biblica, Inc.® All rights reserved worldwide.</p>
                                         <div className="divider"></div>
-                                        <p>To learn more about American Bible Society, visit <a href="https://americanbible.org" target="_blank" rel="noopener noreferrer">americanbible.org</a>.</p>
+                                        <p>To learn more, visit <a href="http://biblica.com" target="_blank" rel="noopener noreferrer">biblica.com</a> and <a href="http://facebook.com/Biblica" target="_blank" rel="noopener noreferrer">facebook.com/Biblica</a>.</p>
                                     </div>
                                 ) : (
                                     chapterData.copyright && (
