@@ -17,7 +17,7 @@ import { AnnotationProvider } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
 
 const API_BIBLE_IDS = {
-    CSB: '55212e3cf5d04d49-01',
+    CSB: 'a556c5305ee15c3f-01',
     NIV: 'de4e12af7f28f599-01',
     NASB: 'a6a7991bff536a0f-01',
 };
