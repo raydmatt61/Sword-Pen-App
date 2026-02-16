@@ -70,6 +70,24 @@ function VerseComponent({
         };
 
         const segments = flattenVerseContent(verse.content);
+        
+        const firstNonEmptySegmentIndex = segments.findIndex(s => s.text.trim().length > 0);
+        
+        if (firstNonEmptySegmentIndex !== -1) {
+            const verseNumberStr = `${verse.number}`;
+            const segment = segments[firstNonEmptySegmentIndex];
+            const originalText = segment.text;
+            const trimmedText = originalText.trimStart();
+
+            if (trimmedText.startsWith(verseNumberStr)) {
+                const charAfterNumber = trimmedText[verseNumberStr.length];
+                if (charAfterNumber === ' ' || charAfterNumber === undefined || !/\d/.test(charAfterNumber)) {
+                    const textAfterNumber = trimmedText.substring(verseNumberStr.length);
+                    segment.text = originalText.substring(0, originalText.length - trimmedText.length) + textAfterNumber.trimStart();
+                }
+            }
+        }
+
         const flatText = segments.map(s => s.text).join('');
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
         
@@ -510,3 +528,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         </TooltipProvider>
     );
 }
+
+
+    
