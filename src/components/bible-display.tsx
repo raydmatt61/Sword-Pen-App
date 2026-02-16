@@ -11,7 +11,7 @@ import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useUser } from '@/firebase';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
@@ -469,11 +469,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                     <p className="text-xs text-muted-foreground">
                                         The Berean Bible and Majority Bible texts are officially dedicated to the public domain as of April 30, 2023.
                                     </p>
-                                ) : chapterData.translation.id === 'KJV' || chapterData.translation.id === 'ASV' ? (
-                                     <p className="text-xs text-muted-foreground">
-                                        This work is in the Public Domain.
-                                    </p>
-                                ) : chapterData.translation.id === 'WEB' ? (
+                                ) : chapterData.translation.id === 'EWEB' ? (
                                     <p className="text-xs text-muted-foreground">
                                         The World English Bible is in the Public Domain. That means that it is not copyrighted. However, "World English Bible" is a Trademark of{' '}
                                         <a href="https://eBible.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
@@ -481,6 +477,12 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                         </a>
                                         .
                                     </p>
+                                ) : chapterData.translation.id === 'NIV' ? (
+                                    <div className="citation-box text-xs">
+                                        <p className="citation-text">The Holy Bible, New International Version® NIV® Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by Permission of Biblica, Inc.® All rights reserved worldwide. To learn more, visit http://biblica.com and http://facebook.com/Biblica.</p>
+                                        <div className="divider"></div>
+                                        <p>To learn more about American Bible Society, visit <a href="https://americanbible.org" target="_blank" rel="noopener noreferrer">americanbible.org</a>.</p>
+                                    </div>
                                 ) : (
                                     chapterData.copyright && (
                                         <p className="text-xs text-muted-foreground italic">{chapterData.copyright}</p>
@@ -516,5 +518,3 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         </TooltipProvider>
     );
 }
-
-    
