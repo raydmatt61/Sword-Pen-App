@@ -18,8 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 
 const API_BIBLE_IDS = {
     CSB: 'a556c5305ee15c3f-01',
-    NIV: 'de4e12af7f28f599-01',
-    NASB: 'a6a7991bff536a0f-01',
+    NIV: '78a9f6124f344018-01',
+    NASB: 'b8ee27bcd1cae43a-01',
 };
 const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
 
@@ -535,4 +535,6 @@ function FullPageSkeleton() {
     </main>
   );
 }
+    
+
     
