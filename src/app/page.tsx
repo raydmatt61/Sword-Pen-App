@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'rea
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent } from '@/lib/bible';
+import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText } from '@/lib/bible';
 import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -74,6 +74,62 @@ async function getChapterFromApiBible(
     return null;
   }
 
+  // Helper function to recursively parse the content items from api.bible
+  const processApiBibleItems = (items: any[]): VerseContent[] => {
+    if (!items || !Array.isArray(items)) return [];
+
+    let results: VerseContent[] = [];
+
+    items.forEach(item => {
+        if (item.type === 'text' && typeof item.text === 'string') {
+            results.push(item.text);
+        } else if (item.type === 'tag' && item.name === 'char' && item.attrs?.style === 'woc') {
+            // Recursively process "Words of Christ" content
+            const wocContent = processApiBibleItems(item.items);
+            wocContent.forEach(contentItem => {
+                if (typeof contentItem === 'string') {
+                    results.push({ text: contentItem, wordsOfJesus: true });
+                } else if (typeof contentItem === 'object' && 'text' in contentItem && !('wordsOfJesus' in contentItem)) {
+                    // This case is unlikely but handles nested structures
+                    results.push({ ...contentItem, wordsOfJesus: true });
+                } else {
+                    results.push(contentItem); // Already has wordsOfJesus or is not a text node
+                }
+            });
+        }
+        // Note: This parser is simplified and doesn't handle all possible USX tags like footnotes.
+        // It's focused on text and "Words of Jesus".
+    });
+    
+    // Collapse adjacent strings and FormattedText objects
+    if (results.length < 2) {
+        return results;
+    }
+
+    const collapsed: VerseContent[] = [];
+    if (results.length > 0) {
+        collapsed.push(results[0]);
+    }
+    
+    for (let i = 1; i < results.length; i++) {
+        const current = results[i];
+        const last = collapsed[collapsed.length - 1];
+
+        if (typeof current === 'string' && typeof last === 'string') {
+            collapsed[collapsed.length - 1] = last + current;
+        } else if (
+            typeof current === 'object' && 'text' in current && (current as any).wordsOfJesus &&
+            typeof last === 'object' && 'text' in last && (last as any).wordsOfJesus
+        ) {
+            (last as FormattedText).text += (current as FormattedText).text;
+        } else {
+            collapsed.push(current);
+        }
+    }
+
+    return collapsed;
+  };
+
   try {
     const response = await fetch(
       `https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=true`,
@@ -88,17 +144,27 @@ async function getChapterFromApiBible(
       if (response.status === 403) {
         console.warn(`API.bible request failed with 403 Forbidden for translation ${translationId}. This likely means the API key is not authorized for this translation. Please visit https://api.bible to accept the terms for the translation.`);
       }
-      // The API key may be invalid or lack permissions for this translation.
-      // We fail silently here and let the fallback logic in `getChapter` handle it.
       return null;
     }
 
     const json = await response.json();
     const data = json.data;
 
+    let content_data;
+    if (typeof data.content === 'string') {
+      try {
+        content_data = JSON.parse(data.content);
+      } catch (e) {
+        console.error("Failed to parse api.bible content string", e);
+        return null;
+      }
+    } else {
+      content_data = data.content;
+    }
+
     const chapterContent: ChapterContentItem[] = [];
-    if (data && Array.isArray(data.content)) {
-      data.content.forEach(item => {
+    if (content_data && Array.isArray(content_data)) {
+      content_data.forEach(item => {
         if (item.type !== 'tag' || item.name !== 'para' || !Array.isArray(item.items)) {
           return;
         }
@@ -114,21 +180,12 @@ async function getChapterFromApiBible(
               const verseNumber = parseInt(p_item.attrs.number, 10);
               if (isNaN(verseNumber)) return;
 
-              const verseItems: VerseContent[] = [];
-              if (Array.isArray(p_item.items)) {
-                p_item.items.forEach(v_item => {
-                  if (v_item.type === 'text' && typeof v_item.text === 'string') {
-                    verseItems.push(v_item.text);
-                  }
-                });
-              }
-
-              const collapsedVerseItems: VerseContent[] = verseItems.join(' ').trim() ? [verseItems.join(' ').trim()] : [];
+              const verseContent = processApiBibleItems(p_item.items);
 
               chapterContent.push({
                 type: 'verse',
                 number: verseNumber,
-                content: collapsedVerseItems,
+                content: verseContent,
               });
             }
           });
