@@ -77,7 +77,7 @@ async function getChapterFromApiBible(
   }
 
   const chapterId = `${bookAbbr}.${chapter}`;
-  const apiKey = process.env.NEXT_PUBLIC_API_BIBLE_KEY || "n-eVwCRekVC0-oL2B6_s3"; // Fallback for client
+  const apiKey = process.env.NEXT_PUBLIC_API_BIBLE_KEY;
 
   if (!apiKey) {
     console.error("API key for api.bible is not configured.");
