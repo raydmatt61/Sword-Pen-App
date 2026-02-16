@@ -85,7 +85,8 @@ async function getChapterFromApiBible(
     );
 
     if (!response.ok) {
-      // Fail silently, fallback logic in getChapter will handle it.
+      // The API key may be invalid or lack permissions for this translation.
+      // We fail silently here and let the fallback logic in `getChapter` handle it.
       return null;
     }
 
@@ -531,19 +532,4 @@ function FullPageSkeleton() {
     </main>
   );
 }
-    
-
-    
-
-
-
-    
-
-    
-
-
-    
-
-    
-
     
