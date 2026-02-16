@@ -11,6 +11,7 @@ export const TRANSLATIONS: Translation[] = [
     { id: 'CSB', name: 'Christian Standard Bible' },
     { id: 'NIV', name: 'New International Version' },
     { id: 'NASB', name: 'New American Standard Bible' },
+    { id: 'KJV', name: 'King James Version' },
 ];
 
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
@@ -149,4 +150,5 @@ export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
     
 
     
+
 
