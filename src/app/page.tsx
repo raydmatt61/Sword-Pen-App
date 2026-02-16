@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'rea
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse } from '@/lib/bible';
+import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent } from '@/lib/bible';
 import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,6 +15,13 @@ import { AnnotationWrapper } from '@/components/annotation-wrapper';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
+
+const API_BIBLE_IDS = {
+    CSB: '55212e3cf5d04d49-01',
+    NIV: 'de4e12af7f28f599-01',
+    NASB: 'a6a7991bff536a0f-01',
+};
+const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
 
 async function getCrossReferences(
   book: string,
@@ -57,12 +64,121 @@ async function getCrossReferences(
 }
 
 
+async function getChapterFromApiBible(
+  book: string,
+  chapter: string,
+  translationId: keyof typeof API_BIBLE_IDS
+): Promise<BibleChapterResponse | null> {
+  const bibleId = API_BIBLE_IDS[translationId];
+  const bookAbbr = BIBLE_BOOKS_ABBR[book];
+  if (!bookAbbr) {
+    console.error(`Invalid book name for api.bible: ${book}`);
+    return null;
+  }
+
+  const chapterId = `${bookAbbr}.${chapter}`;
+  const apiKey = process.env.NEXT_PUBLIC_API_BIBLE_KEY || "n-eVwCRekVC0-oL2B6_s3"; // Fallback for client
+
+  if (!apiKey) {
+    console.error("API key for api.bible is not configured.");
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=true`,
+      {
+        headers: {
+          'api-key': apiKey,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`api.bible request failed for ${chapterId}: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(errorText);
+      return null;
+    }
+
+    const json = await response.json();
+    const data = json.data;
+
+    const chapterContent: ChapterContentItem[] = [];
+    if (data && Array.isArray(data.content)) {
+      data.content.forEach(item => {
+        if (item.type !== 'tag' || item.name !== 'para' || !Array.isArray(item.items)) {
+          return;
+        }
+
+        if (item.attrs.style === 'h') {
+          chapterContent.push({
+            type: 'heading',
+            content: [item.items[0]?.text || ''],
+          });
+        } else {
+          item.items.forEach(p_item => {
+            if (p_item.type === 'tag' && p_item.name === 'verse' && p_item.attrs?.number) {
+              const verseNumber = parseInt(p_item.attrs.number, 10);
+              if (isNaN(verseNumber)) return;
+
+              const verseItems: VerseContent[] = [];
+              if (Array.isArray(p_item.items)) {
+                p_item.items.forEach(v_item => {
+                  if (v_item.type === 'text' && typeof v_item.text === 'string') {
+                    verseItems.push(v_item.text);
+                  }
+                });
+              }
+
+              const collapsedVerseItems: VerseContent[] = verseItems.join(' ').trim() ? [verseItems.join(' ').trim()] : [];
+
+              chapterContent.push({
+                type: 'verse',
+                number: verseNumber,
+                content: collapsedVerseItems,
+              });
+            }
+          });
+        }
+      });
+    }
+    
+    const result: BibleChapterResponse = {
+      book: {
+        name: book,
+        id: bookAbbr,
+      },
+      chapter: {
+        number: parseInt(chapter, 10),
+        content: chapterContent,
+      },
+      translation: {
+        name: TRANSLATIONS.find(t => t.id === translationId)?.name || translationId,
+        id: translationId,
+      },
+      copyright: data.copyright,
+    };
+
+    return result;
+
+  } catch (error) {
+    console.error(`Failed to fetch or parse from api.bible for ${chapterId}:`, error);
+    return null;
+  }
+}
+
+
 async function getChapter(
   book: string,
   chapter: string,
   translationId: string,
   isFallbackAttempt = false
 ): Promise<BibleChapterResponse | null> {
+  if (API_BIBLE_TRANSLATIONS.includes(translationId)) {
+    return getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
+  }
+  
   const bookNameAliases: Record<string, string> = {
     'Song of Songs': 'Song of Solomon',
   };
@@ -175,7 +291,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   }, [books, initialBook]);
   
   useEffect(() => {
-    if (chapterData && chapterData.translation.id !== initialTranslationId) {
+    if (chapterData && chapterData.translation.id !== initialTranslationId && !API_BIBLE_TRANSLATIONS.includes(initialTranslationId)) {
         toast({
             title: "Translation Fallback",
             description: `Could not load ${initialBook} ${initialChapter} in ${TRANSLATIONS.find(t=>t.id === initialTranslationId)?.name || initialTranslationId}. Displaying in BSB instead.`,

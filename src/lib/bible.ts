@@ -8,6 +8,9 @@ export const TRANSLATIONS: Translation[] = [
     { id: 'BSB', name: 'Berean Standard Bible' },
     { id: 'engnet', name: 'New English Translation' },
     { id: 'EWEB', name: 'World English Bible' },
+    { id: 'CSB', name: 'Christian Standard Bible' },
+    { id: 'NIV', name: 'New International Version' },
+    { id: 'NASB', name: 'New American Standard Bible' },
 ];
 
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
@@ -146,3 +149,4 @@ export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
     
 
     
+
