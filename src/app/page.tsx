@@ -74,57 +74,7 @@ async function getChapterFromApiBible(
   if (!apiKey) {
     return null;
   }
-
-  // Helper function to recursively parse the content items from api.bible
-  const processApiBibleItems = (items: any[], isWoc = false): VerseContent[] => {
-    if (!items || !Array.isArray(items)) return [];
-
-    let results: VerseContent[] = [];
-
-    items.forEach(item => {
-        if (item.type === 'text' && typeof item.text === 'string') {
-            if (isWoc) {
-                results.push({ text: item.text, wordsOfJesus: true });
-            } else {
-                results.push(item.text);
-            }
-        } else if (item.type === 'tag' && Array.isArray(item.items)) {
-            // Recursively process children, inheriting the woc status
-            const isNewWoc = isWoc || (item.name === 'char' && item.attrs?.style === 'woc');
-            results.push(...processApiBibleItems(item.items, isNewWoc));
-        }
-        // Note: This simplified parser handles text and "Words of Jesus" but may ignore other complex USX tags.
-    });
-
-    // Post-processing to merge adjacent text nodes of the same type.
-    if (results.length < 2) {
-        return results;
-    }
-
-    const collapsed: VerseContent[] = [results[0]];
-    for (let i = 1; i < results.length; i++) {
-        const current = results[i];
-        const last = collapsed[collapsed.length - 1];
-
-        // Merge adjacent plain strings
-        if (typeof current === 'string' && typeof last === 'string') {
-            collapsed[collapsed.length - 1] = last + current;
-        } 
-        // Merge adjacent "Words of Jesus" text objects
-        else if (
-            typeof current === 'object' && 'text' in current && (current as FormattedText).wordsOfJesus &&
-            typeof last === 'object' && 'text' in last && (last as FormattedText).wordsOfJesus
-        ) {
-            (last as FormattedText).text += (current as FormattedText).text;
-        }
-        else {
-            collapsed.push(current);
-        }
-    }
-
-    return collapsed;
-  };
-
+  
   try {
     const response = await fetch(
       `https://rest.api.bible/v1/bibles/${bibleId}/passages/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`,
@@ -156,46 +106,106 @@ async function getChapterFromApiBible(
     } else {
       content_data = data.content;
     }
-
-    const chapterContent: ChapterContentItem[] = [];
     
-    // New, robust recursive function to process the parsed content
-    const processContent = (items: any[]) => {
+    const chapterContent: ChapterContentItem[] = [];
+    let currentVerseNumber: number | null = null;
+    let currentVerseContent: VerseContent[] = [];
+
+    const processItems = (items: any[], isWoc = false) => {
         if (!items || !Array.isArray(items)) return;
 
         items.forEach(item => {
             if (item.type === 'tag') {
+                let flushVerse = false;
+                let startNewVerse: number | null = null;
+
                 if (item.name === 'verse' && item.attrs?.number) {
-                    const verseNumber = parseInt(item.attrs.number, 10);
-                    if (isNaN(verseNumber)) return;
+                    flushVerse = true;
+                    startNewVerse = parseInt(item.attrs.number, 10);
+                }
+                
+                if (item.name === 'para' && item.attrs?.style === 'h') {
+                    flushVerse = true;
+                }
+                
+                if (flushVerse && currentVerseNumber !== null && currentVerseContent.length > 0) {
+                     chapterContent.push({
+                        type: 'verse',
+                        number: currentVerseNumber,
+                        content: currentVerseContent
+                    });
+                    currentVerseContent = [];
+                    currentVerseNumber = null;
+                }
+                
+                if(startNewVerse) {
+                    currentVerseNumber = startNewVerse;
+                }
 
-                    const verseContent = processApiBibleItems(item.items);
-
-                    // Only add verse if it has content
-                    if (verseContent && verseContent.length > 0) {
-                        chapterContent.push({
-                            type: 'verse',
-                            number: verseNumber,
-                            content: verseContent,
+                if (item.name === 'para' && item.attrs?.style === 'h') {
+                    const headingText = item.items?.map(i => i.text).join(' ').trim();
+                    if(headingText) {
+                         chapterContent.push({
+                            type: 'heading',
+                            content: [headingText],
                         });
                     }
-                } else if (item.name === 'para' && item.attrs?.style === 'h') {
-                     chapterContent.push({
-                        type: 'heading',
-                        content: [item.items[0]?.text || ''],
-                    });
-                } else if (item.items && Array.isArray(item.items)) {
-                    // Recurse into any other tags that have items
-                    processContent(item.items);
+                }
+                
+                const isNewWoc = isWoc || (item.name === 'char' && item.attrs?.style === 'woc');
+                if (item.items && Array.isArray(item.items)) {
+                    processItems(item.items, isNewWoc);
+                }
+
+            } else if (item.type === 'text' && typeof item.text === 'string') {
+                if (currentVerseNumber !== null) {
+                    const textToAdd = item.text;
+                    if (textToAdd) {
+                         if (isWoc) {
+                            currentVerseContent.push({ text: textToAdd, wordsOfJesus: true });
+                        } else {
+                            currentVerseContent.push(textToAdd);
+                        }
+                    }
                 }
             }
         });
     };
     
     if (content_data && Array.isArray(content_data)) {
-        processContent(content_data);
+        processItems(content_data);
     }
     
+    if (currentVerseNumber !== null && currentVerseContent.length > 0) {
+        chapterContent.push({
+            type: 'verse',
+            number: currentVerseNumber,
+            content: currentVerseContent
+        });
+    }
+
+    chapterContent.forEach(item => {
+        if (item.type !== 'verse' || item.content.length < 2) return;
+        const collapsed: VerseContent[] = [];
+        if (item.content.length > 0) collapsed.push(item.content[0]);
+
+        for (let i = 1; i < item.content.length; i++) {
+            const current = item.content[i];
+            const last = collapsed[collapsed.length - 1];
+            if (typeof current === 'string' && typeof last === 'string') {
+                collapsed[collapsed.length - 1] = last + current;
+            } else if (
+                typeof current === 'object' && 'text' in current && (current as FormattedText).wordsOfJesus &&
+                typeof last === 'object' && 'text' in last && (last as FormattedText).wordsOfJesus
+            ) {
+                (last as FormattedText).text += (current as FormattedText).text;
+            } else {
+                collapsed.push(current);
+            }
+        }
+        item.content = collapsed;
+    });
+
     const result: BibleChapterResponse = {
       book: {
         name: book,
