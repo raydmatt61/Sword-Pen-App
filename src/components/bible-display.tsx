@@ -469,14 +469,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                     <p className="text-xs text-muted-foreground">
                                         The Berean Bible and Majority Bible texts are officially dedicated to the public domain as of April 30, 2023.
                                     </p>
-                                ) : chapterData.translation.id === 'EWEB' ? (
-                                    <p className="text-xs text-muted-foreground">
-                                        The World English Bible is in the Public Domain. That means that it is not copyrighted. However, "World English Bible" is a Trademark of{' '}
-                                        <a href="https://eBible.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
-                                            eBible.org
-                                        </a>
-                                        .
-                                    </p>
                                 ) : chapterData.translation.id === 'NIV' ? (
                                     <div className="citation-box text-xs">
                                         <p className="citation-text">The Holy Bible, New International Version® NIV® Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by Permission of Biblica, Inc.® All rights reserved worldwide.</p>
