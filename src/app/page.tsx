@@ -157,34 +157,42 @@ async function getChapterFromApiBible(
     }
 
     const chapterContent: ChapterContentItem[] = [];
-    if (content_data && Array.isArray(content_data)) {
-      content_data.forEach(item => {
-        if (item.type !== 'tag' || item.name !== 'para' || !Array.isArray(item.items)) {
-          return;
-        }
+    
+    // New, robust recursive function to process the parsed content
+    const processContent = (items: any[]) => {
+        if (!items || !Array.isArray(items)) return;
 
-        if (item.attrs.style === 'h') {
-          chapterContent.push({
-            type: 'heading',
-            content: [item.items[0]?.text || ''],
-          });
-        } else {
-          item.items.forEach(p_item => {
-            if (p_item.type === 'tag' && p_item.name === 'verse' && p_item.attrs?.number) {
-              const verseNumber = parseInt(p_item.attrs.number, 10);
-              if (isNaN(verseNumber)) return;
+        items.forEach(item => {
+            if (item.type === 'tag') {
+                if (item.name === 'verse' && item.attrs?.number) {
+                    const verseNumber = parseInt(item.attrs.number, 10);
+                    if (isNaN(verseNumber)) return;
 
-              const verseContent = processApiBibleItems(p_item.items);
+                    const verseContent = processApiBibleItems(item.items);
 
-              chapterContent.push({
-                type: 'verse',
-                number: verseNumber,
-                content: verseContent,
-              });
+                    // Only add verse if it has content
+                    if (verseContent && verseContent.length > 0) {
+                        chapterContent.push({
+                            type: 'verse',
+                            number: verseNumber,
+                            content: verseContent,
+                        });
+                    }
+                } else if (item.name === 'para' && item.attrs?.style === 'h') {
+                     chapterContent.push({
+                        type: 'heading',
+                        content: [item.items[0]?.text || ''],
+                    });
+                } else if (item.items && Array.isArray(item.items)) {
+                    // Recurse into any other tags that have items
+                    processContent(item.items);
+                }
             }
-          });
-        }
-      });
+        });
+    };
+    
+    if (content_data && Array.isArray(content_data)) {
+        processContent(content_data);
     }
     
     const result: BibleChapterResponse = {
@@ -601,6 +609,8 @@ function FullPageSkeleton() {
     
 
 
+
+    
 
     
 
