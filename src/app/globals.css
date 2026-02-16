@@ -92,4 +92,32 @@
 .text-size-xl p { font-size: 1.25rem; line-height: 1.75rem; letter-spacing: 0.01em; }
 .text-size-2xl p { font-size: 1.5rem; line-height: 2rem; letter-spacing: 0.01em; }
 
+.citation-box {
+    background: #fff;
+    border: 1px solid #E4E4E7;
+    border-radius: 20px;
+    padding: 20px 16px;
+    max-width: 700px;
+    line-height: 1.5;
+    color: #222;
+}
+
+.citation-box p.citation-text {
+    font-style: italic;
+}
+
+.citation-box .divider {
+    border-top: 1px solid #e0e0e0;
+    margin: 20px 0;
+}
+
+.citation-box a {
+    color: #0155CC;
+    text-decoration: none;
+}
+
+.citation-box a:hover {
+    text-decoration: underline;
+}
     
+
