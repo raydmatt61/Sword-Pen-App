@@ -278,17 +278,25 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   }, [books, initialBook]);
   
   useEffect(() => {
-    if (chapterData && chapterData.translation.id !== initialTranslationId && !isFallbackFromApiBible()) {
-        toast({
-            title: "Translation Fallback",
-            description: `Could not load ${initialBook} ${initialChapter} in ${TRANSLATIONS.find(t=>t.id === initialTranslationId)?.name || initialTranslationId}. Displaying in BSB instead.`,
-        });
+    // Only show toast if a fallback has actually occurred.
+    if (chapterData && chapterData.translation.id !== initialTranslationId) {
+        const isApiBibleTranslation = API_BIBLE_TRANSLATIONS.includes(initialTranslationId);
+        
+        if (isApiBibleTranslation) {
+            // This case handles fallbacks from CSB, NIV, NASB which are likely permission issues.
+            toast({
+                title: "Translation Permission Issue",
+                description: `Could not load ${initialTranslationId}. This may be a permission issue. Please ensure you have accepted the terms for this translation on api.bible. Displaying in BSB instead.`,
+            });
+        } else {
+            // This handles fallbacks from other translations.
+            toast({
+                title: "Translation Fallback",
+                description: `Could not load ${initialBook} ${initialChapter} in ${TRANSLATIONS.find(t=>t.id === initialTranslationId)?.name || initialTranslationId}. Displaying in BSB instead.`,
+            });
+        }
     }
   }, [chapterData, initialTranslationId, initialBook, initialChapter, toast]);
-
-  const isFallbackFromApiBible = () => {
-    return API_BIBLE_TRANSLATIONS.includes(initialTranslationId) && chapterData?.translation.id === 'BSB'
-  }
 
   const searchParamsString = searchParams.toString();
   const navigate = useCallback((newValues: Partial<{ book: string; chapter: string; translation: string }>) => {
@@ -535,6 +543,8 @@ function FullPageSkeleton() {
     </main>
   );
 }
+    
+
     
 
     
