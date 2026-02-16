@@ -3,7 +3,7 @@
 
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, type VerseContent } from '@/lib/bible';
+import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, type VerseContent, FormattedText } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Balancer from 'react-wrap-balancer';
@@ -11,10 +11,11 @@ import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useUser } from '@/firebase';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon } from 'lucide-react';
-import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
+import { StrongsPopover } from './strongs-popover';
 
 
 function VerseComponent({
@@ -47,23 +48,20 @@ function VerseComponent({
 
 
     const renderedContent = useMemo(() => {
-        const flattenVerseContent = (content: VerseContent[]): { text: string; isWoj: boolean }[] => {
-            const segments: { text: string; isWoj: boolean }[] = [];
+        const flattenVerseContent = (content: VerseContent[]): { text: string; isWoj: boolean, strongs?: string }[] => {
+            const segments: { text: string; isWoj: boolean, strongs?: string }[] = [];
             if (!Array.isArray(content)) return segments;
     
             for (const item of content) {
                 if (typeof item === 'string') {
                     segments.push({ text: item, isWoj: false });
                 } else if (item && typeof item === 'object') {
-                    // This is a FormattedText object
                     if ('text' in item && typeof item.text === 'string') {
-                        segments.push({ text: item.text, isWoj: !!(item as any).wordsOfJesus });
+                        segments.push({ text: item.text, isWoj: !!(item as any).wordsOfJesus, strongs: (item as any).strongs });
                     } 
-                    // This is an InlineLineBreak. Treat as space to maintain character offsets.
                     else if ('lineBreak' in item && (item as any).lineBreak === true) {
                         segments.push({ text: ' ', isWoj: false });
                     }
-                    // We ignore InlineHeading and VerseFootnoteReference for flat text generation.
                 }
             }
             return segments;
@@ -98,6 +96,7 @@ function VerseComponent({
         const chars = flatText.split('').map(char => ({
             char,
             isWoj: false,
+            strongs: undefined as string | undefined,
             annotations: [] as Annotation[],
         }));
         
@@ -106,6 +105,7 @@ function VerseComponent({
             for (let i = 0; i < segment.text.length; i++) {
                 if (chars[charIndex]) {
                     chars[charIndex].isWoj = segment.isWoj;
+                    chars[charIndex].strongs = segment.strongs;
                 }
                 charIndex++;
             }
@@ -123,9 +123,13 @@ function VerseComponent({
             const charInfo = chars[i];
             const currentAnnotationClasses = charInfo.annotations.map(a => cn(a.highlight, a.underline, a.note && a.note.trim() !== '' && "border-b-2 border-dashed border-primary")).join(' ');
             const isCurrentWoj = charInfo.isWoj;
+            const currentStrongs = charInfo.strongs;
 
             let j = i;
-            while (j < chars.length && chars[j].isWoj === isCurrentWoj && chars[j].annotations.map(a => a.id).join(',') === charInfo.annotations.map(a => a.id).join(',')) {
+            while (j < chars.length && 
+                chars[j].isWoj === isCurrentWoj && 
+                chars[j].strongs === currentStrongs &&
+                chars[j].annotations.map(a => a.id).join(',') === charInfo.annotations.map(a => a.id).join(',')) {
                 j++;
             }
 
@@ -133,7 +137,7 @@ function VerseComponent({
             const mainAnnotation = charInfo.annotations[0];
             const hasNote = mainAnnotation?.note && mainAnnotation.note.trim() !== '';
 
-            const segmentSpan = (
+            let segmentSpan = (
                 <span 
                     key={i} 
                     className={cn(currentAnnotationClasses, isCurrentWoj && 'words-of-jesus', hasNote && 'cursor-help')}
@@ -143,7 +147,24 @@ function VerseComponent({
                 </span>
             );
 
-            if (hasNote) {
+            if (currentStrongs) {
+                 segmentSpan = (
+                    <span 
+                        key={i} 
+                        className={cn(currentAnnotationClasses, isCurrentWoj && 'words-of-jesus', hasNote && 'cursor-help', "underline text-primary cursor-pointer")}
+                        onClick={mainAnnotation ? (e) => { e.stopPropagation(); onAnnotationClick(mainAnnotation); } : undefined}
+                    >
+                        {segmentText}
+                    </span>
+                );
+
+                finalRender.push(
+                    <StrongsPopover key={`spop-${i}`} strongsNumber={currentStrongs} navigate={navigate}>
+                       {segmentSpan}
+                    </StrongsPopover>
+                );
+
+            } else if (hasNote) {
                 finalRender.push(
                     <Tooltip key={`t-${i}`} delayDuration={100}>
                         <TooltipTrigger asChild>
@@ -160,7 +181,7 @@ function VerseComponent({
             i = j;
         }
         return finalRender;
-    }, [verse.content, annotations, onAnnotationClick]);
+    }, [verse.content, annotations, onAnnotationClick, navigate]);
 
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {

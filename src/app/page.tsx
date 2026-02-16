@@ -114,7 +114,7 @@ async function getChapterFromApiBible(
     let currentVerseNumber: number | null = null;
     let currentVerseContent: VerseContent[] = [];
 
-    const processItems = (items: any[], isWoc = false) => {
+    const processItems = (items: any[], isWoc = false, strongs: string | null = null) => {
         if (!items || !Array.isArray(items)) return;
 
         items.forEach(item => {
@@ -155,19 +155,25 @@ async function getChapterFromApiBible(
                     }
                 }
                 
+                const newStrongs = (item.name === 'w' && (item.attrs?.lemma || item.attrs?.strong)) ? (item.attrs?.lemma || item.attrs?.strong) : strongs;
                 const isNewWoc = isWoc || (item.name === 'char' && item.attrs?.style === 'woc');
+                
                 if (item.items && Array.isArray(item.items)) {
-                    processItems(item.items, isNewWoc);
+                    processItems(item.items, isNewWoc, newStrongs);
                 }
 
             } else if (item.type === 'text' && typeof item.text === 'string') {
                 if (currentVerseNumber !== null) {
                     const textToAdd = item.text;
                     if (textToAdd) {
-                         if (isWoc) {
-                            currentVerseContent.push({ text: textToAdd, wordsOfJesus: true });
-                        } else {
+                        const content: FormattedText = { text: textToAdd };
+                        if (isWoc) content.wordsOfJesus = true;
+                        if (strongs) content.strongs = strongs;
+
+                        if (Object.keys(content).length === 1 && content.text) {
                             currentVerseContent.push(textToAdd);
+                        } else if (content.text) {
+                            currentVerseContent.push(content);
                         }
                     }
                 }
@@ -195,11 +201,14 @@ async function getChapterFromApiBible(
         for (let i = 1; i < item.content.length; i++) {
             const current = item.content[i];
             const last = collapsed[collapsed.length - 1];
+            
             if (typeof current === 'string' && typeof last === 'string') {
                 collapsed[collapsed.length - 1] = last + current;
             } else if (
-                typeof current === 'object' && 'text' in current && (current as FormattedText).wordsOfJesus &&
-                typeof last === 'object' && 'text' in last && (last as FormattedText).wordsOfJesus
+                typeof current === 'object' && current !== null && 'text' in current &&
+                typeof last === 'object' && last !== null && 'text' in last &&
+                (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus &&
+                (last as FormattedText).strongs === (current as FormattedText).strongs
             ) {
                 (last as FormattedText).text += (current as FormattedText).text;
             } else {
@@ -630,4 +639,5 @@ function FullPageSkeleton() {
     
 
     
+
 
