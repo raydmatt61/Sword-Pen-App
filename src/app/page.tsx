@@ -90,7 +90,7 @@ async function getChapterFromApiBible(
                 if (typeof contentItem === 'string') {
                     results.push({ text: contentItem, wordsOfJesus: true });
                 } else if (typeof contentItem === 'object' && 'text' in contentItem && !('wordsOfJesus' in contentItem)) {
-                    // This case is unlikely but handles nested structures
+                    // This case handles nested structures
                     results.push({ ...contentItem, wordsOfJesus: true });
                 } else {
                     results.push(contentItem); // Already has wordsOfJesus or is not a text node
@@ -605,3 +605,4 @@ function FullPageSkeleton() {
     
 
     
+
