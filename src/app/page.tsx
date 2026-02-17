@@ -275,11 +275,14 @@ async function getChapterFromLabsBible(
         const data = await response.json();
         if (!data || !Array.isArray(data) || data.length === 0) return null;
 
+        const isOT = OLD_TESTAMENT_BOOK_NAMES.includes(book);
+        const isNT = NEW_TESTAMENT_BOOK_NAMES.includes(book);
+        const strongsPrefix = isOT ? 'H' : isNT ? 'G' : '';
+
         const chapterContent: ChapterContentItem[] = [];
         const allFootnotes: Footnote[] = [];
         const chapterHasNotes = data[0].notes && data[0].notes.length > 0;
 
-        // Collect all footnotes from the first verse's response (they are for the whole chapter)
         if (chapterHasNotes) {
             data[0].notes.forEach((note: any) => {
                 allFootnotes.push({ id: String(note.note_id), text: note.note_text });
@@ -288,32 +291,29 @@ async function getChapterFromLabsBible(
         
         for (const verseData of data) {
             const verseNumber = parseInt(verseData.verse, 10);
-            let verseText = verseData.text; // This is a string with XML-like tags
+            let verseText = verseData.text;
             
-            // Remove the outer <p> tag
             verseText = verseText.replace(/^<p class="bodytext">/, '').replace(/<\/p>$/, '');
             
             const verseItems: VerseContent[] = [];
             let lastIndex = 0;
-            // Regex to find <st> (strongs) and <n> (note) tags
             const regex = /<st data-num="([^"]+)"[^>]*>([\s\S]*?)<\/st>|<n id="([^"]+)"\s*\/>/g;
             let match;
 
             while ((match = regex.exec(verseText)) !== null) {
-                // Text before the match
                 if (match.index > lastIndex) {
                     verseItems.push(verseText.substring(lastIndex, match.index));
                 }
 
-                if (match[1] !== undefined) { // <st> tag
-                    verseItems.push({ text: match[2], strongs: match[1] });
-                } else if (match[3] !== undefined) { // <n> tag
+                if (match[1] !== undefined) {
+                    const strongsNum = `${strongsPrefix}${match[1]}`;
+                    verseItems.push({ text: match[2], strongs: strongsNum });
+                } else if (match[3] !== undefined) {
                     verseItems.push({ noteId: match[3] } as VerseFootnoteReference);
                 }
                 lastIndex = regex.lastIndex;
             }
 
-            // Remaining text after last match
             if (lastIndex < verseText.length) {
                 verseItems.push(verseText.substring(lastIndex));
             }
@@ -325,7 +325,6 @@ async function getChapterFromLabsBible(
             });
         }
 
-        // Post-process content to merge adjacent strings correctly for spacing
         chapterContent.forEach(item => {
             if (item.type !== 'verse' || !item.content || item.content.length < 2) return;
 
@@ -824,5 +823,7 @@ function FullPageSkeleton() {
 
 
 
+
+    
 
     
