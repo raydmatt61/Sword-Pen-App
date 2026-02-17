@@ -141,7 +141,7 @@ function VerseComponent({
                 <span 
                     key={i} 
                     className={cn(currentAnnotationClasses, isCurrentWoj && 'words-of-jesus', hasNote && 'cursor-help')}
-                    onClick={mainAnnotation ? (e) => { e.stopPropagation(); onAnnotationClick(mainAnnotation); } : undefined}
+                    onClick={mainAnnotation ? () => onAnnotationClick(mainAnnotation) : undefined}
                 >
                     {segmentText}
                 </span>
@@ -152,7 +152,7 @@ function VerseComponent({
                     <span 
                         key={i} 
                         className={cn(currentAnnotationClasses, isCurrentWoj && 'words-of-jesus', hasNote && 'cursor-help', "underline text-primary cursor-pointer")}
-                        onClick={mainAnnotation ? (e) => { e.stopPropagation(); onAnnotationClick(mainAnnotation); } : undefined}
+                        onClick={mainAnnotation ? () => onAnnotationClick(mainAnnotation) : undefined}
                     >
                         {segmentText}
                     </span>

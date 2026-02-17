@@ -87,7 +87,7 @@ export function StrongsPopover({ children, strongsNumber, navigate }: StrongsPop
 
     return (
         <Popover open={isOpen} onOpenChange={handleOpenChange}>
-            <PopoverTrigger asChild onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+            <PopoverTrigger asChild>
                 {children}
             </PopoverTrigger>
             <PopoverContent className="w-[400px] md:w-[500px] p-0" onClick={(e) => e.stopPropagation()}>
@@ -136,4 +136,3 @@ export function StrongsPopover({ children, strongsNumber, navigate }: StrongsPop
         </Popover>
     );
 }
-
