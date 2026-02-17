@@ -214,14 +214,24 @@ async function getChapterFromApiBible(
             const last = collapsed[collapsed.length - 1];
             
             if (typeof current === 'string' && typeof last === 'string') {
-                collapsed[collapsed.length - 1] = last + current;
+                let separator = ' ';
+                if (last.endsWith(' ') || /^\s/.test(current) || /^[.,?!:;]/.test(current)) {
+                    separator = '';
+                }
+                collapsed[collapsed.length - 1] = last + separator + current;
             } else if (
-                typeof current === 'object' && current !== null && 'text' in current &&
-                typeof last === 'object' && last !== null && 'text' in last &&
+                typeof current === 'object' && current !== null && 'text' in current && typeof (current as FormattedText).text === 'string' &&
+                typeof last === 'object' && last !== null && 'text' in last && typeof (last as FormattedText).text === 'string' &&
                 (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus &&
                 (last as FormattedText).strongs === (current as FormattedText).strongs
             ) {
-                (last as FormattedText).text += (current as FormattedText).text;
+                const lastText = (last as FormattedText).text;
+                const currentText = (current as FormattedText).text;
+                let separator = ' ';
+                if (lastText.endsWith(' ') || /^\s/.test(currentText) || /^[.,?!:;]/.test(currentText)) {
+                    separator = '';
+                }
+                (last as FormattedText).text += separator + currentText;
             } else {
                 collapsed.push(current);
             }
@@ -289,6 +299,41 @@ async function getChapter(
                   const data = JSON.parse(text);
                   if (data && data.chapter && data.chapter.content) {
                       chapterData = data as BibleChapterResponse;
+                      // Post-process the content to fix spacing issues.
+                      chapterData.chapter.content.forEach(item => {
+                          if (item.type !== 'verse' || !item.content || item.content.length < 2) return;
+
+                          const collapsed: VerseContent[] = [];
+                          if (item.content.length > 0) collapsed.push(item.content[0]);
+
+                          for (let i = 1; i < item.content.length; i++) {
+                              const current = item.content[i];
+                              const last = collapsed[collapsed.length - 1];
+
+                              if (typeof current === 'string' && typeof last === 'string') {
+                                  let separator = ' ';
+                                  if (last.endsWith(' ') || /^\s/.test(current) || /^[.,?!:;]/.test(current)) {
+                                      separator = '';
+                                  }
+                                  collapsed[collapsed.length - 1] = last + separator + current;
+                              } else if (
+                                  current && typeof current === 'object' && 'text' in current && typeof (current as any).text === 'string' &&
+                                  last && typeof last === 'object' && 'text' in last && typeof (last as any).text === 'string' &&
+                                  (last as any).wordsOfJesus === (current as any).wordsOfJesus
+                              ) {
+                                  const lastText = (last as any).text;
+                                  const currentText = (current as any).text;
+                                  let separator = ' ';
+                                  if (lastText.endsWith(' ') || /^\s/.test(currentText) || /^[.,?!:;]/.test(currentText)) {
+                                      separator = '';
+                                  }
+                                  (last as any).text += separator + currentText;
+                              } else {
+                                  collapsed.push(current);
+                              }
+                          }
+                          item.content = collapsed;
+                      });
                   }
               }
           }
