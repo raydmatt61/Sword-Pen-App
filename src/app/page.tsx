@@ -275,9 +275,8 @@ async function getChapterFromLabsBible(
         const data = await response.json();
         if (!data || !Array.isArray(data) || data.length === 0) return null;
 
-        const apiBookName = data[0].bookname;
-        const isOT = OLD_TESTAMENT_BOOK_NAMES.includes(apiBookName);
-        const isNT = NEW_TESTAMENT_BOOK_NAMES.includes(apiBookName);
+        const isOT = OLD_TESTAMENT_BOOK_NAMES.includes(book);
+        const isNT = NEW_TESTAMENT_BOOK_NAMES.includes(book);
         const strongsPrefix = isOT ? 'H' : isNT ? 'G' : '';
 
         const chapterContent: ChapterContentItem[] = [];
