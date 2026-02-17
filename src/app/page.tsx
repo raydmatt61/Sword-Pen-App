@@ -157,11 +157,16 @@ async function getChapterFromApiBible(
                 
                 const isNewWoc = isWoc || (item.name === 'char' && item.attrs?.style === 'woc');
                 
-                let strongsForChildren = strongs; // Inherit from parent by default.
-                if (item.name === 'w' && (item.attrs?.lemma || item.attrs?.strong)) {
-                    const strongVal = (item.attrs.lemma || item.attrs.strong) as string;
-                    // The value can be "strong:G2424", so we split and take the last part.
-                    strongsForChildren = strongVal.split(':').pop() || strongVal;
+                let strongsForChildren = strongs;
+                if (item.name === 'w') {
+                    const strongVal = (item.attrs?.lemma || item.attrs?.strong || null);
+                    if (typeof strongVal === 'string' && strongVal.trim()) {
+                        // Clean up the value to be just the ID (e.g., G2424)
+                        strongsForChildren = strongVal.replace(/strong:/g, '').trim();
+                    } else {
+                        // A <w> tag without a strong's number attribute resets the context.
+                        strongsForChildren = null;
+                    }
                 }
                 
                 if (item.items && Array.isArray(item.items)) {
@@ -648,3 +653,6 @@ function FullPageSkeleton() {
 
 
 
+
+
+    
