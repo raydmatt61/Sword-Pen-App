@@ -70,8 +70,8 @@ function VerseComponent({
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-md">
                                 <DialogHeader><DialogTitle>Footnote {vfr.noteId}</DialogTitle></DialogHeader>
-                                <ScrollArea className="max-h-[60vh] -mx-4">
-                                    <div className="px-4 py-2" dangerouslySetInnerHTML={{ __html: noteText }} />
+                                <ScrollArea className="max-h-[60vh] pr-4">
+                                    <div className="py-2" dangerouslySetInnerHTML={{ __html: noteText }} />
                                 </ScrollArea>
                             </DialogContent>
                         </Dialog>
