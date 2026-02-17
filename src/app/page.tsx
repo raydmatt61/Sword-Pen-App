@@ -155,11 +155,17 @@ async function getChapterFromApiBible(
                     }
                 }
                 
-                const newStrongs = (item.name === 'w' && (item.attrs?.lemma || item.attrs?.strong)) ? (item.attrs?.lemma || item.attrs?.strong) : strongs;
                 const isNewWoc = isWoc || (item.name === 'char' && item.attrs?.style === 'woc');
                 
+                let strongsForChildren = strongs; // Inherit from parent by default.
+                if (item.name === 'w' && (item.attrs?.lemma || item.attrs?.strong)) {
+                    const strongVal = (item.attrs.lemma || item.attrs.strong) as string;
+                    // The value can be "strong:G2424", so we split and take the last part.
+                    strongsForChildren = strongVal.split(':').pop() || strongVal;
+                }
+                
                 if (item.items && Array.isArray(item.items)) {
-                    processItems(item.items, isNewWoc, newStrongs);
+                    processItems(item.items, isNewWoc, strongsForChildren);
                 }
 
             } else if (item.type === 'text' && typeof item.text === 'string') {
@@ -639,5 +645,6 @@ function FullPageSkeleton() {
     
 
     
+
 
 
