@@ -3,7 +3,7 @@
 
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, type VerseContent, FormattedText } from '@/lib/bible';
+import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, type VerseContent, FormattedText, VerseFootnoteReference } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Balancer from 'react-wrap-balancer';
@@ -36,6 +36,11 @@ function VerseComponent({
     const { fontSize } = useAnnotationContext();
     const [isCrossRefOpen, setIsCrossRefOpen] = useState(false);
 
+    const footnotesMap = useMemo(() => {
+        if (!chapterData.chapter.footnotes) return new Map<string, string>();
+        return new Map(chapterData.chapter.footnotes.map(f => [f.id, f.text]));
+    }, [chapterData.chapter.footnotes]);
+
     const verseNotes = useMemo(() => {
         const notes = new Set<string>();
         annotations.forEach(ann => {
@@ -48,141 +53,100 @@ function VerseComponent({
 
 
     const renderedContent = useMemo(() => {
-        const flattenVerseContent = (content: VerseContent[]): { text: string; isWoj: boolean, strongs?: string }[] => {
-            const segments: { text: string; isWoj: boolean, strongs?: string }[] = [];
-            if (!Array.isArray(content)) return segments;
-    
-            for (const item of content) {
-                if (typeof item === 'string') {
-                    segments.push({ text: item, isWoj: false });
-                } else if (item && typeof item === 'object') {
-                    if ('text' in item && typeof item.text === 'string') {
-                        segments.push({ text: item.text, isWoj: !!(item as any).wordsOfJesus, strongs: (item as any).strongs });
-                    } 
-                    else if ('lineBreak' in item && (item as any).lineBreak === true) {
-                        segments.push({ text: ' ', isWoj: false });
-                    }
-                }
-            }
-            return segments;
-        };
-
-        const segments = flattenVerseContent(verse.content);
-        
-        const firstNonEmptySegmentIndex = segments.findIndex(s => s.text.trim().length > 0);
-        
-        if (firstNonEmptySegmentIndex !== -1) {
-            const verseNumberStr = `${verse.number}`;
-            const segment = segments[firstNonEmptySegmentIndex];
-            const originalText = segment.text;
-            const trimmedText = originalText.trimStart();
-
-            if (trimmedText.startsWith(verseNumberStr)) {
-                const charAfterNumber = trimmedText[verseNumberStr.length];
-                if (charAfterNumber === ' ' || charAfterNumber === undefined || !/\d/.test(charAfterNumber)) {
-                    const textAfterNumber = trimmedText.substring(verseNumberStr.length);
-                    segment.text = originalText.substring(0, originalText.length - trimmedText.length) + textAfterNumber.trimStart();
-                }
-            }
-        }
-
-        const flatText = segments.map(s => s.text).join('');
+        const finalNodes: React.ReactNode[] = [];
+        let charOffset = 0;
+        let keyCounter = 0;
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
-        
-        if (!flatText) {
-            return null;
-        }
 
-        const chars = flatText.split('').map(char => ({
-            char,
-            isWoj: false,
-            strongs: undefined as string | undefined,
-            annotations: [] as Annotation[],
-        }));
-        
-        let charIndex = 0;
-        for (const segment of segments) {
-            for (let i = 0; i < segment.text.length; i++) {
-                if (chars[charIndex]) {
-                    chars[charIndex].isWoj = segment.isWoj;
-                    chars[charIndex].strongs = segment.strongs;
+        verse.content.forEach(item => {
+            if (item && typeof item === 'object' && 'noteId' in item) {
+                const vfr = item as VerseFootnoteReference;
+                const noteText = footnotesMap.get(vfr.noteId);
+                if (noteText) {
+                    finalNodes.push(
+                        <Dialog key={`n-${keyCounter++}`}>
+                            <DialogTrigger asChild>
+                                <sup className="font-headline font-bold text-accent-foreground align-super cursor-pointer px-0.5">{vfr.noteId}</sup>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader><DialogTitle>Footnote {vfr.noteId}</DialogTitle></DialogHeader>
+                                <ScrollArea className="max-h-[60vh] -mx-4">
+                                    <div className="px-4 py-2" dangerouslySetInnerHTML={{ __html: noteText }} />
+                                </ScrollArea>
+                            </DialogContent>
+                        </Dialog>
+                    );
                 }
-                charIndex++;
-            }
-        }
-        
-        sortedAnnotations.forEach(ann => {
-            for (let i = ann.start; i < ann.end; i++) {
-                if (chars[i]) chars[i].annotations.push(ann);
+            } else {
+                const text = typeof item === 'string' ? item : (item as FormattedText).text;
+                if (typeof text !== 'string' || text.length === 0) return;
+
+                const strongs = (item as FormattedText).strongs;
+                const isWoj = (item as FormattedText).wordsOfJesus;
+
+                const segmentStart = charOffset;
+                const segmentEnd = segmentStart + text.length;
+
+                const boundaries = new Set([0, text.length]);
+                sortedAnnotations.forEach(ann => {
+                    if (ann.start < segmentEnd && ann.end > segmentStart) {
+                         boundaries.add(Math.max(0, ann.start - segmentStart));
+                         boundaries.add(Math.min(text.length, ann.end - segmentStart));
+                    }
+                });
+
+                const sortedBoundaries = Array.from(boundaries).sort((a, b) => a - b);
+                
+                const subSpans = sortedBoundaries.map((start, i) => {
+                    const end = sortedBoundaries[i+1];
+                    if (start >= end) return null;
+
+                    const subText = text.substring(start, end);
+                    if (!subText) return null;
+                    
+                    const subMidpoint = segmentStart + start;
+                    
+                    const subAnnotations = sortedAnnotations.filter(a => a.start <= subMidpoint && a.end > subMidpoint);
+                    const mainAnnotation = subAnnotations[0];
+                    const hasNote = mainAnnotation?.note && mainAnnotation.note.trim() !== '';
+
+                    const classes = subAnnotations.map(a => cn(a.highlight, a.underline, hasNote && "border-b-2 border-dashed border-primary")).join(' ');
+                    
+                    const span = (
+                        <span
+                            key={`s-${keyCounter++}`}
+                            className={cn(classes, isWoj && 'words-of-jesus', hasNote && 'cursor-help')}
+                            onClick={mainAnnotation ? () => onAnnotationClick(mainAnnotation) : undefined}
+                        >
+                            {subText}
+                        </span>
+                    );
+
+                    if (hasNote) {
+                        return (
+                            <Tooltip key={`t-${keyCounter++}`} delayDuration={100}>
+                                <TooltipTrigger asChild>{span}</TooltipTrigger>
+                                <TooltipContent className="max-w-sm font-body whitespace-pre-wrap shadow-lg">{mainAnnotation.note}</TooltipContent>
+                            </Tooltip>
+                        );
+                    }
+                    return span;
+                }).filter(Boolean);
+
+                if (strongs) {
+                    finalNodes.push(
+                        <StrongsPopover key={`sp-${keyCounter++}`} strongsNumber={strongs} navigate={navigate}>
+                            <span>{subSpans}</span>
+                        </StrongsPopover>
+                    );
+                } else {
+                    finalNodes.push(...subSpans);
+                }
+                charOffset += text.length;
             }
         });
-
-        const finalRender: React.ReactNode[] = [];
-        let i = 0;
-        while (i < chars.length) {
-            const charInfo = chars[i];
-            const currentAnnotationClasses = charInfo.annotations.map(a => cn(a.highlight, a.underline, a.note && a.note.trim() !== '' && "border-b-2 border-dashed border-primary")).join(' ');
-            const isCurrentWoj = charInfo.isWoj;
-            const currentStrongs = charInfo.strongs;
-
-            let j = i;
-            while (j < chars.length && 
-                chars[j].isWoj === isCurrentWoj && 
-                chars[j].strongs === currentStrongs &&
-                chars[j].annotations.map(a => a.id).join(',') === charInfo.annotations.map(a => a.id).join(',')) {
-                j++;
-            }
-
-            const segmentText = chars.slice(i, j).map(c => c.char).join('');
-            const mainAnnotation = charInfo.annotations[0];
-            const hasNote = mainAnnotation?.note && mainAnnotation.note.trim() !== '';
-
-            let segmentSpan = (
-                <span 
-                    key={i} 
-                    className={cn(currentAnnotationClasses, isCurrentWoj && 'words-of-jesus', hasNote && 'cursor-help')}
-                    onClick={mainAnnotation ? () => onAnnotationClick(mainAnnotation) : undefined}
-                >
-                    {segmentText}
-                </span>
-            );
-
-            if (currentStrongs) {
-                 segmentSpan = (
-                    <span 
-                        key={i} 
-                        className={cn(currentAnnotationClasses, isCurrentWoj && 'words-of-jesus', hasNote && 'cursor-help', "underline text-primary cursor-pointer")}
-                        onClick={mainAnnotation ? () => onAnnotationClick(mainAnnotation) : undefined}
-                    >
-                        {segmentText}
-                    </span>
-                );
-
-                finalRender.push(
-                    <StrongsPopover key={`spop-${i}`} strongsNumber={currentStrongs} navigate={navigate}>
-                       {segmentSpan}
-                    </StrongsPopover>
-                );
-
-            } else if (hasNote) {
-                finalRender.push(
-                    <Tooltip key={`t-${i}`} delayDuration={100}>
-                        <TooltipTrigger asChild>
-                            {segmentSpan}
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-sm font-body whitespace-pre-wrap shadow-lg">
-                            {mainAnnotation.note}
-                        </TooltipContent>
-                    </Tooltip>
-                );
-            } else {
-                finalRender.push(segmentSpan);
-            }
-            i = j;
-        }
-        return finalRender;
-    }, [verse.content, annotations, onAnnotationClick, navigate]);
-
+        return finalNodes;
+    }, [verse.content, annotations, onAnnotationClick, navigate, footnotesMap]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
         const supElement = event.currentTarget;

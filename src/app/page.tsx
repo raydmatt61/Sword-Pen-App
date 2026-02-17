@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'rea
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText } from '@/lib/bible';
+import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference } from '@/lib/bible';
 import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -263,6 +263,124 @@ async function getChapterFromApiBible(
   }
 }
 
+async function getChapterFromLabsBible(
+    book: string,
+    chapter: string
+): Promise<BibleChapterResponse | null> {
+    const url = `https://labs.bible.org/api/?passage=${encodeURIComponent(book)}%20${chapter}&formatting=full&type=json&notes=on`;
+    try {
+        const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        if (!data || !Array.isArray(data) || data.length === 0) return null;
+
+        const chapterContent: ChapterContentItem[] = [];
+        const allFootnotes: Footnote[] = [];
+        const chapterHasNotes = data[0].notes && data[0].notes.length > 0;
+
+        // Collect all footnotes from the first verse's response (they are for the whole chapter)
+        if (chapterHasNotes) {
+            data[0].notes.forEach((note: any) => {
+                allFootnotes.push({ id: String(note.note_id), text: note.note_text });
+            });
+        }
+        
+        for (const verseData of data) {
+            const verseNumber = parseInt(verseData.verse, 10);
+            let verseText = verseData.text; // This is a string with XML-like tags
+            
+            // Remove the outer <p> tag
+            verseText = verseText.replace(/^<p class="bodytext">/, '').replace(/<\/p>$/, '');
+            
+            const verseItems: VerseContent[] = [];
+            let lastIndex = 0;
+            // Regex to find <st> (strongs) and <n> (note) tags
+            const regex = /<st data-num="([^"]+)"[^>]*>([\s\S]*?)<\/st>|<n id="([^"]+)"\s*\/>/g;
+            let match;
+
+            while ((match = regex.exec(verseText)) !== null) {
+                // Text before the match
+                if (match.index > lastIndex) {
+                    verseItems.push(verseText.substring(lastIndex, match.index));
+                }
+
+                if (match[1] !== undefined) { // <st> tag
+                    verseItems.push({ text: match[2], strongs: match[1] });
+                } else if (match[3] !== undefined) { // <n> tag
+                    verseItems.push({ noteId: match[3] } as VerseFootnoteReference);
+                }
+                lastIndex = regex.lastIndex;
+            }
+
+            // Remaining text after last match
+            if (lastIndex < verseText.length) {
+                verseItems.push(verseText.substring(lastIndex));
+            }
+            
+            chapterContent.push({
+                type: 'verse',
+                number: verseNumber,
+                content: verseItems,
+            });
+        }
+
+        // Post-process content to merge adjacent strings correctly for spacing
+        chapterContent.forEach(item => {
+            if (item.type !== 'verse' || !item.content || item.content.length < 2) return;
+
+            const collapsed: VerseContent[] = [];
+            if (item.content.length > 0) collapsed.push(item.content[0]);
+
+            for (let i = 1; i < item.content.length; i++) {
+                const current = item.content[i];
+                const last = collapsed[collapsed.length - 1];
+
+                if (typeof current === 'string' && typeof last === 'string') {
+                    let separator = ' ';
+                    if (last.endsWith(' ') || /^\s/.test(current) || /^[.,?!:;]/.test(current)) {
+                        separator = '';
+                    }
+                    collapsed[collapsed.length - 1] = last + separator + current;
+                } else if (
+                    typeof current === 'object' && current !== null && 'text' in current && typeof (current as FormattedText).text === 'string' &&
+                    typeof last === 'object' && last !== null && 'text' in last && typeof (last as FormattedText).text === 'string' &&
+                    (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus &&
+                    (last as FormattedText).strongs === (current as FormattedText).strongs
+                ) {
+                    const lastText = (last as FormattedText).text;
+                    const currentText = (current as FormattedText).text;
+                    let separator = ' ';
+                    if (lastText.endsWith(' ') || /^\s/.test(currentText) || /^[.,?!:;]/.test(currentText)) {
+                        separator = '';
+                    }
+                    (last as FormattedText).text += separator + currentText;
+                } else {
+                    collapsed.push(current);
+                }
+            }
+            item.content = collapsed;
+        });
+
+        const result: BibleChapterResponse = {
+            book: { name: book, id: BIBLE_BOOKS_ABBR[book] || book },
+            chapter: {
+                number: parseInt(chapter, 10),
+                content: chapterContent,
+                footnotes: allFootnotes,
+            },
+            translation: { name: 'New English Translation', id: 'engnet' },
+            copyright: "NET Bible® copyright ©1996-2017 by Biblical Studies Press, L.L.C. http://netbible.com All rights reserved.",
+        };
+
+        return result;
+
+    } catch (error) {
+        console.error("Error fetching or parsing from labs.bible.org:", error);
+        return null;
+    }
+}
+
 
 async function getChapter(
   book: string,
@@ -271,83 +389,90 @@ async function getChapter(
   isFallbackAttempt = false
 ): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
+  
+  if (translationId === 'engnet') {
+      chapterData = await getChapterFromLabsBible(book, chapter);
+  }
 
-  if (API_BIBLE_TRANSLATIONS.includes(translationId)) {
-    chapterData = await getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
-  } else {
-    const bookNameAliases: Record<string, string> = {
-      'Song of Songs': 'Song of Solomon',
-    };
-    const canonicalBook = bookNameAliases[book] || book;
-    const bookId = BIBLE_BOOKS_ABBR[canonicalBook] || canonicalBook;
+  if (!chapterData) {
+      if (API_BIBLE_TRANSLATIONS.includes(translationId)) {
+        chapterData = await getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
+      } else {
+        const bookNameAliases: Record<string, string> = {
+          'Song of Songs': 'Song of Solomon',
+        };
+        const canonicalBook = bookNameAliases[book] || book;
+        const bookId = BIBLE_BOOKS_ABBR[canonicalBook] || canonicalBook;
 
-    let attempts = 0;
-    const maxRetries = 3;
-    const delay = 1000; // 1 second
-    
-    while (attempts < maxRetries && !chapterData) {
-      try {
-        const response = await fetch(
-          `https://bible.helloao.org/api/${translationId}/${bookId}/${chapter}.json`
-        );
+        let attempts = 0;
+        const maxRetries = 3;
+        const delay = 1000; // 1 second
+        
+        while (attempts < maxRetries && !chapterData) {
+          try {
+            const response = await fetch(
+              `https://bible.helloao.org/api/${translationId}/${bookId}/${chapter}.json`
+            );
 
-        if (response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-              const text = await response.text();
-              if(text) {
-                  const data = JSON.parse(text);
-                  if (data && data.chapter && data.chapter.content) {
-                      chapterData = data as BibleChapterResponse;
-                      // Post-process the content to fix spacing issues.
-                      chapterData.chapter.content.forEach(item => {
-                          if (item.type !== 'verse' || !item.content || item.content.length < 2) return;
+            if (response.ok) {
+              const contentType = response.headers.get("content-type");
+              if (contentType && contentType.includes("application/json")) {
+                  const text = await response.text();
+                  if(text) {
+                      const data = JSON.parse(text);
+                      if (data && data.chapter && data.chapter.content) {
+                          chapterData = data as BibleChapterResponse;
+                          // Post-process the content to fix spacing issues.
+                          chapterData.chapter.content.forEach(item => {
+                              if (item.type !== 'verse' || !item.content || item.content.length < 2) return;
 
-                          const collapsed: VerseContent[] = [];
-                          if (item.content.length > 0) collapsed.push(item.content[0]);
+                              const collapsed: VerseContent[] = [];
+                              if (item.content.length > 0) collapsed.push(item.content[0]);
 
-                          for (let i = 1; i < item.content.length; i++) {
-                              const current = item.content[i];
-                              const last = collapsed[collapsed.length - 1];
+                              for (let i = 1; i < item.content.length; i++) {
+                                  const current = item.content[i];
+                                  const last = collapsed[collapsed.length - 1];
 
-                              if (typeof current === 'string' && typeof last === 'string') {
-                                  let separator = ' ';
-                                  if (last.endsWith(' ') || /^\s/.test(current) || /^[.,?!:;]/.test(current)) {
-                                      separator = '';
+                                  if (typeof current === 'string' && typeof last === 'string') {
+                                      let separator = ' ';
+                                      if (last.endsWith(' ') || /^\s/.test(current) || /^[.,?!:;]/.test(current)) {
+                                          separator = '';
+                                      }
+                                      collapsed[collapsed.length - 1] = last + separator + current;
+                                  } else if (
+                                      current && typeof current === 'object' && 'text' in current && typeof (current as any).text === 'string' &&
+                                      last && typeof last === 'object' && 'text' in last && typeof (last as any).text === 'string' &&
+                                      (last as any).wordsOfJesus === (current as any).wordsOfJesus
+                                  ) {
+                                      const lastText = (last as any).text;
+                                      const currentText = (current as any).text;
+                                      let separator = ' ';
+                                      if (lastText.endsWith(' ') || /^\s/.test(currentText) || /^[.,?!:;]/.test(currentText)) {
+                                          separator = '';
+                                      }
+                                      (last as any).text += separator + currentText;
+                                  } else {
+                                      collapsed.push(current);
                                   }
-                                  collapsed[collapsed.length - 1] = last + separator + current;
-                              } else if (
-                                  current && typeof current === 'object' && 'text' in current && typeof (current as any).text === 'string' &&
-                                  last && typeof last === 'object' && 'text' in last && typeof (last as any).text === 'string' &&
-                                  (last as any).wordsOfJesus === (current as any).wordsOfJesus
-                              ) {
-                                  const lastText = (last as any).text;
-                                  const currentText = (current as any).text;
-                                  let separator = ' ';
-                                  if (lastText.endsWith(' ') || /^\s/.test(currentText) || /^[.,?!:;]/.test(currentText)) {
-                                      separator = '';
-                                  }
-                                  (last as any).text += separator + currentText;
-                              } else {
-                                  collapsed.push(current);
                               }
-                          }
-                          item.content = collapsed;
-                      });
+                              item.content = collapsed;
+                          });
+                      }
                   }
               }
+            }
+          } catch (error) {
+            // Silently catch fetch errors
+          }
+          
+          attempts++;
+          if (attempts < maxRetries && !chapterData) {
+            await new Promise(res => setTimeout(res, delay));
           }
         }
-      } catch (error) {
-        // Silently catch fetch errors
       }
-      
-      attempts++;
-      if (attempts < maxRetries && !chapterData) {
-        await new Promise(res => setTimeout(res, delay));
-      }
-    }
   }
+
 
   // If we got data, return it
   if (chapterData) {

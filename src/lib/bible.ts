@@ -40,6 +40,11 @@ export const NEW_TESTAMENT_BOOK_NAMES = [
 
 export const BIBLE_BOOKS = Object.keys(BIBLE_BOOKS_ABBR);
 
+export type Footnote = {
+    id: string;
+    text: string;
+};
+
 export type FormattedText = {
     text: string;
     poem?: number;
@@ -56,7 +61,7 @@ export type InlineLineBreak = {
 };
 
 export type VerseFootnoteReference = {
-    noteId: number;
+    noteId: string;
 };
 
 export type VerseContent = string | FormattedText | InlineHeading | InlineLineBreak | VerseFootnoteReference;
@@ -85,7 +90,7 @@ export type BibleChapterResponse = {
     chapter: {
         number: number;
         content: ChapterContentItem[];
-        footnotes?: any[];
+        footnotes?: Footnote[];
     };
     translation: {
         name: string;
@@ -151,6 +156,7 @@ export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
     
 
     
+
 
 
 
