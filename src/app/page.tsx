@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'rea
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference } from '@/lib/bible';
+import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference, SearchResultVerse } from '@/lib/bible';
 import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +16,7 @@ import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
 import { SearchDialog } from '@/components/search-dialog';
+import { searchBible } from '@/app/actions';
 
 const API_BIBLE_IDS = {
     CSB: 'a556c5305ee15c3f-01',
@@ -291,6 +292,7 @@ async function getChapterFromLabsBible(
             
             verseText = verseText.replace(/^<p class="bodytext">/, '').replace(/<\/p>$/, '');
             verseText = verseText.replace(/<st[^>]*>([\s\S]*?)<\/st>/g, '$1');
+            verseText = verseText.replace(/<span class="smcaps">|<\/span>/g, '');
             
             const verseItems: VerseContent[] = [];
             let lastIndex = 0;
