@@ -159,3 +159,12 @@ export type SearchResultVerse = {
     text: string;
     bookId: string;
 };
+
+export type GenerateVerseInsightsInput = {
+    verse: string;
+    annotations: string;
+};
+
+export type GenerateVerseInsightsOutput = {
+    insights: string;
+};

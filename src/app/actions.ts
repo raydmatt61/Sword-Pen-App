@@ -2,8 +2,7 @@
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
-import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput } from "@/ai/flows/generate-verse-insights";
-import { type SearchResultVerse } from "@/lib/bible";
+import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse } from "@/lib/bible";
 
 
 // New types and action
