@@ -487,9 +487,10 @@ async function getChapter(
   return null;
 }
 
-async function fetchBooksForTranslation(): Promise<Omit<Book, 'testament'>[] | null> {
-    // Use CSB from api.bible for a reliable book list, as per user's example.
-    const bibleId = 'a556c5305ee15c3f-01'; // CSB
+async function fetchBooksForTranslation(translationId: string): Promise<Omit<Book, 'testament'>[] | null> {
+    const bibleIdForSelectedTranslation = API_BIBLE_IDS[translationId as keyof typeof API_BIBLE_IDS];
+    // Default to CSB if the selected translation isn't available via api.bible, to ensure the book selector always works.
+    const bibleId = bibleIdForSelectedTranslation || 'a556c5305ee15c3f-01'; 
     const apiKey = process.env.NEXT_PUBLIC_API_BIBLE_KEY;
 
     if (!apiKey) {
@@ -498,12 +499,12 @@ async function fetchBooksForTranslation(): Promise<Omit<Book, 'testament'>[] | n
     }
     
     try {
-        const booksRes = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/books?include-chapters=true`, {
+        const booksRes = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/books?include-chapters=true&include-chapters-and-sections=true`, {
             headers: { 'api-key': apiKey }
         });
 
         if (!booksRes.ok) {
-            console.error("api.bible books request failed:", booksRes.status, booksRes.statusText);
+            console.error(`api.bible books request failed for ${bibleId}:`, booksRes.status, booksRes.statusText);
             return null;
         }
         
@@ -525,8 +526,8 @@ async function fetchBooksForTranslation(): Promise<Omit<Book, 'testament'>[] | n
     }
 }
 
-async function getBooks(): Promise<Book[]> {
-    const booksFromApi = await fetchBooksForTranslation();
+async function getBooks(translationId: string): Promise<Book[]> {
+    const booksFromApi = await fetchBooksForTranslation(translationId);
     if (!booksFromApi) return [];
     
     return booksFromApi.map(book => {
@@ -681,7 +682,7 @@ function ChapterLoader({ book, chapter, translationId }) {
     async function loadData() {
       setIsLoading(true);
       const [booksData, chapterContent, crossRefData] = await Promise.all([
-        getBooks(),
+        getBooks(translationId),
         getChapter(book, chapter, translationId),
         getCrossReferences(book, chapter),
       ]);
