@@ -14,8 +14,7 @@ import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon } from 'lucide
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
-import { BIBLE_ABBR_BOOKS, OLD_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
-import { StrongsPopover } from './strongs-popover';
+import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
 
 
 function VerseComponent({
@@ -83,7 +82,6 @@ function VerseComponent({
                 if (typeof text !== 'string' || text.length === 0) return;
 
                 const isWoj = (item as FormattedText).wordsOfJesus;
-                const strongsNum = (item as FormattedText).strongs;
 
                 const segmentStart = charOffset;
                 const segmentEnd = segmentStart + text.length;
@@ -136,25 +134,13 @@ function VerseComponent({
 
                 const textEl = <>{subSpans}</>;
 
-                if (strongsNum) {
-                    const testament = OLD_TESTAMENT_BOOK_NAMES.includes(chapterData.book.name) ? 'H' : 'G';
-                    const fullStrongsNum = `${testament}${strongsNum}`;
-                    finalNodes.push(
-                        <StrongsPopover key={`sp-${keyCounter++}`} strongsNumber={fullStrongsNum} navigate={navigate}>
-                            <span className="underline decoration-dotted decoration-1 underline-offset-2 cursor-pointer">
-                                {textEl}
-                            </span>
-                        </StrongsPopover>
-                    );
-                } else {
-                    finalNodes.push(textEl);
-                }
-
+                finalNodes.push(textEl);
+                
                 charOffset += text.length;
             }
         });
         return finalNodes;
-    }, [verse.content, annotations, onAnnotationClick, footnotesMap, chapterData.book.name, navigate]);
+    }, [verse.content, annotations, onAnnotationClick, footnotesMap]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
         const supElement = event.currentTarget;

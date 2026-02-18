@@ -16,7 +16,6 @@ import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
 import { SearchDialog } from '@/components/search-dialog';
-import { StrongsLookupDialog } from '@/components/strongs-lookup-dialog';
 
 const API_BIBLE_IDS = {
     CSB: 'a556c5305ee15c3f-01',
@@ -291,10 +290,11 @@ async function getChapterFromLabsBible(
             let verseText = verseData.text;
             
             verseText = verseText.replace(/^<p class="bodytext">/, '').replace(/<\/p>$/, '');
+            verseText = verseText.replace(/<st[^>]*>([\s\S]*?)<\/st>/g, '$1');
             
             const verseItems: VerseContent[] = [];
             let lastIndex = 0;
-            const regex = /<st data-num="([^"]+)"[^>]*>([\s\S]*?)<\/st>|<n id="([^"]+)"\s*\/>/g;
+            const regex = /<n id="([^"]+)"\s*\/>/g;
             let match;
 
             while ((match = regex.exec(verseText)) !== null) {
@@ -303,10 +303,7 @@ async function getChapterFromLabsBible(
                 }
 
                 if (match[1] !== undefined) {
-                    const strongsNum = match[1].split(',')[0].trim();
-                    verseItems.push({ text: match[2], strongs: strongsNum } as FormattedText);
-                } else if (match[3] !== undefined) {
-                    verseItems.push({ noteId: match[3] } as VerseFootnoteReference);
+                    verseItems.push({ noteId: match[1] } as VerseFootnoteReference);
                 }
                 lastIndex = regex.lastIndex;
             }
@@ -341,8 +338,7 @@ async function getChapterFromLabsBible(
                 } else if (
                     typeof current === 'object' && current !== null && 'text' in current && typeof (current as FormattedText).text === 'string' &&
                     typeof last === 'object' && last !== null && 'text' in last && typeof (last as FormattedText).text === 'string' &&
-                    (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus &&
-                    (last as FormattedText).strongs === (current as FormattedText).strongs
+                    (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus
                 ) {
                     const lastText = (last as FormattedText).text;
                     const currentText = (current as FormattedText).text;
@@ -661,7 +657,6 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
           </div>
           <div className="flex items-center gap-2">
             <SearchDialog translationId={initialTranslationId} navigate={navigate} />
-            <StrongsLookupDialog navigate={navigate} />
             <FontSizeAdjuster />
             <QrCodeGenerator />
             <AuthManager />

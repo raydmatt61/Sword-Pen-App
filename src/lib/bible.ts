@@ -51,7 +51,6 @@ export type FormattedText = {
     text: string;
     poem?: number;
     wordsOfJesus?: boolean;
-    strongs?: string;
 };
 
 export type InlineHeading = {
@@ -160,16 +159,3 @@ export type SearchResultVerse = {
     text: string;
     bookId: string;
 };
-
-export const StrongsDetailSchema = z.object({
-    strongsNumber: z.string(),
-    lemma: z.string(),
-    transliteration: z.string(),
-    pronunciation: z.string(),
-    shortDefinition: z.string(),
-    longDefinition: z.string(),
-    kjvDefinition: z.string(),
-    strongsDerivation: z.string().nullable(),
-});
-
-export type StrongsDetail = z.infer<typeof StrongsDetailSchema>;
