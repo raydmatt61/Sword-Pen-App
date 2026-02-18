@@ -6,7 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference, SearchResultVerse } from '@/lib/bible';
-import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
+import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES, API_BIBLE_IDS_SEARCH } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
@@ -650,7 +650,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
           <div className="flex items-center gap-2">
             <div>
               <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
-                Sword and Pen Bible
+                Verse Insights
               </h1>
               <p className="text-xs text-muted-foreground mt-1 font-headline">
                 Deepen your Bible study with annotations, notes and AI-powered insights.
@@ -830,7 +830,7 @@ function FullPageSkeleton() {
         <div className="flex items-center gap-2">
           <div>
             <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
-              Sword and Pen Bible
+              Verse Insights
             </h1>
             <p className="text-xs text-muted-foreground mt-1 font-headline">
               Deepen your Bible study with annotations, notes and AI-powered insights.

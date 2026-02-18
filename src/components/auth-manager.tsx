@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -135,7 +136,7 @@ export function AuthManager() {
     createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword)
         .then((newUserCredential) => {
             handleUserDocCreation(newUserCredential);
-            toast({ title: "Account Created!", description: `Welcome to Sword and Pen Bible, ${signUpEmail}!` });
+            toast({ title: "Account Created!", description: `Welcome to Verse Insights, ${signUpEmail}!` });
             setIsAuthModalOpen(false);
         })
         .catch((error: any) => {
@@ -188,7 +189,7 @@ export function AuthManager() {
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Sword and Pen Bible</DialogTitle>
+            <DialogTitle>Verse Insights</DialogTitle>
             <DialogDescription>
               Sign in or create an account to save your notes and highlights.
             </DialogDescription>
