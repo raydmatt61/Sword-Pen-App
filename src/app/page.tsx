@@ -264,128 +264,6 @@ async function getChapterFromApiBible(
   }
 }
 
-async function getChapterFromLabsBible(
-    book: string,
-    chapter: string
-): Promise<BibleChapterResponse | null> {
-    const url = `https://labs.bible.org/api/?passage=${encodeURIComponent(book)}%20${chapter}&formatting=full&type=json&notes=on`;
-    try {
-        const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (!response.ok) return null;
-
-        const data = await response.json();
-        if (!data || !Array.isArray(data) || data.length === 0) return null;
-
-        const chapterContent: ChapterContentItem[] = [];
-        const allFootnotes: Footnote[] = [];
-        const chapterHasNotes = data[0].notes && data[0].notes.length > 0;
-
-        if (chapterHasNotes) {
-            data[0].notes.forEach((note: any) => {
-                let noteText = note.note_text;
-                if (typeof noteText === 'string') {
-                    noteText = noteText.replace(/<\/?i>/g, '');
-                }
-                allFootnotes.push({ id: String(note.note_id), text: noteText });
-            });
-        }
-        
-        for (const verseData of data) {
-            const verseNumber = parseInt(verseData.verse, 10);
-            let verseText = verseData.text;
-            
-            const noteMarkers: { id: string; index: number }[] = [];
-            const noteRegex = /<n id="([^"]+)"\s*\/>/g;
-            let noteMatch;
-            while ((noteMatch = noteRegex.exec(verseText)) !== null) {
-                noteMarkers.push({ id: noteMatch[1], index: noteMatch.index });
-            }
-
-            // Replace note markers with a temporary placeholder
-            const placeholder = '||NOTE||';
-            let textWithPlaceholders = verseText.replace(noteRegex, placeholder);
-            
-            // Strip all other HTML tags
-            let cleanedText = textWithPlaceholders
-                .replace(/<p class="bodytext">|<\/p>/g, '')
-                .replace(/<st[^>]*>([\s\S]*?)<\/st>/g, '$1')
-                .replace(/<span class="smcaps">|<\/span>/g, '')
-                .replace(/<\/?i>/g, '');
-
-            const verseItems: VerseContent[] = [];
-            const textSegments = cleanedText.split(placeholder);
-
-            textSegments.forEach((segment, index) => {
-                if (segment) {
-                    verseItems.push(segment);
-                }
-                if (index < noteMarkers.length) {
-                    verseItems.push({ noteId: noteMarkers[index].id } as VerseFootnoteReference);
-                }
-            });
-            
-            chapterContent.push({
-                type: 'verse',
-                number: verseNumber,
-                content: verseItems,
-            });
-        }
-
-        chapterContent.forEach(item => {
-            if (item.type !== 'verse' || !item.content || item.content.length < 2) return;
-
-            const collapsed: VerseContent[] = [];
-            if (item.content.length > 0) collapsed.push(item.content[0]);
-
-            for (let i = 1; i < item.content.length; i++) {
-                const current = item.content[i];
-                const last = collapsed[collapsed.length - 1];
-
-                if (typeof current === 'string' && typeof last === 'string') {
-                    let separator = ' ';
-                    if (last.endsWith(' ') || /^\s/.test(current) || /^[.,?!:;]/.test(current)) {
-                        separator = '';
-                    }
-                    collapsed[collapsed.length - 1] = last + separator + current;
-                } else if (
-                    typeof current === 'object' && current !== null && 'text' in current && typeof (current as FormattedText).text === 'string' &&
-                    typeof last === 'object' && last !== null && 'text' in last && typeof (last as FormattedText).text === 'string' &&
-                    (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus
-                ) {
-                    const lastText = (last as FormattedText).text;
-                    const currentText = (current as FormattedText).text;
-                    let separator = ' ';
-                    if (lastText.endsWith(' ') || /^\s/.test(currentText) || /^[.,?!:;]/.test(currentText)) {
-                        separator = '';
-                    }
-                    (last as FormattedText).text += separator + currentText;
-                } else {
-                    collapsed.push(current);
-                }
-            }
-            item.content = collapsed;
-        });
-
-        const result: BibleChapterResponse = {
-            book: { name: book, id: BIBLE_BOOKS_ABBR[book] || book },
-            chapter: {
-                number: parseInt(chapter, 10),
-                content: chapterContent,
-                footnotes: allFootnotes,
-            },
-            translation: { name: 'New English Translation', id: 'engnet' },
-            copyright: "NET Bible® copyright ©1996-2017 by Biblical Studies Press, L.L.C. http://netbible.com All rights reserved.",
-        };
-
-        return result;
-
-    } catch (error) {
-        console.error("Error fetching or parsing from labs.bible.org:", error);
-        return null;
-    }
-}
-
-
 async function getChapter(
   book: string,
   chapter: string,
@@ -393,10 +271,6 @@ async function getChapter(
   isFallbackAttempt = false
 ): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
-  
-  if (translationId === 'engnet') {
-      chapterData = await getChapterFromLabsBible(book, chapter);
-  }
 
   if (!chapterData) {
       if (API_BIBLE_TRANSLATIONS.includes(translationId)) {
@@ -717,7 +591,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   );
 }
 
-function ChapterLoader({ book, chapter, translationId }) {
+function ChapterLoader({ book, chapter, translationId }: { book: string; chapter: string; translationId: string; }) {
   const [books, setBooks] = useState<Book[]>([]);
   const [chapterData, setChapterData] = useState<BibleChapterResponse | null>(null);
   const [crossRefs, setCrossRefs] = useState<CrossRefChapterResponse | null>(null);
