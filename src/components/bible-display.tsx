@@ -65,7 +65,9 @@ function VerseComponent({
                     finalNodes.push(
                         <Dialog key={`n-${itemIndex}`}>
                             <DialogTrigger asChild>
-                                <sup className="font-headline font-bold text-primary align-super cursor-pointer px-0.5">{vfr.noteId}</sup>
+                                <button className="relative -top-1 mx-0.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-muted text-muted-foreground text-xs font-bold hover:bg-primary hover:text-primary-foreground">
+                                    {vfr.noteId}
+                                </button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-md">
                                 <DialogHeader><DialogTitle>Footnote {vfr.noteId}</DialogTitle></DialogHeader>
@@ -504,3 +506,5 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         </TooltipProvider>
     );
 }
+
+    
