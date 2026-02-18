@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
 import { ScrollArea } from './ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from './ui/card';
 
 interface StrongsPopoverProps {
   children: React.ReactNode;
@@ -128,6 +128,11 @@ export function StrongsPopover({ children, strongsNumber, navigate }: StrongsPop
                                         </div>
                                     )}
                                 </CardContent>
+                                <CardFooter>
+                                  <p className="text-xs text-muted-foreground">
+                                    Data from <a href="https://github.com/openscriptures/strongs" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Open Scriptures</a>.
+                                  </p>
+                                </CardFooter>
                             </Card>
                         ))}
                     </div>

@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { getStrongsDetail } from '@/app/actions';
 import type { StrongsDetail } from '@/lib/bible';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from './ui/card';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
 
 interface StrongsLookupDialogProps {
@@ -141,10 +141,12 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
                 </CardHeader>
                 <CardContent className="space-y-4 font-body">
                     <p><span className="font-bold">Short Definition:</span> {item.shortDefinition}</p>
-                    <div>
-                        <p className="font-bold">Long Definition:</p>
-                        <RenderHtmlWithNavigation htmlString={item.longDefinition} onNavigate={handleLinkNavigate} />
-                    </div>
+                    {item.longDefinition && (
+                        <div>
+                            <p className="font-bold">Long Definition:</p>
+                            <RenderHtmlWithNavigation htmlString={item.longDefinition} onNavigate={handleLinkNavigate} />
+                        </div>
+                    )}
                      <div>
                         <p className="font-bold">KJV Definition:</p>
                         <p className="italic">{item.kjvDefinition}</p>
@@ -156,6 +158,11 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
                         </div>
                     )}
                 </CardContent>
+                <CardFooter>
+                    <p className="text-xs text-muted-foreground">
+                        Data from <a href="https://github.com/openscriptures/strongs" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Open Scriptures</a>.
+                    </p>
+                </CardFooter>
               </Card>
             ))}
           </div>

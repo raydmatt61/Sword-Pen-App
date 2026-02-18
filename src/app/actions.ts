@@ -4,6 +4,7 @@
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
 import { API_BIBLE_IDS_SEARCH, BIBLE_ABBR_BOOKS } from "@/lib/bible";
 import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, StrongsDetail } from "@/lib/bible";
+import { strongsGreekDictionary } from "@/lib/strongs-greek-dictionary";
 
 
 // New types and action
@@ -65,29 +66,25 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
 
 export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
     try {
-        const response = await fetch(`https://bible.helloao.org/api/strongs/${strongsNumber}.json`);
+        const dictionary: Record<string, any> = strongsGreekDictionary;
+        const entry = dictionary[strongsNumber.toUpperCase()];
 
-        if (!response.ok) {
-            console.error("strongs lookup request failed:", response.status, response.statusText);
+        if (!entry) {
             return null;
         }
 
-        const json = await response.json();
+        const detail: StrongsDetail = {
+            strongsNumber: strongsNumber.toUpperCase(),
+            lemma: entry.lemma,
+            transliteration: entry.translit,
+            pronunciation: "", // This info is not in the new data source.
+            shortDefinition: entry.strongs_def,
+            longDefinition: "", // This info is not in the new data source.
+            kjvDefinition: entry.kjv_def,
+            strongsDerivation: entry.derivation,
+        };
 
-        if (!json || json.length === 0) {
-            return null;
-        }
-
-        return json.map((item: any) => ({
-            strongsNumber: item.strongs_number,
-            lemma: item.lemma,
-            transliteration: item.transliteration,
-            pronunciation: item.pronunciation,
-            shortDefinition: item.definition,
-            longDefinition: item.long_def,
-            kjvDefinition: item.kjv_def,
-            strongsDerivation: item.strongs_derivation,
-        }));
+        return [detail];
 
     } catch (error) {
         console.error("Error in getStrongsDetail action:", error);
