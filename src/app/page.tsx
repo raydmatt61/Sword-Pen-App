@@ -80,7 +80,7 @@ async function getChapterFromApiBible(
   
   try {
     const response = await fetch(
-      `https://rest.api.bible/v1/bibles/${bibleId}/passages/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`,
+      `https://rest.api.bible/v1/bibles/${bibleId}/passages/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=false`,
       {
         headers: {
           'api-key': apiKey,
@@ -188,10 +188,25 @@ async function getChapterFromApiBible(
                         }
                     }
                 }
+            } else if (item.type === 'verse' && item.attrs?.number) { // Handling verse numbers when they are not tags but part of content
+                if (currentVerseNumber !== null && currentVerseContent.length > 0) {
+                    chapterContent.push({ type: 'verse', number: currentVerseNumber, content: currentVerseContent });
+                    currentVerseContent = [];
+                }
+                currentVerseNumber = parseInt(item.attrs.number, 10);
             }
         });
     };
     
+    // Fallback for verse number when not in tags
+    if (data.verseCount > 0 && content_data[0] && content_data[0].name === 'p') {
+      const verseNumberMatch = data.reference.match(/:(\d+)/);
+      if (verseNumberMatch) {
+          currentVerseNumber = parseInt(verseNumberMatch[1], 10);
+      }
+    }
+
+
     if (content_data && Array.isArray(content_data)) {
         processItems(content_data);
     }
