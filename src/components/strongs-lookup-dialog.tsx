@@ -8,7 +8,7 @@ import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { getStrongsDetail } from '@/app/actions';
-import type { StrongsDetail } from '@/app/actions';
+import type { StrongsDetail } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
 

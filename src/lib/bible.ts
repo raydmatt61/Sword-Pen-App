@@ -1,4 +1,6 @@
 
+import { z } from 'zod';
+
 export type Translation = {
     id: string;
     name: string;
@@ -151,3 +153,23 @@ export type CrossRefChapterResponse = {
 export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
     Object.entries(BIBLE_BOOKS_ABBR).map(([name, abbr]) => [abbr, name])
 );
+
+export type SearchResultVerse = {
+    id: string;
+    reference: string;
+    text: string;
+    bookId: string;
+};
+
+export const StrongsDetailSchema = z.object({
+    strongsNumber: z.string(),
+    lemma: z.string(),
+    transliteration: z.string(),
+    pronunciation: z.string(),
+    shortDefinition: z.string(),
+    longDefinition: z.string(),
+    kjvDefinition: z.string(),
+    strongsDerivation: z.string().nullable(),
+});
+
+export type StrongsDetail = z.infer<typeof StrongsDetailSchema>;

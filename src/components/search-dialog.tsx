@@ -8,7 +8,7 @@ import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { searchBible } from '@/app/actions';
-import type { SearchResultVerse } from '@/app/actions';
+import type { SearchResultVerse } from '@/lib/bible';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
 
 export function SearchDialog({ translationId, navigate }: { translationId: string; navigate: (newValues: Partial<{ book: string; chapter: string; translation: string }>) => void; }) {

@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { getStrongsDetail } from '@/app/actions';
-import type { StrongsDetail } from '@/app/actions';
+import type { StrongsDetail } from '@/lib/bible';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';

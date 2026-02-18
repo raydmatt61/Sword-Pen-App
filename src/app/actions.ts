@@ -3,19 +3,13 @@
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
 import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput } from "@/ai/flows/generate-verse-insights";
-import { z } from "zod";
+import { StrongsDetailSchema, type StrongsDetail, type SearchResultVerse } from "@/lib/bible";
+
 
 // New types and action
 interface SearchBibleInput {
     query: string;
     translationId: string;
-}
-
-export interface SearchResultVerse {
-    id: string;
-    reference: string;
-    text: string;
-    bookId: string;
 }
 
 interface SearchBibleOutput {
@@ -89,19 +83,6 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
     throw new Error("Failed to generate AI insights.");
   }
 }
-
-export const StrongsDetailSchema = z.object({
-    strongsNumber: z.string(),
-    lemma: z.string(),
-    transliteration: z.string(),
-    pronunciation: z.string(),
-    shortDefinition: z.string(),
-    longDefinition: z.string(),
-    kjvDefinition: z.string(),
-    strongsDerivation: z.string().nullable(),
-});
-
-export type StrongsDetail = z.infer<typeof StrongsDetailSchema>;
 
 export async function getStrongsDetail(
   strongsId: string
