@@ -294,30 +294,35 @@ async function getChapterFromLabsBible(
             const verseNumber = parseInt(verseData.verse, 10);
             let verseText = verseData.text;
             
-            verseText = verseText.replace(/^<p class="bodytext">/, '').replace(/<\/p>$/, '');
-            verseText = verseText.replace(/<st[^>]*>([\s\S]*?)<\/st>/g, '$1');
-            verseText = verseText.replace(/<span class="smcaps">|<\/span>/g, '');
-            verseText = verseText.replace(/<\/?i>/g, '');
+            const noteMarkers: { id: string; index: number }[] = [];
+            const noteRegex = /<n id="([^"]+)"\s*\/>/g;
+            let noteMatch;
+            while ((noteMatch = noteRegex.exec(verseText)) !== null) {
+                noteMarkers.push({ id: noteMatch[1], index: noteMatch.index });
+            }
+
+            // Replace note markers with a temporary placeholder
+            const placeholder = '||NOTE||';
+            let textWithPlaceholders = verseText.replace(noteRegex, placeholder);
             
+            // Strip all other HTML tags
+            let cleanedText = textWithPlaceholders
+                .replace(/<p class="bodytext">|<\/p>/g, '')
+                .replace(/<st[^>]*>([\s\S]*?)<\/st>/g, '$1')
+                .replace(/<span class="smcaps">|<\/span>/g, '')
+                .replace(/<\/?i>/g, '');
+
             const verseItems: VerseContent[] = [];
-            let lastIndex = 0;
-            const regex = /<n id="([^"]+)"\s*\/>/g;
-            let match;
+            const textSegments = cleanedText.split(placeholder);
 
-            while ((match = regex.exec(verseText)) !== null) {
-                if (match.index > lastIndex) {
-                    verseItems.push(verseText.substring(lastIndex, match.index));
+            textSegments.forEach((segment, index) => {
+                if (segment) {
+                    verseItems.push(segment);
                 }
-
-                if (match[1] !== undefined) {
-                    verseItems.push({ noteId: match[1] } as VerseFootnoteReference);
+                if (index < noteMarkers.length) {
+                    verseItems.push({ noteId: noteMarkers[index].id } as VerseFootnoteReference);
                 }
-                lastIndex = regex.lastIndex;
-            }
-
-            if (lastIndex < verseText.length) {
-                verseItems.push(verseText.substring(lastIndex));
-            }
+            });
             
             chapterContent.push({
                 type: 'verse',
