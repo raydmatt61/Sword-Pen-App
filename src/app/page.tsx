@@ -24,6 +24,7 @@ const API_BIBLE_IDS = {
     NASB: 'b8ee27bcd1cae43a-01',
     KJV: 'de4e12af7f28f599-01',
     WEB: '72f4e6dc683324df-01',
+    'engnet': '72f4e6dc683324df-01', // Using WEB as a proxy for now
 };
 const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
 
@@ -207,32 +208,36 @@ async function getChapterFromApiBible(
     }
 
     chapterContent.forEach(item => {
-        if (item.type !== 'verse' || item.content.length < 2) return;
-        const collapsed: VerseContent[] = [];
-        if (item.content.length > 0) collapsed.push(item.content[0]);
-
-        for (let i = 1; i < item.content.length; i++) {
-            const current = item.content[i];
+        if (item.type !== 'verse' || !item.content) return;
+    
+        const normalizedContent: VerseContent[] = item.content.map(c => 
+            typeof c === 'string' ? { text: c } : c
+        );
+    
+        if (normalizedContent.length < 2) {
+            item.content = normalizedContent;
+            return;
+        }
+    
+        const collapsed: VerseContent[] = [normalizedContent[0]];
+    
+        for (let i = 1; i < normalizedContent.length; i++) {
+            const current = normalizedContent[i];
             const last = collapsed[collapsed.length - 1];
-            
-            if (typeof current === 'string' && typeof last === 'string') {
-                let separator = ' ';
-                if (last.endsWith(' ') || /^\s/.test(current) || /^[.,?!:;]/.test(current)) {
-                    separator = '';
-                }
-                collapsed[collapsed.length - 1] = last + separator + current;
-            } else if (
-                typeof current === 'object' && current !== null && 'text' in current && typeof (current as FormattedText).text === 'string' &&
-                typeof last === 'object' && last !== null && 'text' in last && typeof (last as FormattedText).text === 'string' &&
-                (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus
-            ) {
-                const lastText = (last as FormattedText).text;
-                const currentText = (current as FormattedText).text;
-                let separator = ' ';
-                if (lastText.endsWith(' ') || /^\s/.test(currentText) || /^[.,?!:;]/.test(currentText)) {
-                    separator = '';
-                }
-                (last as FormattedText).text += separator + currentText;
+    
+            if (typeof current === 'object' && 'text' in current && typeof last === 'object' && 'text' in last) {
+                 const currentFt = current as FormattedText;
+                 const lastFt = last as FormattedText;
+    
+                 if (!!lastFt.wordsOfJesus === !!currentFt.wordsOfJesus) {
+                     let separator = ' ';
+                     if (lastFt.text.endsWith(' ') || /^\s/.test(currentFt.text) || /^[.,?!:;]/.test(currentFt.text)) {
+                         separator = '';
+                     }
+                     lastFt.text += separator + currentFt.text;
+                 } else {
+                     collapsed.push(current);
+                 }
             } else {
                 collapsed.push(current);
             }
@@ -300,41 +305,43 @@ async function getChapter(
                       const data = JSON.parse(text);
                       if (data && data.chapter && data.chapter.content) {
                           chapterData = data as BibleChapterResponse;
-                          // Post-process the content to fix spacing issues.
                           chapterData.chapter.content.forEach(item => {
-                              if (item.type !== 'verse' || !item.content || item.content.length < 2) return;
-
-                              const collapsed: VerseContent[] = [];
-                              if (item.content.length > 0) collapsed.push(item.content[0]);
-
-                              for (let i = 1; i < item.content.length; i++) {
-                                  const current = item.content[i];
-                                  const last = collapsed[collapsed.length - 1];
-
-                                  if (typeof current === 'string' && typeof last === 'string') {
-                                      let separator = ' ';
-                                      if (last.endsWith(' ') || /^\s/.test(current) || /^[.,?!:;]/.test(current)) {
-                                          separator = '';
-                                      }
-                                      collapsed[collapsed.length - 1] = last + separator + current;
-                                  } else if (
-                                      current && typeof current === 'object' && 'text' in current && typeof (current as any).text === 'string' &&
-                                      last && typeof last === 'object' && 'text' in last && typeof (last as any).text === 'string' &&
-                                      (last as any).wordsOfJesus === (current as any).wordsOfJesus
-                                  ) {
-                                      const lastText = (last as any).text;
-                                      const currentText = (current as any).text;
-                                      let separator = ' ';
-                                      if (lastText.endsWith(' ') || /^\s/.test(currentText) || /^[.,?!:;]/.test(currentText)) {
-                                          separator = '';
-                                      }
-                                      (last as any).text += separator + currentText;
-                                  } else {
-                                      collapsed.push(current);
-                                  }
-                              }
-                              item.content = collapsed;
-                          });
+                            if (item.type !== 'verse' || !item.content) return;
+                        
+                            const normalizedContent: VerseContent[] = item.content.map(c => 
+                                typeof c === 'string' ? { text: c } : c
+                            );
+                        
+                            if (normalizedContent.length < 2) {
+                                item.content = normalizedContent;
+                                return;
+                            }
+                        
+                            const collapsed: VerseContent[] = [normalizedContent[0]];
+                        
+                            for (let i = 1; i < normalizedContent.length; i++) {
+                                const current = normalizedContent[i];
+                                const last = collapsed[collapsed.length - 1];
+                        
+                                if (typeof current === 'object' && 'text' in current && typeof last === 'object' && 'text' in last) {
+                                     const currentFt = current as FormattedText;
+                                     const lastFt = last as FormattedText;
+                        
+                                     if (!!lastFt.wordsOfJesus === !!currentFt.wordsOfJesus) {
+                                         let separator = ' ';
+                                         if (lastFt.text.endsWith(' ') || /^\s/.test(currentFt.text) || /^[.,?!:;]/.test(currentFt.text)) {
+                                             separator = '';
+                                         }
+                                         lastFt.text += separator + currentFt.text;
+                                     } else {
+                                         collapsed.push(current);
+                                     }
+                                } else {
+                                    collapsed.push(current);
+                                }
+                            }
+                            item.content = collapsed;
+                        });
                       }
                   }
               }
