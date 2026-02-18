@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useEffect, useRef, useState, useCallback, Fragment } from 'react';
@@ -64,7 +65,7 @@ function VerseComponent({
                     finalNodes.push(
                         <Dialog key={`n-${itemIndex}`}>
                             <DialogTrigger asChild>
-                                <sup className="font-headline font-bold text-accent-foreground align-super cursor-pointer px-0.5">{vfr.noteId}</sup>
+                                <sup className="font-headline font-bold text-primary align-super cursor-pointer px-0.5">{vfr.noteId}</sup>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-md">
                                 <DialogHeader><DialogTitle>Footnote {vfr.noteId}</DialogTitle></DialogHeader>
