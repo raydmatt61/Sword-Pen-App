@@ -15,6 +15,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
+import { StrongsPopover } from './strongs-popover';
 
 
 function VerseComponent({
@@ -82,7 +83,9 @@ function VerseComponent({
                 const text = typeof item === 'string' ? item : (item as FormattedText).text;
                 if (typeof text !== 'string' || text.length === 0) return;
 
-                const isWoj = (item as FormattedText).wordsOfJesus;
+                const ftItem = typeof item === 'object' ? (item as FormattedText) : null;
+                const isWoj = ftItem?.wordsOfJesus;
+                const strongs = ftItem?.strongs;
 
                 const segmentStart = charOffset;
                 const segmentEnd = segmentStart + text.length;
@@ -104,19 +107,24 @@ function VerseComponent({
                     const subText = text.substring(start, end);
                     if (!subText) return null;
                     
-                    const subMidpoint = segmentStart + start;
+                    const subMidpoint = segmentStart + start + (end - start) / 2;
                     
-                    const subAnnotations = sortedAnnotations.filter(a => a.start <= subMidpoint && a.end > subMidpoint);
-                    const mainAnnotation = subAnnotations[0];
-                    const hasNote = mainAnnotation?.note && mainAnnotation.note.trim() !== '';
+                    const coveringAnnotations = sortedAnnotations.filter(a => a.start <= subMidpoint && a.end > subMidpoint);
+            
+                    const primaryAnnotation = coveringAnnotations.length > 0 
+                        ? coveringAnnotations.reduce((prev, current) => ((prev.end - prev.start) > (current.end - current.start)) ? prev : current) 
+                        : null;
 
-                    const classes = subAnnotations.map(a => cn(a.highlight, a.underline, hasNote && "border-b-2 border-dashed border-primary")).join(' ');
+                    const hasNote = primaryAnnotation?.note && primaryAnnotation.note.trim() !== '';
+
+                    const highlightClasses = [...new Set(coveringAnnotations.map(a => a.highlight).filter(Boolean))].join(' ');
+                    const underlineClasses = [...new Set(coveringAnnotations.map(a => a.underline).filter(Boolean))].join(' ');
                     
                     const span = (
                         <span
                             key={`s-${itemIndex}-${i}`}
-                            className={cn(classes, isWoj && 'words-of-jesus', hasNote && 'cursor-help')}
-                            onClick={mainAnnotation ? () => onAnnotationClick(mainAnnotation) : undefined}
+                            className={cn(highlightClasses, underlineClasses, hasNote && 'cursor-help border-b-2 border-dashed border-primary')}
+                            onClick={primaryAnnotation ? (e) => { e.stopPropagation(); onAnnotationClick(primaryAnnotation); } : undefined}
                         >
                             {subText}
                         </span>
@@ -126,20 +134,36 @@ function VerseComponent({
                         return (
                             <Tooltip key={`t-${itemIndex}-${i}`} delayDuration={100}>
                                 <TooltipTrigger asChild>{span}</TooltipTrigger>
-                                <TooltipContent className="max-w-sm font-body whitespace-pre-wrap shadow-lg">{mainAnnotation.note}</TooltipContent>
+                                <TooltipContent className="max-w-sm font-body whitespace-pre-wrap shadow-lg">{primaryAnnotation.note}</TooltipContent>
                             </Tooltip>
                         );
                     }
                     return span;
                 }).filter(Boolean);
 
-                finalNodes.push(<Fragment key={`text-${itemIndex}`}>{subSpans}</Fragment>);
+                const annotatedContent = <Fragment key={`frag-${itemIndex}`}>{subSpans}</Fragment>;
+
+                if (strongs && strongs.length > 0) {
+                    finalNodes.push(
+                        <StrongsPopover key={`sp-${itemIndex}`} strongsNumber={strongs[0]} navigate={navigate}>
+                            <span className={cn("text-primary hover:underline cursor-pointer", isWoj && 'words-of-jesus')}>
+                                {annotatedContent}
+                            </span>
+                        </StrongsPopover>
+                    );
+                } else {
+                    finalNodes.push(
+                        <span key={`text-${itemIndex}`} className={cn(isWoj && 'words-of-jesus')}>
+                            {annotatedContent}
+                        </span>
+                    );
+                }
                 
                 charOffset += text.length;
             }
         });
         return finalNodes;
-    }, [verse.content, annotations, onAnnotationClick, footnotesMap, onAnnotationClick]);
+    }, [verse.content, annotations, onAnnotationClick, footnotesMap, navigate]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
         const supElement = event.currentTarget;
