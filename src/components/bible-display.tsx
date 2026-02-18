@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
+import { useMemo, useEffect, useRef, useState, useCallback, Fragment } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, type VerseContent, FormattedText, VerseFootnoteReference } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -30,7 +29,7 @@ function VerseComponent({
     crossReferences: CrossRef[];
     onAnnotationClick: (annotation: Annotation) => void;
     chapterData: BibleChapterResponse;
-    navigate: (newValues: Partial<{ book: string; chapter: string; translation: string }>) => void;
+    navigate: (newValues: Partial<{ book: string; chapter: string; translation: string; verse: string; }>) => void;
 }) {
     const { fontSize } = useAnnotationContext();
     const [isCrossRefOpen, setIsCrossRefOpen] = useState(false);
@@ -53,18 +52,17 @@ function VerseComponent({
 
     const renderedContent = useMemo(() => {
         let charOffset = 0;
-        let keyCounter = 0;
         const finalNodes: React.ReactNode[] = [];
         
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
 
-        verse.content.forEach(item => {
+        verse.content.forEach((item, itemIndex) => {
             if (item && typeof item === 'object' && 'noteId' in item) {
                 const vfr = item as VerseFootnoteReference;
                 const noteText = footnotesMap.get(vfr.noteId);
                 if (noteText) {
                     finalNodes.push(
-                        <Dialog key={`n-${keyCounter++}`}>
+                        <Dialog key={`n-${itemIndex}`}>
                             <DialogTrigger asChild>
                                 <sup className="font-headline font-bold text-accent-foreground align-super cursor-pointer px-0.5">{vfr.noteId}</sup>
                             </DialogTrigger>
@@ -113,7 +111,7 @@ function VerseComponent({
                     
                     const span = (
                         <span
-                            key={`s-${keyCounter++}`}
+                            key={`s-${itemIndex}-${i}`}
                             className={cn(classes, isWoj && 'words-of-jesus', hasNote && 'cursor-help')}
                             onClick={mainAnnotation ? () => onAnnotationClick(mainAnnotation) : undefined}
                         >
@@ -123,7 +121,7 @@ function VerseComponent({
 
                     if (hasNote) {
                         return (
-                            <Tooltip key={`t-${keyCounter++}`} delayDuration={100}>
+                            <Tooltip key={`t-${itemIndex}-${i}`} delayDuration={100}>
                                 <TooltipTrigger asChild>{span}</TooltipTrigger>
                                 <TooltipContent className="max-w-sm font-body whitespace-pre-wrap shadow-lg">{mainAnnotation.note}</TooltipContent>
                             </Tooltip>
@@ -132,15 +130,13 @@ function VerseComponent({
                     return span;
                 }).filter(Boolean);
 
-                const textEl = <>{subSpans}</>;
-
-                finalNodes.push(textEl);
+                finalNodes.push(<Fragment key={`text-${itemIndex}`}>{subSpans}</Fragment>);
                 
                 charOffset += text.length;
             }
         });
         return finalNodes;
-    }, [verse.content, annotations, onAnnotationClick, footnotesMap]);
+    }, [verse.content, annotations, onAnnotationClick, footnotesMap, onAnnotationClick]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
         const supElement = event.currentTarget;
@@ -252,7 +248,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     chapterData: BibleChapterResponse, 
     crossRefs: CrossRefChapterResponse | null,
     onChapterNav: (direction: 'prev' | 'next') => void,
-    navigate: (newValues: Partial<{ book: string, chapter: string, translation: string }>) => void,
+    navigate: (newValues: Partial<{ book: string, chapter: string, translation: string, verse: string }>) => void,
     currentChapter: number,
     maxChapters: number
 }) {
