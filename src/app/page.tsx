@@ -80,7 +80,7 @@ async function getChapterFromApiBible(
   
   try {
     const response = await fetch(
-      `https://rest.api.bible/v1/bibles/${bibleId}/passages/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=false`,
+      `https://rest.api.bible/v1/bibles/${bibleId}/passages/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`,
       {
         headers: {
           'api-key': apiKey,
@@ -488,20 +488,39 @@ async function getChapter(
 }
 
 async function fetchBooksForTranslation(): Promise<Omit<Book, 'testament'>[] | null> {
-    const bookListTranslation = 'BSB'; // Always use BSB for a reliable book list
+    // Use CSB from api.bible for a reliable book list, as per user's example.
+    const bibleId = 'a556c5305ee15c3f-01'; // CSB
+    const apiKey = process.env.NEXT_PUBLIC_API_BIBLE_KEY;
+
+    if (!apiKey) {
+        console.error("API key for api.bible is not configured to fetch book list.");
+        return null;
+    }
+    
     try {
-        const booksRes = await fetch(`https://bible.helloao.org/api/${bookListTranslation}/books.json`);
+        const booksRes = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/books?include-chapters=true`, {
+            headers: { 'api-key': apiKey }
+        });
+
         if (!booksRes.ok) {
+            console.error("api.bible books request failed:", booksRes.status, booksRes.statusText);
             return null;
         }
-        const contentType = booksRes.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            const booksData = await booksRes.json();
-            return booksData.books || null;
-        } else {
+        
+        const json = await booksRes.json();
+
+        if (!json.data) {
             return null;
         }
+
+        return json.data.map((book: any) => ({
+            id: book.id,
+            commonName: book.name,
+            numberOfChapters: book.chapters.length,
+        }));
+
     } catch (error) {
+        console.error("Error fetching books from api.bible:", error);
         return null;
     }
 }
