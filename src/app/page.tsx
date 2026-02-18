@@ -16,6 +16,7 @@ import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
 import { SearchDialog } from '@/components/search-dialog';
+import { StrongsLookupDialog } from '@/components/strongs-lookup-dialog';
 
 const API_BIBLE_IDS = {
     CSB: 'a556c5305ee15c3f-01',
@@ -302,7 +303,8 @@ async function getChapterFromLabsBible(
                 }
 
                 if (match[1] !== undefined) {
-                    verseItems.push(match[2]);
+                    const strongsNum = match[1].split(',')[0].trim();
+                    verseItems.push({ text: match[2], strongs: strongsNum } as FormattedText);
                 } else if (match[3] !== undefined) {
                     verseItems.push({ noteId: match[3] } as VerseFootnoteReference);
                 }
@@ -339,7 +341,8 @@ async function getChapterFromLabsBible(
                 } else if (
                     typeof current === 'object' && current !== null && 'text' in current && typeof (current as FormattedText).text === 'string' &&
                     typeof last === 'object' && last !== null && 'text' in last && typeof (last as FormattedText).text === 'string' &&
-                    (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus
+                    (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus &&
+                    (last as FormattedText).strongs === (current as FormattedText).strongs
                 ) {
                     const lastText = (last as FormattedText).text;
                     const currentText = (current as FormattedText).text;
@@ -601,6 +604,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
           </div>
           <div className="flex items-center gap-2">
             <SearchDialog translationId={initialTranslationId} navigate={navigate} />
+            <StrongsLookupDialog navigate={navigate} />
             <FontSizeAdjuster />
             <QrCodeGenerator />
             <AuthManager />
@@ -801,24 +805,3 @@ function FullPageSkeleton() {
     </main>
   );
 }
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-
-
-
-    
-
-    
-
-    

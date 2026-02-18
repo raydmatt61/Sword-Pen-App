@@ -14,7 +14,8 @@ import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon } from 'lucide
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
-import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
+import { BIBLE_ABBR_BOOKS, OLD_TESTAMENT_BOOK_NAMES } from '@/lib/bible';
+import { StrongsPopover } from './strongs-popover';
 
 
 function VerseComponent({
@@ -52,9 +53,10 @@ function VerseComponent({
 
 
     const renderedContent = useMemo(() => {
-        const finalNodes: React.ReactNode[] = [];
         let charOffset = 0;
         let keyCounter = 0;
+        const finalNodes: React.ReactNode[] = [];
+        
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
 
         verse.content.forEach(item => {
@@ -81,6 +83,7 @@ function VerseComponent({
                 if (typeof text !== 'string' || text.length === 0) return;
 
                 const isWoj = (item as FormattedText).wordsOfJesus;
+                const strongsNum = (item as FormattedText).strongs;
 
                 const segmentStart = charOffset;
                 const segmentEnd = segmentStart + text.length;
@@ -131,12 +134,27 @@ function VerseComponent({
                     return span;
                 }).filter(Boolean);
 
-                finalNodes.push(...subSpans);
+                const textEl = <>{subSpans}</>;
+
+                if (strongsNum) {
+                    const testament = OLD_TESTAMENT_BOOK_NAMES.includes(chapterData.book.name) ? 'H' : 'G';
+                    const fullStrongsNum = `${testament}${strongsNum}`;
+                    finalNodes.push(
+                        <StrongsPopover key={`sp-${keyCounter++}`} strongsNumber={fullStrongsNum} navigate={navigate}>
+                            <span className="underline decoration-dotted decoration-1 underline-offset-2 cursor-pointer">
+                                {textEl}
+                            </span>
+                        </StrongsPopover>
+                    );
+                } else {
+                    finalNodes.push(textEl);
+                }
+
                 charOffset += text.length;
             }
         });
         return finalNodes;
-    }, [verse.content, annotations, onAnnotationClick, footnotesMap]);
+    }, [verse.content, annotations, onAnnotationClick, footnotesMap, chapterData.book.name, navigate]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
         const supElement = event.currentTarget;
@@ -503,6 +521,3 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         </TooltipProvider>
     );
 }
-
-
-    

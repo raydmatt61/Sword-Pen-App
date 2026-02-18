@@ -49,6 +49,7 @@ export type FormattedText = {
     text: string;
     poem?: number;
     wordsOfJesus?: boolean;
+    strongs?: string;
 };
 
 export type InlineHeading = {
@@ -150,15 +151,3 @@ export type CrossRefChapterResponse = {
 export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
     Object.entries(BIBLE_BOOKS_ABBR).map(([name, abbr]) => [abbr, name])
 );
-    
-
-    
-
-    
-
-
-
-
-
-
-
