@@ -551,11 +551,20 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const verseParam = searchParams.get('verse');
 
   const maxChapters = useMemo(() => {
     return books.find(b => b.commonName === initialBook)?.numberOfChapters || 1;
   }, [books, initialBook]);
   
+  const maxVerses = useMemo(() => {
+    if (!chapterData?.chapter?.content) return 0;
+    const verses = chapterData.chapter.content.filter(item => item.type === 'verse');
+    if (verses.length === 0) return 0;
+    const lastVerse = verses[verses.length - 1];
+    return lastVerse.type === 'verse' ? lastVerse.number : 0;
+  }, [chapterData]);
+
   useEffect(() => {
     // Only show toast if a fallback has actually occurred.
     if (chapterData && chapterData.translation.id !== initialTranslationId) {
@@ -578,8 +587,17 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   }, [chapterData, initialTranslationId, initialBook, initialChapter, toast]);
 
   const searchParamsString = searchParams.toString();
-  const navigate = useCallback((newValues: Partial<{ book: string; chapter: string; translation: string }>) => {
+  const navigate = useCallback((newValues: Partial<{ book: string; chapter: string; translation: string; verse: string }>) => {
     const current = new URLSearchParams(searchParamsString);
+    
+    const isNewBook = newValues.book && newValues.book !== current.get('book');
+    const isNewChapter = newValues.chapter && newValues.chapter !== current.get('chapter');
+    
+    // If book or chapter changes, clear the verse param
+    if (isNewBook || isNewChapter) {
+        current.delete('verse');
+    }
+
     for (const [key, value] of Object.entries(newValues)) {
         if (value) {
             current.set(key, value);
@@ -607,6 +625,25 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
       contentRef.current.scrollTop = 0;
     }
   }, [initialBook, initialChapter, initialTranslationId]);
+
+  useEffect(() => {
+    // Scroll to verse if 'verse' param is present
+    if (verseParam && chapterData && contentRef.current) {
+        const verseElement = contentRef.current.querySelector(`div[data-verse-number="${verseParam}"]`);
+        if (verseElement) {
+            verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Add highlight effect
+            verseElement.classList.add('verse-highlight');
+            const timeoutId = setTimeout(() => {
+                verseElement.classList.remove('verse-highlight');
+            }, 2500);
+
+            // Cleanup timeout on component unmount or param change
+            return () => clearTimeout(timeoutId);
+        }
+    }
+  }, [verseParam, chapterData]);
 
   return (
     <AnnotationProvider key={providerKey} chapterData={chapterData}>
@@ -639,6 +676,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
                 translations={TRANSLATIONS}
                 onChapterNav={handleChapterNav}
                 navigate={navigate}
+                maxVerses={maxVerses}
             />
           </div>
           <div className="md:col-span-2">

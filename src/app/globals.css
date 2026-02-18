@@ -134,3 +134,13 @@
 .strongs-html-content a:hover {
     text-decoration: none;
 }
+
+.verse-highlight {
+  background-color: hsl(var(--accent));
+  border-radius: var(--radius);
+  transition: background-color 1.5s ease-out;
+}
+
+.dark .verse-highlight {
+  background-color: hsl(var(--accent) / 0.3);
+}

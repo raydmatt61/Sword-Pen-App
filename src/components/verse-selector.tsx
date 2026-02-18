@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Book, Translation } from '@/lib/bible';
-import { ChevronsRight, ChevronLeft, ChevronRight, History, ChevronsUpDown } from 'lucide-react';
+import { ChevronsRight, ChevronLeft, ChevronRight, History, ChevronsUpDown, Hash } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -74,23 +74,46 @@ const ChapterSelectorGrid = ({ numberOfChapters, onSelect }: { numberOfChapters:
     );
 };
 
+const VerseSelectorGrid = ({ numberOfVerses, onSelect }: { numberOfVerses: number, onSelect: (verse: number) => void }) => {
+    return (
+        <ScrollArea className="h-96">
+            <div className="grid grid-cols-7 gap-1 p-2">
+                {Array.from({ length: numberOfVerses }, (_, i) => i + 1).map(verseNum => (
+                    <Button
+                        key={verseNum}
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto px-2 py-1.5 justify-center"
+                        onClick={() => onSelect(verseNum)}
+                    >
+                        {verseNum}
+                    </Button>
+                ))}
+            </div>
+        </ScrollArea>
+    );
+};
+
 
 export function VerseSelector({ 
     defaultValues, 
     books,
     translations,
     onChapterNav,
-    navigate
+    navigate,
+    maxVerses
 }: { 
     defaultValues: { book: string; chapter: string; translation: string; }, 
     books: Book[],
     translations: Translation[],
     onChapterNav: (direction: 'prev' | 'next') => void,
-    navigate: (newValues: Partial<{ book: string, chapter: string, translation: string }>) => void
+    navigate: (newValues: Partial<{ book: string, chapter: string, translation: string, verse: string }>) => void,
+    maxVerses: number;
 }) {
   
   const [tempBook, setTempBook] = useState(defaultValues.book);
   const [isBookSelectorOpen, setIsBookSelectorOpen] = useState(false);
+  const [isVerseSelectorOpen, setIsVerseSelectorOpen] = useState(false);
   const [selectionStep, setSelectionStep] = useState<'book' | 'chapter'>('book');
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   
@@ -132,6 +155,11 @@ export function VerseSelector({
             translation: savedLocation.translationId
         });
     }
+  };
+  
+  const handleVerseSelect = (verseNumber: number) => {
+    navigate({ verse: String(verseNumber) });
+    setIsVerseSelectorOpen(false);
   };
   
   const maxChaptersForCurrentBook = useMemo(() => books.find(b => b.commonName === defaultValues.book)?.numberOfChapters || 1, [books, defaultValues.book]);
@@ -176,6 +204,19 @@ export function VerseSelector({
             <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook} aria-label="Next Chapter">
                 <ChevronRight className="h-4 w-4" />
             </Button>
+            <Popover open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" type="button" aria-label="Go to verse" disabled={maxVerses === 0}>
+                        <Hash className="h-4 w-4" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[340px] p-0">
+                    <VerseSelectorGrid 
+                        numberOfVerses={maxVerses} 
+                        onSelect={handleVerseSelect} 
+                    />
+                </PopoverContent>
+            </Popover>
             <Button variant="outline" size="icon" type="button" onClick={handleGoBack} aria-label="Go to last location">
                 <History className="h-4 w-4" />
             </Button>
@@ -225,6 +266,27 @@ export function VerseSelector({
                                 />
                             </>
                         )}
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between" disabled={maxVerses === 0}>
+                            Go to Verse
+                            <Hash className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Select a Verse</DialogTitle>
+                        </DialogHeader>
+                        <VerseSelectorGrid 
+                            numberOfVerses={maxVerses} 
+                            onSelect={(v) => {
+                                handleVerseSelect(v);
+                                setIsMobileSheetOpen(false); // also close the main sheet
+                            }} 
+                        />
                     </DialogContent>
                 </Dialog>
 
