@@ -160,11 +160,23 @@ export type SearchResultVerse = {
     bookId: string;
 };
 
-export type GenerateVerseInsightsInput = {
-    verse: string;
-    annotations: string;
+export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
+    CSB: 'a556c5305ee15c3f-01',
+    NIV: '78a9f6124f344018-01',
+    NASB: 'b8ee27bcd1cae43a-01',
+    KJV: 'de4e12af7f28f599-01',
+    WEB: '72f4e6dc683324df-01',
 };
 
-export type GenerateVerseInsightsOutput = {
-    insights: string;
-};
+export const GenerateVerseInsightsInputSchema = z.object({
+    verse: z.string().describe('The Bible verse to analyze.'),
+    annotations: z.string().describe('User annotations for the verse.'),
+});
+
+export const GenerateVerseInsightsOutputSchema = z.object({
+    insights: z.string().describe('AI-generated insights for the verse based on user annotations.'),
+});
+
+
+export type GenerateVerseInsightsInput = z.infer<typeof GenerateVerseInsightsInputSchema>;
+export type GenerateVerseInsightsOutput = z.infer<typeof GenerateVerseInsightsOutputSchema>;
