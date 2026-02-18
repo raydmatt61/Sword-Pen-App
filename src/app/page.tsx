@@ -16,7 +16,6 @@ import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
 import { SearchDialog } from '@/components/search-dialog';
-import { StrongsLookupDialog } from '@/components/strongs-lookup-dialog';
 
 const API_BIBLE_IDS = {
     CSB: 'a556c5305ee15c3f-01',
@@ -114,7 +113,7 @@ async function getChapterFromApiBible(
     let currentVerseNumber: number | null = null;
     let currentVerseContent: VerseContent[] = [];
 
-    const processItems = (items: any[], isWoc = false, strongs: string | null = null) => {
+    const processItems = (items: any[], isWoc = false) => {
         if (!items || !Array.isArray(items)) return;
 
         items.forEach(item => {
@@ -157,24 +156,8 @@ async function getChapterFromApiBible(
                 
                 const isNewWoc = isWoc || (item.name === 'char' && item.attrs?.style === 'woc');
                 
-                let strongsForChildren = strongs;
-                if (item.name === 'w') {
-                    const strongVal = (item.attrs?.lemma || item.attrs?.strong || null);
-                    if (typeof strongVal === 'string' && strongVal.trim()) {
-                        // Clean up the value to be just the ID (e.g., G2424)
-                        // It can sometimes contain multiple values like "strong:H113,H3068" or "strong:H113 strong:H3068".
-                        // We'll take only the first one to avoid lookup errors.
-                        const cleanedString = strongVal.replace(/strong:/g, '').trim();
-                        const firstStrongId = cleanedString.split(/[\s,]+/)[0];
-                        strongsForChildren = firstStrongId;
-                    } else {
-                        // A <w> tag without a strong's number attribute resets the context.
-                        strongsForChildren = null;
-                    }
-                }
-                
                 if (item.items && Array.isArray(item.items)) {
-                    processItems(item.items, isNewWoc, strongsForChildren);
+                    processItems(item.items, isNewWoc);
                 }
 
             } else if (item.type === 'text' && typeof item.text === 'string') {
@@ -183,7 +166,6 @@ async function getChapterFromApiBible(
                     if (textToAdd) {
                         const content: FormattedText = { text: textToAdd };
                         if (isWoc) content.wordsOfJesus = true;
-                        if (strongs) content.strongs = strongs;
 
                         if (Object.keys(content).length === 1 && content.text) {
                             currentVerseContent.push(textToAdd);
@@ -241,8 +223,7 @@ async function getChapterFromApiBible(
             } else if (
                 typeof current === 'object' && current !== null && 'text' in current && typeof (current as FormattedText).text === 'string' &&
                 typeof last === 'object' && last !== null && 'text' in last && typeof (last as FormattedText).text === 'string' &&
-                (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus &&
-                (last as FormattedText).strongs === (current as FormattedText).strongs
+                (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus
             ) {
                 const lastText = (last as FormattedText).text;
                 const currentText = (current as FormattedText).text;
@@ -294,10 +275,6 @@ async function getChapterFromLabsBible(
         const data = await response.json();
         if (!data || !Array.isArray(data) || data.length === 0) return null;
 
-        const isOT = OLD_TESTAMENT_BOOK_NAMES.includes(book);
-        const isNT = NEW_TESTAMENT_BOOK_NAMES.includes(book);
-        const strongsPrefix = isOT ? 'H' : isNT ? 'G' : '';
-
         const chapterContent: ChapterContentItem[] = [];
         const allFootnotes: Footnote[] = [];
         const chapterHasNotes = data[0].notes && data[0].notes.length > 0;
@@ -325,8 +302,7 @@ async function getChapterFromLabsBible(
                 }
 
                 if (match[1] !== undefined) {
-                    const strongsNum = `${strongsPrefix}${match[1]}`;
-                    verseItems.push({ text: match[2], strongs: strongsNum });
+                    verseItems.push(match[2]);
                 } else if (match[3] !== undefined) {
                     verseItems.push({ noteId: match[3] } as VerseFootnoteReference);
                 }
@@ -363,8 +339,7 @@ async function getChapterFromLabsBible(
                 } else if (
                     typeof current === 'object' && current !== null && 'text' in current && typeof (current as FormattedText).text === 'string' &&
                     typeof last === 'object' && last !== null && 'text' in last && typeof (last as FormattedText).text === 'string' &&
-                    (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus &&
-                    (last as FormattedText).strongs === (current as FormattedText).strongs
+                    (last as FormattedText).wordsOfJesus === (current as FormattedText).wordsOfJesus
                 ) {
                     const lastText = (last as FormattedText).text;
                     const currentText = (current as FormattedText).text;
@@ -626,7 +601,6 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
           </div>
           <div className="flex items-center gap-2">
             <SearchDialog translationId={initialTranslationId} navigate={navigate} />
-            <StrongsLookupDialog navigate={navigate} />
             <FontSizeAdjuster />
             <QrCodeGenerator />
             <AuthManager />

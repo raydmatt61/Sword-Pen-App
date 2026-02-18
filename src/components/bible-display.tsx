@@ -15,7 +15,6 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
-import { StrongsPopover } from './strongs-popover';
 
 
 function VerseComponent({
@@ -81,7 +80,6 @@ function VerseComponent({
                 const text = typeof item === 'string' ? item : (item as FormattedText).text;
                 if (typeof text !== 'string' || text.length === 0) return;
 
-                const strongs = (item as FormattedText).strongs;
                 const isWoj = (item as FormattedText).wordsOfJesus;
 
                 const segmentStart = charOffset;
@@ -133,20 +131,12 @@ function VerseComponent({
                     return span;
                 }).filter(Boolean);
 
-                if (strongs) {
-                    finalNodes.push(
-                        <StrongsPopover key={`sp-${keyCounter++}`} strongsNumber={strongs} navigate={navigate}>
-                            <span>{subSpans}</span>
-                        </StrongsPopover>
-                    );
-                } else {
-                    finalNodes.push(...subSpans);
-                }
+                finalNodes.push(...subSpans);
                 charOffset += text.length;
             }
         });
         return finalNodes;
-    }, [verse.content, annotations, onAnnotationClick, navigate, footnotesMap]);
+    }, [verse.content, annotations, onAnnotationClick, footnotesMap]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
         const supElement = event.currentTarget;

@@ -49,7 +49,6 @@ export type FormattedText = {
     text: string;
     poem?: number;
     wordsOfJesus?: boolean;
-    strongs?: string;
 };
 
 export type InlineHeading = {
@@ -156,6 +155,7 @@ export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
     
 
     
+
 
 
 
