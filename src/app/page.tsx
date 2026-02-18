@@ -16,7 +16,7 @@ import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
 import { SearchDialog } from '@/components/search-dialog';
-import { searchBible } from '@/app/actions';
+import { StrongsLookupDialog } from '@/components/strongs-lookup-dialog';
 
 const API_BIBLE_IDS = {
     CSB: 'a556c5305ee15c3f-01',
@@ -229,7 +229,7 @@ async function getChapterFromApiBible(
                  const currentFt = current as FormattedText;
                  const lastFt = last as FormattedText;
     
-                 if (!!lastFt.wordsOfJesus === !!currentFt.wordsOfJesus) {
+                 if (!!lastFt.wordsOfJesus === !!currentFt.wordsOfJesus && !lastFt.strongs && !currentFt.strongs) {
                      let separator = ' ';
                      if (lastFt.text.endsWith(' ') || /^\s/.test(currentFt.text) || /^[.,?!:;]/.test(currentFt.text)) {
                          separator = '';
@@ -327,7 +327,7 @@ async function getChapter(
                                      const currentFt = current as FormattedText;
                                      const lastFt = last as FormattedText;
                         
-                                     if (!!lastFt.wordsOfJesus === !!currentFt.wordsOfJesus) {
+                                     if (!!lastFt.wordsOfJesus === !!currentFt.wordsOfJesus && !lastFt.strongs && !currentFt.strongs) {
                                          let separator = ' ';
                                          if (lastFt.text.endsWith(' ') || /^\s/.test(currentFt.text) || /^[.,?!:;]/.test(currentFt.text)) {
                                              separator = '';
@@ -550,6 +550,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
           </div>
           <div className="flex items-center gap-2">
             <SearchDialog translationId={initialTranslationId} navigate={navigate} />
+            <StrongsLookupDialog navigate={navigate} />
             <FontSizeAdjuster />
             <QrCodeGenerator />
             <AuthManager />

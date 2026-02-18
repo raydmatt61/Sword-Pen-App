@@ -2,8 +2,8 @@
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
-import { API_BIBLE_IDS_SEARCH } from "@/lib/bible";
-import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse } from "@/lib/bible";
+import { API_BIBLE_IDS_SEARCH, BIBLE_ABBR_BOOKS } from "@/lib/bible";
+import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, StrongsDetail } from "@/lib/bible";
 
 
 // New types and action
@@ -60,6 +60,41 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
             throw error;
         }
         throw new Error("Failed to perform search due to an unexpected error.");
+    }
+}
+
+export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
+    try {
+        const response = await fetch(`https://bible.helloao.org/api/strongs/${strongsNumber}.json`);
+
+        if (!response.ok) {
+            console.error("strongs lookup request failed:", response.status, response.statusText);
+            return null;
+        }
+
+        const json = await response.json();
+
+        if (!json || json.length === 0) {
+            return null;
+        }
+
+        return json.map((item: any) => ({
+            strongsNumber: item.strongs_number,
+            lemma: item.lemma,
+            transliteration: item.transliteration,
+            pronunciation: item.pronunciation,
+            shortDefinition: item.definition,
+            longDefinition: item.long_def,
+            kjvDefinition: item.kjv_def,
+            strongsDerivation: item.strongs_derivation,
+        }));
+
+    } catch (error) {
+        console.error("Error in getStrongsDetail action:", error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error("Failed to perform Strong's lookup due to an unexpected error.");
     }
 }
 

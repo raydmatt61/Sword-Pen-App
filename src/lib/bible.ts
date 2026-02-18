@@ -51,6 +51,7 @@ export type FormattedText = {
     text: string;
     poem?: number;
     wordsOfJesus?: boolean;
+    strongs?: string[];
 };
 
 export type InlineHeading = {
@@ -180,3 +181,14 @@ export const GenerateVerseInsightsOutputSchema = z.object({
 
 export type GenerateVerseInsightsInput = z.infer<typeof GenerateVerseInsightsInputSchema>;
 export type GenerateVerseInsightsOutput = z.infer<typeof GenerateVerseInsightsOutputSchema>;
+
+export type StrongsDetail = {
+  strongsNumber: string;
+  lemma: string;
+  transliteration: string;
+  pronunciation: string;
+  shortDefinition: string;
+  longDefinition: string;
+  kjvDefinition: string;
+  strongsDerivation?: string;
+};
