@@ -162,7 +162,11 @@ async function getChapterFromApiBible(
                     const strongVal = (item.attrs?.lemma || item.attrs?.strong || null);
                     if (typeof strongVal === 'string' && strongVal.trim()) {
                         // Clean up the value to be just the ID (e.g., G2424)
-                        strongsForChildren = strongVal.replace(/strong:/g, '').trim();
+                        // It can sometimes contain multiple values like "strong:H113,H3068" or "strong:H113 strong:H3068".
+                        // We'll take only the first one to avoid lookup errors.
+                        const cleanedString = strongVal.replace(/strong:/g, '').trim();
+                        const firstStrongId = cleanedString.split(/[\s,]+/)[0];
+                        strongsForChildren = firstStrongId;
                     } else {
                         // A <w> tag without a strong's number attribute resets the context.
                         strongsForChildren = null;
@@ -838,6 +842,8 @@ function FullPageSkeleton() {
 
 
 
+
+    
 
     
 
