@@ -282,7 +282,11 @@ async function getChapterFromLabsBible(
 
         if (chapterHasNotes) {
             data[0].notes.forEach((note: any) => {
-                allFootnotes.push({ id: String(note.note_id), text: note.note_text });
+                let noteText = note.note_text;
+                if (typeof noteText === 'string') {
+                    noteText = noteText.replace(/<\/?i>/g, '');
+                }
+                allFootnotes.push({ id: String(note.note_id), text: noteText });
             });
         }
         
@@ -293,6 +297,7 @@ async function getChapterFromLabsBible(
             verseText = verseText.replace(/^<p class="bodytext">/, '').replace(/<\/p>$/, '');
             verseText = verseText.replace(/<st[^>]*>([\s\S]*?)<\/st>/g, '$1');
             verseText = verseText.replace(/<span class="smcaps">|<\/span>/g, '');
+            verseText = verseText.replace(/<\/?i>/g, '');
             
             const verseItems: VerseContent[] = [];
             let lastIndex = 0;
