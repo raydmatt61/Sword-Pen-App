@@ -532,3 +532,4 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
 }
 
     
+

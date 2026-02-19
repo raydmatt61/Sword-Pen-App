@@ -5,8 +5,8 @@ import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'rea
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference, SearchResultVerse } from '@/lib/bible';
-import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES, API_BIBLE_IDS_SEARCH } from '@/lib/bible';
+import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference, SearchResultVerse, BsbVerse, BsbContent } from '@/lib/bible';
+import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES, API_BIBLE_IDS_SEARCH, BSB_BOOK_FILENAME_MAP } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
@@ -27,6 +27,193 @@ const API_BIBLE_IDS = {
     'engnet': '72f4e6dc683324df-01', // Using WEB as a proxy for now
 };
 const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
+
+async function getChapterFromKjvStrongsGithub(
+  book: string,
+  chapter: string
+): Promise<BibleChapterResponse | null> {
+    const KJV_BOOK_NAMES = [
+        "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", 
+        "1_Samuel", "2_Samuel", "1_Kings", "2_Kings", "1_Chronicles", "2_Chronicles", "Ezra", 
+        "Nehemiah", "Esther", "Job", "Psalms", "Proverbs", "Ecclesiastes", "Song_of_Solomon", 
+        "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel", "Amos", 
+        "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", 
+        "Malachi", "Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1_Corinthians", 
+        "2_Corinthians", "Galatians", "Ephesians", "Philippians", "Colossians", "1_Thessalonians", 
+        "2_Thessalonians", "1_Timothy", "2_Timothy", "Titus", "Philemon", "Hebrews", "James", 
+        "1_Peter", "2_Peter", "1_John", "2_John", "3_John", "Jude", "Revelation"
+    ];
+
+    // Handle book names like "1 Samuel" -> "1_Samuel"
+    const bookForUrl = book.replace(/ /g, '_');
+    const bookIndex = KJV_BOOK_NAMES.findIndex(b => b === bookForUrl);
+
+    if (bookIndex === -1) {
+        console.error(`Book not found in KJV mapping: ${book}`);
+        return null;
+    }
+
+    const bookNumber = bookIndex + 1;
+    const paddedBookNumber = String(bookNumber).padStart(2, '0');
+    const bookNameForUrl = KJV_BOOK_NAMES[bookIndex];
+    const paddedChapterNumber = String(chapter).padStart(3, '0');
+
+    const url = `https://raw.githubusercontent.com/SoliDeoGloria/KJV-with-Strongs/master/A${paddedBookNumber}_${bookNameForUrl}/A${paddedBookNumber}_${bookNameForUrl}_${paddedChapterNumber}.json`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.error(`Failed to fetch KJV data for ${book} ${chapter} from GitHub. URL: ${url}`);
+            return null;
+        }
+
+        const data = await response.json();
+        
+        const chapterContent: ChapterContentItem[] = [];
+        const sortedVerseKeys = Object.keys(data.chapter).sort((a, b) => parseInt(a) - parseInt(b));
+
+        for (const verseKey of sortedVerseKeys) {
+            const verseData = data.chapter[verseKey];
+            const verseText = verseData.verse;
+
+            const verseContent: VerseContent[] = [];
+            const words = verseText.split(' ');
+
+            words.forEach((word) => {
+                const match = word.match(/^(.*?)(<[GH]\d+>)$/);
+                if (match) {
+                    const [, text, strongsTag] = match;
+                    const strongsNumber = strongsTag.substring(2, strongsTag.length - 1);
+                    if (text) {
+                        verseContent.push({ text: text, strongs: [strongsNumber] });
+                    }
+                } else {
+                    verseContent.push(word);
+                }
+            });
+
+            // Reconstruct with spaces and collapse consecutive strings
+            const finalContent: VerseContent[] = [];
+            let textBuffer = '';
+            verseContent.forEach((item, index) => {
+                const isLastItem = index === verseContent.length - 1;
+                const space = isLastItem ? '' : ' ';
+
+                if (typeof item === 'string') {
+                    textBuffer += item + space;
+                } else if (typeof item === 'object' && 'strongs' in item) {
+                    if (textBuffer) {
+                        finalContent.push(textBuffer.trimEnd());
+                        textBuffer = '';
+                    }
+                    item.text += space;
+                    finalContent.push(item);
+                }
+            });
+            if (textBuffer) {
+                finalContent.push(textBuffer.trimEnd());
+            }
+
+            chapterContent.push({
+                type: 'verse',
+                number: parseInt(verseData.verse_nr),
+                content: finalContent
+            });
+        }
+        
+        const result: BibleChapterResponse = {
+            book: {
+                name: book,
+                id: BIBLE_BOOKS_ABBR[book] || book,
+            },
+            chapter: {
+                number: parseInt(chapter, 10),
+                content: chapterContent,
+            },
+            translation: {
+                name: 'King James Version',
+                id: 'KJV',
+            },
+            copyright: 'King James Version with Strongs numbers. Public Domain.',
+        };
+        
+        return result;
+
+    } catch (error) {
+        console.error("Error fetching or processing KJV data:", error);
+        return null;
+    }
+}
+
+
+async function getChapterFromBsbGithub(
+  book: string,
+  chapter: string
+): Promise<BibleChapterResponse | null> {
+  const bookFilenamePart = BSB_BOOK_FILENAME_MAP[book];
+  if (!bookFilenamePart) {
+    console.warn(`No BSB filename mapping for book: ${book}`);
+    return null;
+  }
+  const url = `https://raw.githubusercontent.com/gapmiss/berean-study-bible-with-strongs/master/json/bsb_strongs_${bookFilenamePart}.json`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+        console.error(`Failed to fetch BSB data for ${book} from GitHub. URL: ${url}`);
+        return null;
+    }
+    const data: BsbVerse[] = await response.json();
+
+    const chapterData = data.filter(
+      (v) => v.chapter === parseInt(chapter, 10)
+    );
+
+    if (chapterData.length === 0) return null;
+    
+    const chapterContent: ChapterContentItem[] = [];
+    let currentVerseNumber: number | null = null;
+    let currentVerseContent: VerseContent[] = [];
+
+    chapterData.forEach((verse) => {
+        if (currentVerseNumber !== verse.verse) {
+            if (currentVerseNumber !== null) {
+                chapterContent.push({ type: 'verse', number: currentVerseNumber, content: currentVerseContent });
+            }
+            currentVerseNumber = verse.verse;
+            currentVerseContent = [];
+        }
+
+        verse.content?.forEach((item: BsbContent) => {
+            if (item.type === 'h') {
+                chapterContent.push({ type: 'heading', content: [item.text || ''] });
+            } else if (item.type === 'w') {
+                const content: FormattedText = { text: item.text || '' };
+                if (item.strongs) content.strongs = [item.strongs];
+                if (item.woc) content.wordsOfJesus = true;
+                currentVerseContent.push(content);
+            } else if (item.type === 'br') {
+                 chapterContent.push({ type: 'line_break' });
+            }
+        });
+    });
+
+     if (currentVerseNumber !== null) {
+        chapterContent.push({ type: 'verse', number: currentVerseNumber, content: currentVerseContent });
+    }
+
+    return {
+      book: { name: book, id: BIBLE_BOOKS_ABBR[book] || '' },
+      chapter: { number: parseInt(chapter, 10), content: chapterContent },
+      translation: { name: 'Berean Standard Bible', id: 'BSB' },
+      copyright: 'The Berean Bible and Majority Bible texts are officially dedicated to the public domain as of April 30, 2023.',
+    };
+  } catch (error) {
+    console.error(`Error fetching BSB data for ${book}:`, error);
+    return null;
+  }
+}
+
 
 async function getCrossReferences(
   book: string,
@@ -276,6 +463,12 @@ async function getChapter(
   isFallbackAttempt = false
 ): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
+
+  if (translationId === 'BSB') {
+      chapterData = await getChapterFromBsbGithub(book, chapter);
+  } else if (translationId === 'KJV') {
+      chapterData = await getChapterFromKjvStrongsGithub(book, chapter);
+  }
 
   if (!chapterData) {
       if (API_BIBLE_TRANSLATIONS.includes(translationId)) {

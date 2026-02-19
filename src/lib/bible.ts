@@ -26,6 +26,25 @@ export const BIBLE_BOOKS_ABBR: Record<string, string> = {
     "Hebrews": "HEB", "James": "JAS", "1 Peter": "1PE", "2 Peter": "2PE", "1 John": "1JN", "2 John": "2JN", "3 John": "3JN", "Jude": "JUD", "Revelation": "REV"
 };
 
+export const BSB_BOOK_FILENAME_MAP: Record<string, string> = {
+    "Genesis": "01_genesis", "Exodus": "02_exodus", "Leviticus": "03_leviticus", "Numbers": "04_numbers",
+    "Deuteronomy": "05_deuteronomy", "Joshua": "06_joshua", "Judges": "07_judges", "Ruth": "08_ruth",
+    "1 Samuel": "09_1_samuel", "2 Samuel": "10_2_samuel", "1 Kings": "11_1_kings", "2 Kings": "12_2_kings",
+    "1 Chronicles": "13_1_chronicles", "2 Chronicles": "14_2_chronicles", "Ezra": "15_ezra", "Nehemiah": "16_nehemiah",
+    "Esther": "17_esther", "Job": "18_job", "Psalms": "19_psalms", "Proverbs": "20_proverbs", "Ecclesiastes": "21_ecclesiastes",
+    "Song of Solomon": "22_song_of_solomon", "Isaiah": "23_isaiah", "Jeremiah": "24_jeremiah", "Lamentations": "25_lamentations",
+    "Ezekiel": "26_ezekiel", "Daniel": "27_daniel", "Hosea": "28_hosea", "Joel": "29_joel", "Amos": "30_amos",
+    "Obadiah": "31_obadiah", "Jonah": "32_jonah", "Micah": "33_micah", "Nahum": "34_nahum", "Habakkuk": "35_habakkuk",
+    "Zephaniah": "36_zephaniah", "Haggai": "37_haggai", "Zechariah": "38_zechariah", "Malachi": "39_malachi",
+    "Matthew": "40_matthew", "Mark": "41_mark", "Luke": "42_luke", "John": "43_john", "Acts": "44_acts",
+    "Romans": "45_romans", "1 Corinthians": "46_1_corinthians", "2 Corinthians": "47_2_corinthians", "Galatians": "48_galatians",
+    "Ephesians": "49_ephesians", "Philippians": "50_philippians", "Colossians": "51_colossians",
+    "1 Thessalonians": "52_1_thessalonians", "2 Thessalonians": "53_2_thessalonians", "1 Timothy": "54_1_timothy",
+    "2 Timothy": "55_2_timothy", "Titus": "56_titus", "Philemon": "57_philemon", "Hebrews": "58_hebrews",
+    "James": "59_james", "1 Peter": "60_1_peter", "2 Peter": "61_2_peter", "1 John": "62_1_john",
+    "2 John": "63_2_john", "3 John": "64_3_john", "Jude": "65_jude", "Revelation": "66_revelation"
+};
+
 export const OLD_TESTAMENT_BOOK_NAMES = [
     "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
     "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
@@ -160,6 +179,22 @@ export type SearchResultVerse = {
     text: string;
     bookId: string;
 };
+
+export type BsbContent = {
+    type: 'h' | 'w' | 'br' | 'f';
+    text?: string;
+    strongs?: string;
+    woc?: boolean;
+    note?: string;
+}
+
+export type BsbVerse = {
+    book: number;
+    chapter: number;
+    verse: number;
+    content?: BsbContent[];
+}
+
 
 export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
     CSB: 'a556c5305ee15c3f-01',
