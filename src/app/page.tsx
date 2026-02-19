@@ -28,124 +28,6 @@ const API_BIBLE_IDS = {
 };
 const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
 
-async function getChapterFromKjvStrongsGithub(
-  book: string,
-  chapter: string
-): Promise<BibleChapterResponse | null> {
-    const KJV_BOOK_NAMES = [
-        "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", 
-        "1_Samuel", "2_Samuel", "1_Kings", "2_Kings", "1_Chronicles", "2_Chronicles", "Ezra", 
-        "Nehemiah", "Esther", "Job", "Psalms", "Proverbs", "Ecclesiastes", "Song_of_Solomon", 
-        "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel", "Amos", 
-        "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", 
-        "Malachi", "Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1_Corinthians", 
-        "2_Corinthians", "Galatians", "Ephesians", "Philippians", "Colossians", "1_Thessalonians", 
-        "2_Thessalonians", "1_Timothy", "2_Timothy", "Titus", "Philemon", "Hebrews", "James", 
-        "1_Peter", "2_Peter", "1_John", "2_John", "3_John", "Jude", "Revelation"
-    ];
-
-    // Handle book names like "1 Samuel" -> "1_Samuel"
-    const bookForUrl = book.replace(/ /g, '_');
-    const bookIndex = KJV_BOOK_NAMES.findIndex(b => b === bookForUrl);
-
-    if (bookIndex === -1) {
-        console.error(`Book not found in KJV mapping: ${book}`);
-        return null;
-    }
-
-    const bookNumber = bookIndex + 1;
-    const paddedBookNumber = String(bookNumber).padStart(2, '0');
-    const bookNameForUrl = KJV_BOOK_NAMES[bookIndex];
-    const paddedChapterNumber = String(chapter).padStart(3, '0');
-
-    const url = `https://raw.githubusercontent.com/SoliDeoGloria/KJV-with-Strongs/master/A${paddedBookNumber}_${bookNameForUrl}/A${paddedBookNumber}_${bookNameForUrl}_${paddedChapterNumber}.json`;
-    
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            console.error(`Failed to fetch KJV data for ${book} ${chapter} from GitHub. URL: ${url}`);
-            return null;
-        }
-
-        const data = await response.json();
-        
-        const chapterContent: ChapterContentItem[] = [];
-        const sortedVerseKeys = Object.keys(data.chapter).sort((a, b) => parseInt(a) - parseInt(b));
-
-        for (const verseKey of sortedVerseKeys) {
-            const verseData = data.chapter[verseKey];
-            const verseText = verseData.verse;
-
-            const verseContent: VerseContent[] = [];
-            const words = verseText.split(' ');
-
-            words.forEach((word) => {
-                const match = word.match(/^(.*?)(<[GH]\d+>)$/);
-                if (match) {
-                    const [, text, strongsTag] = match;
-                    const strongsNumber = strongsTag.substring(2, strongsTag.length - 1);
-                    if (text) {
-                        verseContent.push({ text: text, strongs: [strongsNumber] });
-                    }
-                } else {
-                    verseContent.push(word);
-                }
-            });
-
-            // Reconstruct with spaces and collapse consecutive strings
-            const finalContent: VerseContent[] = [];
-            let textBuffer = '';
-            verseContent.forEach((item, index) => {
-                const isLastItem = index === verseContent.length - 1;
-                const space = isLastItem ? '' : ' ';
-
-                if (typeof item === 'string') {
-                    textBuffer += item + space;
-                } else if (typeof item === 'object' && 'strongs' in item) {
-                    if (textBuffer) {
-                        finalContent.push(textBuffer.trimEnd());
-                        textBuffer = '';
-                    }
-                    item.text += space;
-                    finalContent.push(item);
-                }
-            });
-            if (textBuffer) {
-                finalContent.push(textBuffer.trimEnd());
-            }
-
-            chapterContent.push({
-                type: 'verse',
-                number: parseInt(verseData.verse_nr),
-                content: finalContent
-            });
-        }
-        
-        const result: BibleChapterResponse = {
-            book: {
-                name: book,
-                id: BIBLE_BOOKS_ABBR[book] || book,
-            },
-            chapter: {
-                number: parseInt(chapter, 10),
-                content: chapterContent,
-            },
-            translation: {
-                name: 'King James Version',
-                id: 'KJV',
-            },
-            copyright: 'King James Version with Strongs numbers. Public Domain.',
-        };
-        
-        return result;
-
-    } catch (error) {
-        console.error("Error fetching or processing KJV data:", error);
-        return null;
-    }
-}
-
-
 async function getCrossReferences(
   book: string,
   chapter: string,
@@ -395,89 +277,83 @@ async function getChapter(
 ): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
-  if (translationId === 'KJV') {
-      chapterData = await getChapterFromKjvStrongsGithub(book, chapter);
-  }
+  if (API_BIBLE_TRANSLATIONS.includes(translationId)) {
+    chapterData = await getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
+  } else {
+    const bookNameAliases: Record<string, string> = {
+      'Song of Songs': 'Song of Solomon',
+    };
+    const canonicalBook = bookNameAliases[book] || book;
+    const bookId = BIBLE_BOOKS_ABBR[canonicalBook] || canonicalBook;
 
-  if (!chapterData) {
-      if (API_BIBLE_TRANSLATIONS.includes(translationId)) {
-        chapterData = await getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
-      } else {
-        const bookNameAliases: Record<string, string> = {
-          'Song of Songs': 'Song of Solomon',
-        };
-        const canonicalBook = bookNameAliases[book] || book;
-        const bookId = BIBLE_BOOKS_ABBR[canonicalBook] || canonicalBook;
+    let attempts = 0;
+    const maxRetries = 3;
+    const delay = 1000; // 1 second
+    
+    while (attempts < maxRetries && !chapterData) {
+      try {
+        const response = await fetch(
+          `https://bible.helloao.org/api/${translationId}/${bookId}/${chapter}.json`
+        );
 
-        let attempts = 0;
-        const maxRetries = 3;
-        const delay = 1000; // 1 second
-        
-        while (attempts < maxRetries && !chapterData) {
-          try {
-            const response = await fetch(
-              `https://bible.helloao.org/api/${translationId}/${bookId}/${chapter}.json`
-            );
-
-            if (response.ok) {
-              const contentType = response.headers.get("content-type");
-              if (contentType && contentType.includes("application/json")) {
-                  const text = await response.text();
-                  if(text) {
-                      const data = JSON.parse(text);
-                      if (data && data.chapter && data.chapter.content) {
-                          chapterData = data as BibleChapterResponse;
-                          chapterData.chapter.content.forEach(item => {
-                            if (item.type !== 'verse' || !item.content) return;
-                        
-                            const normalizedContent: VerseContent[] = item.content.map(c => 
-                                typeof c === 'string' ? { text: c } : c
-                            );
-                        
-                            if (normalizedContent.length < 2) {
-                                item.content = normalizedContent;
-                                return;
-                            }
-                        
-                            const collapsed: VerseContent[] = [normalizedContent[0]];
-                        
-                            for (let i = 1; i < normalizedContent.length; i++) {
-                                const current = normalizedContent[i];
-                                const last = collapsed[collapsed.length - 1];
-                        
-                                if (typeof current === 'object' && 'text' in current && typeof last === 'object' && 'text' in last) {
-                                     const currentFt = current as FormattedText;
-                                     const lastFt = last as FormattedText;
-                        
-                                     if (!!lastFt.wordsOfJesus === !!currentFt.wordsOfJesus && !lastFt.strongs && !currentFt.strongs) {
-                                         let separator = ' ';
-                                         if (lastFt.text.endsWith(' ') || /^\s/.test(currentFt.text) || /^[.,?!:;]/.test(currentFt.text)) {
-                                             separator = '';
-                                         }
-                                         lastFt.text += separator + currentFt.text;
-                                     } else {
-                                         collapsed.push(current);
+        if (response.ok) {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+              const text = await response.text();
+              if(text) {
+                  const data = JSON.parse(text);
+                  if (data && data.chapter && data.chapter.content) {
+                      chapterData = data as BibleChapterResponse;
+                      chapterData.chapter.content.forEach(item => {
+                        if (item.type !== 'verse' || !item.content) return;
+                    
+                        const normalizedContent: VerseContent[] = item.content.map(c => 
+                            typeof c === 'string' ? { text: c } : c
+                        );
+                    
+                        if (normalizedContent.length < 2) {
+                            item.content = normalizedContent;
+                            return;
+                        }
+                    
+                        const collapsed: VerseContent[] = [normalizedContent[0]];
+                    
+                        for (let i = 1; i < normalizedContent.length; i++) {
+                            const current = normalizedContent[i];
+                            const last = collapsed[collapsed.length - 1];
+                    
+                            if (typeof current === 'object' && 'text' in current && typeof last === 'object' && 'text' in last) {
+                                 const currentFt = current as FormattedText;
+                                 const lastFt = last as FormattedText;
+                    
+                                 if (!!lastFt.wordsOfJesus === !!currentFt.wordsOfJesus && !lastFt.strongs && !currentFt.strongs) {
+                                     let separator = ' ';
+                                     if (lastFt.text.endsWith(' ') || /^\s/.test(currentFt.text) || /^[.,?!:;]/.test(currentFt.text)) {
+                                         separator = '';
                                      }
-                                } else {
-                                    collapsed.push(current);
-                                }
+                                     lastFt.text += separator + currentFt.text;
+                                 } else {
+                                     collapsed.push(current);
+                                 }
+                            } else {
+                                collapsed.push(current);
                             }
-                            item.content = collapsed;
-                        });
-                      }
+                        }
+                        item.content = collapsed;
+                    });
                   }
               }
-            }
-          } catch (error) {
-            // Silently catch fetch errors
-          }
-          
-          attempts++;
-          if (attempts < maxRetries && !chapterData) {
-            await new Promise(res => setTimeout(res, delay));
           }
         }
+      } catch (error) {
+        // Silently catch fetch errors
       }
+      
+      attempts++;
+      if (attempts < maxRetries && !chapterData) {
+        await new Promise(res => setTimeout(res, delay));
+      }
+    }
   }
 
 
