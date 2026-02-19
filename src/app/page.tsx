@@ -5,8 +5,8 @@ import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'rea
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference, SearchResultVerse, BsbVerse, BsbContent } from '@/lib/bible';
-import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES, API_BIBLE_IDS_SEARCH, BSB_BOOK_FILENAME_MAP } from '@/lib/bible';
+import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference, SearchResultVerse } from '@/lib/bible';
+import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES, API_BIBLE_IDS_SEARCH } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
@@ -143,75 +143,6 @@ async function getChapterFromKjvStrongsGithub(
         console.error("Error fetching or processing KJV data:", error);
         return null;
     }
-}
-
-
-async function getChapterFromBsbGithub(
-  book: string,
-  chapter: string
-): Promise<BibleChapterResponse | null> {
-  const bookFilenamePart = BSB_BOOK_FILENAME_MAP[book];
-  if (!bookFilenamePart) {
-    console.warn(`No BSB filename mapping for book: ${book}`);
-    return null;
-  }
-  const url = `https://raw.githubusercontent.com/gapmiss/berean-study-bible-with-strongs/master/bsb_strongs_${bookFilenamePart}.json`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-        console.error(`Failed to fetch BSB data for ${book} from GitHub. URL: ${url}`);
-        return null;
-    }
-    const data: BsbVerse[] = await response.json();
-
-    const chapterData = data.filter(
-      (v) => v.chapter === parseInt(chapter, 10)
-    );
-
-    if (chapterData.length === 0) return null;
-    
-    const chapterContent: ChapterContentItem[] = [];
-    let currentVerseNumber: number | null = null;
-    let currentVerseContent: VerseContent[] = [];
-
-    chapterData.forEach((verse) => {
-        if (currentVerseNumber !== verse.verse) {
-            if (currentVerseNumber !== null) {
-                chapterContent.push({ type: 'verse', number: currentVerseNumber, content: currentVerseContent });
-            }
-            currentVerseNumber = verse.verse;
-            currentVerseContent = [];
-        }
-
-        verse.content?.forEach((item: BsbContent) => {
-            if (item.type === 'h') {
-                chapterContent.push({ type: 'heading', content: [item.text || ''] });
-            } else if (item.type === 'w') {
-                const content: FormattedText = { text: item.text || '' };
-                if (item.strongs) content.strongs = [item.strongs];
-                if (item.woc) content.wordsOfJesus = true;
-                currentVerseContent.push(content);
-            } else if (item.type === 'br') {
-                 chapterContent.push({ type: 'line_break' });
-            }
-        });
-    });
-
-     if (currentVerseNumber !== null) {
-        chapterContent.push({ type: 'verse', number: currentVerseNumber, content: currentVerseContent });
-    }
-
-    return {
-      book: { name: book, id: BIBLE_BOOKS_ABBR[book] || '' },
-      chapter: { number: parseInt(chapter, 10), content: chapterContent },
-      translation: { name: 'Berean Standard Bible', id: 'BSB' },
-      copyright: 'The Berean Bible and Majority Bible texts are officially dedicated to the public domain as of April 30, 2023.',
-    };
-  } catch (error) {
-    console.error(`Error fetching BSB data for ${book}:`, error);
-    return null;
-  }
 }
 
 
@@ -464,9 +395,7 @@ async function getChapter(
 ): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
-  if (translationId === 'BSB') {
-      chapterData = await getChapterFromBsbGithub(book, chapter);
-  } else if (translationId === 'KJV') {
+  if (translationId === 'KJV') {
       chapterData = await getChapterFromKjvStrongsGithub(book, chapter);
   }
 
