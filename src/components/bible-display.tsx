@@ -203,7 +203,7 @@ function VerseComponent({
 
     return (
         <div data-verse-number={verse.number}>
-            <p className={textClasses}>
+            <div className={textClasses}>
                 <sup 
                     className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
                     onClick={handleVerseNumberClick}
@@ -266,7 +266,7 @@ function VerseComponent({
                     </Dialog>
                 )}
                 <span className="verse-text-wrapper">{renderedContent}</span>
-            </p>
+            </div>
         </div>
     );
 }
