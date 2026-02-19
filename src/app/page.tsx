@@ -155,7 +155,7 @@ async function getChapterFromBsbGithub(
     console.warn(`No BSB filename mapping for book: ${book}`);
     return null;
   }
-  const url = `https://raw.githubusercontent.com/gapmiss/berean-study-bible-with-strongs/master/json/bsb_strongs_${bookFilenamePart}.json`;
+  const url = `https://raw.githubusercontent.com/gapmiss/berean-study-bible-with-strongs/master/bsb_strongs_${bookFilenamePart}.json`;
 
   try {
     const response = await fetch(url);
