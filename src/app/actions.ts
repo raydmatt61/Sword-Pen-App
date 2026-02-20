@@ -64,24 +64,28 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
 
 export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
     try {
-        const bollsResponse = await fetch(`https://bolls.life/api/strongs/${strongsNumber.toUpperCase()}`);
+        const upperCaseStrongs = strongsNumber.toUpperCase();
+        const bollsResponse = await fetch(`https://bolls.life/api/strongs/${upperCaseStrongs}`);
         if (!bollsResponse.ok) {
             return null;
         }
         const data = await bollsResponse.json();
 
-        if (!data || data.error) {
+        // The API returns an object with the strongs number as the key
+        const strongsData = data[upperCaseStrongs];
+
+        if (!strongsData || data.error) {
             return null;
         }
 
         const detail: StrongsDetail = {
-            strongsNumber: strongsNumber.toUpperCase(),
-            lemma: data.lemma,
-            transliteration: data.translit,
-            pronunciation: data.pronunciation,
-            shortDefinition: data.strongs_def,
-            kjvDefinition: data.kjv_def,
-            strongsDerivation: data.strongs_derivation,
+            strongsNumber: upperCaseStrongs,
+            lemma: strongsData.lemma,
+            transliteration: strongsData.xlit,
+            pronunciation: strongsData.pron,
+            shortDefinition: strongsData.strongs_def,
+            kjvDefinition: strongsData.kjv_def,
+            strongsDerivation: strongsData.derivation,
         };
 
         return [detail];

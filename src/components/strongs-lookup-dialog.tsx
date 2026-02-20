@@ -141,12 +141,6 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
                 </CardHeader>
                 <CardContent className="space-y-4 font-body">
                     <p><span className="font-bold">Short Definition:</span> {item.shortDefinition}</p>
-                    {item.longDefinition && (
-                        <div>
-                            <p className="font-bold">Long Definition:</p>
-                            <RenderHtmlWithNavigation htmlString={item.longDefinition} onNavigate={handleLinkNavigate} />
-                        </div>
-                    )}
                      <div>
                         <p className="font-bold">KJV Definition:</p>
                         <p className="italic">{item.kjvDefinition}</p>

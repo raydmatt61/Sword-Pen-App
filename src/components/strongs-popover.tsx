@@ -109,12 +109,6 @@ export function StrongsPopover({ children, strongsNumber, navigate }: StrongsPop
                                 </CardHeader>
                                 <CardContent className="space-y-4 font-body text-sm">
                                     <p><span className="font-bold">Short Definition:</span> {item.shortDefinition}</p>
-                                    {item.longDefinition && (
-                                        <div>
-                                            <p className="font-bold">Long Definition:</p>
-                                            <RenderHtmlWithNavigation htmlString={item.longDefinition} onNavigate={handleLinkNavigate} />
-                                        </div>
-                                    )}
                                     {item.kjvDefinition && (
                                         <div>
                                             <p className="font-bold">KJV Definition:</p>

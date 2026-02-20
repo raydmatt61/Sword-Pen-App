@@ -197,7 +197,6 @@ export type StrongsDetail = {
   transliteration: string;
   pronunciation?: string;
   shortDefinition: string;
-  longDefinition?: string;
   kjvDefinition: string;
   strongsDerivation?: string;
 };
