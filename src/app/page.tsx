@@ -6,7 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference, SearchResultVerse } from '@/lib/bible';
-import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES, API_BIBLE_IDS_SEARCH } from '@/lib/bible';
+import { BIBLE_BOOKS_ABBR, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES, API_BIBLE_IDS_SEARCH, BIBLE_BOOK_NUMBERS } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
@@ -27,6 +27,115 @@ const API_BIBLE_IDS = {
     'engnet': '72f4e6dc683324df-01', // Using WEB as a proxy for now
 };
 const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
+
+// Assumed from bolls.life API
+type BollsVerse = {
+    book: string;
+    chapter: number;
+    verse: number;
+    text: string; // The plain text of the verse
+    text_strongs?: { w: string; s?: string; woc?: '1' }[]; 
+};
+
+async function getKJVChapterFromBolls(
+  book: string,
+  chapter: string
+): Promise<BibleChapterResponse | null> {
+    const bookNumber = BIBLE_BOOK_NUMBERS[book as keyof typeof BIBLE_BOOK_NUMBERS];
+    if (!bookNumber) return null;
+
+    try {
+        const url = `https://bolls.life/get-chapter/KJV/${bookNumber}/${chapter}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.error(`Failed to fetch KJV data for ${book} ${chapter} from bolls.life. URL: ${url}`);
+            return null;
+        }
+        
+        const bollsVerses: BollsVerse[] = await response.json();
+        if (!bollsVerses || bollsVerses.length === 0) return null;
+        
+        const chapterContent: ChapterContentItem[] = bollsVerses.map(v => {
+            const verseContent: VerseContent[] = [];
+            if (v.text_strongs && Array.isArray(v.text_strongs)) {
+                v.text_strongs.forEach(sw => {
+                    const formattedText: FormattedText = { text: sw.w };
+                    if (sw.s && sw.s !== "0") {
+                        formattedText.strongs = [sw.s];
+                    }
+                    if (sw.woc === '1') {
+                        formattedText.wordsOfJesus = true;
+                    }
+                    verseContent.push(formattedText);
+                });
+            } else {
+                verseContent.push(v.text);
+            }
+
+            return {
+                type: 'verse',
+                number: v.verse,
+                content: verseContent
+            };
+        });
+
+        // Text collapsing logic
+        chapterContent.forEach(item => {
+            if (item.type !== 'verse' || !item.content) return;
+        
+            const normalizedContent: VerseContent[] = item.content.map(c => 
+                typeof c === 'string' ? { text: c } : c
+            );
+        
+            if (normalizedContent.length < 2) {
+                item.content = normalizedContent;
+                return;
+            }
+        
+            const collapsed: VerseContent[] = [];
+            if(normalizedContent.length > 0) {
+                collapsed.push(normalizedContent[0]);
+            }
+        
+            for (let i = 1; i < normalizedContent.length; i++) {
+                const current = normalizedContent[i];
+                const last = collapsed[collapsed.length - 1];
+        
+                if (typeof current === 'object' && 'text' in current && typeof last === 'object' && 'text' in last) {
+                     const currentFt = current as FormattedText;
+                     const lastFt = last as FormattedText;
+        
+                     if (!!lastFt.wordsOfJesus === !!currentFt.wordsOfJesus && !lastFt.strongs && !currentFt.strongs) {
+                         let separator = ' ';
+                         if (lastFt.text.endsWith(' ') || /^\s/.test(currentFt.text) || /^[.,?!:;]/.test(currentFt.text)) {
+                             separator = '';
+                         }
+                         lastFt.text += separator + currentFt.text;
+                     } else {
+                         collapsed.push(current);
+                     }
+                } else {
+                    collapsed.push(current);
+                }
+            }
+            item.content = collapsed;
+        });
+
+        const result: BibleChapterResponse = {
+            book: { name: book, id: BIBLE_BOOKS_ABBR[book] },
+            chapter: { number: parseInt(chapter, 10), content: chapterContent },
+            translation: { name: 'King James Version', id: 'KJV' },
+            copyright: "Public Domain. Modified by bolls.life."
+        };
+
+        return result;
+
+    } catch (error) {
+        console.error("Error fetching/processing KJV from bolls.life", error);
+        return null;
+    }
+}
+
 
 async function getCrossReferences(
   book: string,
@@ -277,7 +386,9 @@ async function getChapter(
 ): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
-  if (API_BIBLE_TRANSLATIONS.includes(translationId)) {
+  if (translationId === 'KJV') {
+    chapterData = await getKJVChapterFromBolls(book, chapter);
+  } else if (API_BIBLE_TRANSLATIONS.includes(translationId)) {
     chapterData = await getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
   } else {
     const bookNameAliases: Record<string, string> = {
