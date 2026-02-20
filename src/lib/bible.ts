@@ -195,9 +195,9 @@ export type StrongsDetail = {
   strongsNumber: string;
   lemma: string;
   transliteration: string;
-  pronunciation: string;
+  pronunciation?: string;
   shortDefinition: string;
-  longDefinition: string;
+  longDefinition?: string;
   kjvDefinition: string;
   strongsDerivation?: string;
 };

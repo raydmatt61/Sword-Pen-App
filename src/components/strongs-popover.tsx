@@ -105,7 +105,7 @@ export function StrongsPopover({ children, strongsNumber, navigate }: StrongsPop
                                         <span>{item.lemma} ({item.transliteration})</span>
                                         <span className="text-lg font-bold text-primary">{item.strongsNumber}</span>
                                     </CardTitle>
-                                    <p className="text-sm text-muted-foreground -mt-2">{item.pronunciation}</p>
+                                    {item.pronunciation && <p className="text-sm text-muted-foreground -mt-2">{item.pronunciation}</p>}
                                 </CardHeader>
                                 <CardContent className="space-y-4 font-body text-sm">
                                     <p><span className="font-bold">Short Definition:</span> {item.shortDefinition}</p>
@@ -130,7 +130,7 @@ export function StrongsPopover({ children, strongsNumber, navigate }: StrongsPop
                                 </CardContent>
                                 <CardFooter>
                                   <p className="text-xs text-muted-foreground">
-                                    Data from <a href="https://github.com/openscriptures/strongs" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Open Scriptures</a>.
+                                    Data from Sefaria, <a href="https://github.com/openscriptures/strongs" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Open Scriptures</a> & bolls.life.
                                   </p>
                                 </CardFooter>
                             </Card>
