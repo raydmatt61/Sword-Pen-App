@@ -2,7 +2,7 @@
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
-import { API_BIBLE_IDS_SEARCH, BIBLE_ABBR_BOOKS, BIBLE_BOOK_NUMBERS, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from "@/lib/bible";
+import { API_BIBLE_IDS_SEARCH, BIBLE_BOOKS_ABBR, BIBLE_BOOK_NUMBERS, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from "@/lib/bible";
 import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, StrongsDetail, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference } from "@/lib/bible";
 
 // New types and action
@@ -215,7 +215,7 @@ async function getKJVChapterFromBolls(
         });
 
         const result: BibleChapterResponse = {
-            book: { name: book, id: BIBLE_ABBR_BOOKS[book] },
+            book: { name: book, id: BIBLE_BOOKS_ABBR[book] },
             chapter: { number: parseInt(chapter, 10), content: chapterContent },
             translation: { name: 'King James Version', id: 'KJV' },
             copyright: "Public Domain. Modified by bolls.life."
@@ -239,7 +239,7 @@ async function getCrossReferences(
     'Song of Songs': 'Song of Solomon',
   };
   const canonicalBook = bookNameAliases[book] || book;
-  const bookId = BIBLE_ABBR_BOOKS[canonicalBook] || canonicalBook;
+  const bookId = BIBLE_BOOKS_ABBR[canonicalBook] || canonicalBook;
 
   try {
     const response = await fetch(
@@ -269,7 +269,7 @@ async function getChapterFromApiBible(
   translationId: keyof typeof API_BIBLE_IDS
 ): Promise<BibleChapterResponse | null> {
   const bibleId = API_BIBLE_IDS[translationId];
-  const bookAbbr = BIBLE_ABBR_BOOKS[book];
+  const bookAbbr = BIBLE_BOOKS_ABBR[book];
   if (!bookAbbr) {
     return null;
   }
@@ -488,7 +488,7 @@ async function getChapter(
       'Song of Songs': 'Song of Solomon',
     };
     const canonicalBook = bookNameAliases[book] || book;
-    const bookId = BIBLE_ABBR_BOOKS[canonicalBook] || canonicalBook;
+    const bookId = BIBLE_BOOKS_ABBR[canonicalBook] || canonicalBook;
 
     let attempts = 0;
     const maxRetries = 3;
@@ -648,3 +648,5 @@ export async function getPageData(book: string, chapter: string, translationId: 
         crossRefs: crossRefData
     };
 }
+
+    
