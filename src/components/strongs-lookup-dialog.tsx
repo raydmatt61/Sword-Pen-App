@@ -160,7 +160,7 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
                 </CardContent>
                 <CardFooter>
                     <p className="text-xs text-muted-foreground">
-                        Data from Sefaria &amp; bolls.life.
+                        Data from bolls.life.
                     </p>
                 </CardFooter>
               </Card>

@@ -64,31 +64,6 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
 
 export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
     try {
-        // First attempt: Sefaria API (more detailed)
-        try {
-            const sefariaResponse = await fetch(`https://www.sefaria.org/api/lexicon/strongs/${strongsNumber.toUpperCase()}`);
-            if (sefariaResponse.ok) {
-                const data = await sefariaResponse.json();
-                if (data && data.content) {
-                    const detail: StrongsDetail = {
-                        strongsNumber: strongsNumber.toUpperCase(),
-                        lemma: data.lemma,
-                        transliteration: data.transliteration,
-                        pronunciation: data.pronunciation,
-                        shortDefinition: data.content.strongs_def,
-                        longDefinition: data.content['full-declension'] || undefined,
-                        kjvDefinition: data.content.kjv_def,
-                        strongsDerivation: data.content.strongs_derivation,
-                    };
-                    return [detail];
-                }
-            }
-        } catch (e) {
-            // Sefaria fetch failed, will proceed to fallback.
-            console.warn("Sefaria API fetch failed, falling back to bolls.life", e);
-        }
-        
-        // Fallback: bolls.life API
         const bollsResponse = await fetch(`https://bolls.life/api/strongs/${strongsNumber.toUpperCase()}`);
         if (!bollsResponse.ok) {
             return null;
@@ -105,7 +80,6 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
             transliteration: data.translit,
             pronunciation: data.pronunciation,
             shortDefinition: data.strongs_def,
-            // longDefinition is not available from bolls.life
             kjvDefinition: data.kjv_def,
             strongsDerivation: data.strongs_derivation,
         };
