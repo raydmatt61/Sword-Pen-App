@@ -4,7 +4,6 @@
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
 import { API_BIBLE_IDS_SEARCH, BIBLE_ABBR_BOOKS, BIBLE_BOOK_NUMBERS, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from "@/lib/bible";
 import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, StrongsDetail, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, Footnote, VerseFootnoteReference } from "@/lib/bible";
-import { strongsGreekDictionary } from "@/lib/strongs-greek-dictionary";
 
 // New types and action
 interface SearchBibleInput {
@@ -65,22 +64,25 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
 
 export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
     try {
-        const dictionary: Record<string, any> = strongsGreekDictionary;
-        const entry = dictionary[strongsNumber.toUpperCase()];
+        const response = await fetch(`https://www.sefaria.org/api/lexicon/strongs/${strongsNumber.toUpperCase()}`);
+        if (!response.ok) {
+            return null;
+        }
+        const data = await response.json();
 
-        if (!entry) {
+        if (!data || !data.content) {
             return null;
         }
 
         const detail: StrongsDetail = {
             strongsNumber: strongsNumber.toUpperCase(),
-            lemma: entry.lemma,
-            transliteration: entry.translit,
-            pronunciation: "", // This info is not in the new data source.
-            shortDefinition: entry.strongs_def,
-            longDefinition: "", // This info is not in the new data source.
-            kjvDefinition: entry.kjv_def,
-            strongsDerivation: entry.derivation,
+            lemma: data.lemma,
+            transliteration: data.transliteration,
+            pronunciation: data.pronunciation,
+            shortDefinition: data.content.strongs_def,
+            longDefinition: data.content['full-declension'] || "",
+            kjvDefinition: data.content.kjv_def,
+            strongsDerivation: data.content.strongs_derivation,
         };
 
         return [detail];
