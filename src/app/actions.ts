@@ -103,7 +103,7 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
             strongsNumber: strongsNumber.toUpperCase(),
             lemma: data.lemma,
             transliteration: data.translit,
-            // pronunciation is not available from bolls.life
+            pronunciation: data.pronunciation,
             shortDefinition: data.strongs_def,
             // longDefinition is not available from bolls.life
             kjvDefinition: data.kjv_def,

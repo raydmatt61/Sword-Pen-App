@@ -130,7 +130,7 @@ export function StrongsPopover({ children, strongsNumber, navigate }: StrongsPop
                                 </CardContent>
                                 <CardFooter>
                                   <p className="text-xs text-muted-foreground">
-                                    Data from Sefaria, <a href="https://github.com/openscriptures/strongs" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Open Scriptures</a> & bolls.life.
+                                    Data from Sefaria &amp; bolls.life.
                                   </p>
                                 </CardFooter>
                             </Card>

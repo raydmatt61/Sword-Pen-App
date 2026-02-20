@@ -160,7 +160,7 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
                 </CardContent>
                 <CardFooter>
                     <p className="text-xs text-muted-foreground">
-                        Data from <a href="https://github.com/openscriptures/strongs" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Open Scriptures</a> & bolls.life.
+                        Data from Sefaria &amp; bolls.life.
                     </p>
                 </CardFooter>
               </Card>
