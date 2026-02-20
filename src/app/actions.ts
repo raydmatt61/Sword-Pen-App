@@ -65,7 +65,7 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
 export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
     try {
         const upperCaseStrongs = strongsNumber.toUpperCase();
-        const bollsResponse = await fetch(`https://bolls.life/api/strongs/${upperCaseStrongs}`);
+        const bollsResponse = await fetch(`https://bolls.life/api/strongs/${upperCaseStrongs}`, { cache: 'no-store' });
         if (!bollsResponse.ok) {
             return null;
         }
