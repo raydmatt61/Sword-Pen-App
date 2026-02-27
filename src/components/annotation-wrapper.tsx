@@ -3,7 +3,6 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useUser } from '@/firebase';
-import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Trash2, StickyNote, Highlighter, Underline, X } from 'lucide-react';
@@ -11,6 +10,7 @@ import { AiInsightGenerator } from './ai-insight-generator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { useAnnotationContext } from '@/contexts/annotation-context';
+import { cn } from '@/lib/utils';
 
 const highlightColors = [
     { class: 'hl-yellow', color: '#fef08a' },
@@ -94,91 +94,89 @@ export function AnnotationWrapper() {
     const showToolbar = (selection || activeAnnotation) && user;
 
     return (
-        <Card>
-            <div className="relative flex items-center justify-center p-2" style={{minHeight: '56px'}}>
-                {!showToolbar ? (
-                    <p className="text-sm text-muted-foreground text-center px-4">
-                        {!user ? "Sign in to annotate verses." : "Select text in the chapter to annotate."}
-                    </p>
-                ) : (
-                   <div ref={toolbarRef} id="annotation-toolbar" className="w-full">
-                       <div className="flex items-center justify-center gap-1 p-1 bg-background border rounded-lg shadow-md w-full">
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8"><Highlighter /></Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-1">
-                                    <div className="flex gap-1">
-                                        {highlightColors.map(h => <button key={h.class} onClick={() => onHighlight(h.class)} className="h-6 w-6 rounded" style={{ backgroundColor: h.color }} title={`Highlight ${h.class.split('-')[1]}`}></button>)}
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onHighlight(null)}><X className="h-4 w-4"/></Button>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8"><Underline /></Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-1">
-                                    <div className="flex gap-1 items-center">
-                                        {underlineColors.map(u => <button key={u.class} onClick={() => onUnderline(u.class)} className="h-6 w-6 rounded flex items-center justify-center" style={{ backgroundColor: u.color }} title={`Underline ${u.class.split('-')[1]}`}><div className="w-4 h-0.5 bg-white"></div></button>)}
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUnderline(null)}><X className="h-4 w-4"/></Button>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
+        <div className="relative flex items-center justify-center p-1 md:p-2 border rounded-lg bg-background/50 min-h-[36px] md:min-h-[48px] w-full">
+            {!showToolbar ? (
+                <p className="text-[10px] md:text-xs text-muted-foreground text-center leading-tight">
+                    {!user ? "Sign in" : "Select text to annotate"}
+                </p>
+            ) : (
+               <div ref={toolbarRef} id="annotation-toolbar" className="w-full">
+                   <div className="flex items-center justify-center gap-0.5 md:gap-1 p-0.5 bg-background border rounded-lg shadow-sm w-full overflow-x-auto">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8"><Highlighter className="h-4 w-4" /></Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-1" align="start">
+                                <div className="flex gap-1">
+                                    {highlightColors.map(h => <button key={h.class} onClick={() => onHighlight(h.class)} className="h-6 w-6 rounded" style={{ backgroundColor: h.color }}></button>)}
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onHighlight(null)}><X className="h-4 w-4"/></Button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8"><Underline className="h-4 w-4" /></Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-1" align="start">
+                                <div className="flex gap-1 items-center">
+                                    {underlineColors.map(u => <button key={u.class} onClick={() => onUnderline(u.class)} className="h-6 w-6 rounded flex items-center justify-center" style={{ backgroundColor: u.color }}><div className="w-4 h-0.5 bg-white"></div></button>)}
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUnderline(null)}><X className="h-4 w-4"/></Button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
 
-                            <Popover open={isEditingNote} onOpenChange={(open) => {
-                                if (!open) handleCancelEdit();
-                                setIsEditingNote(open);
-                            }}>
-                                <PopoverTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNote} disabled={!activeAnnotation && !selection}>
-                                            <StickyNote />
-                                        </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80">
-                                    <div className="grid gap-4">
-                                        <div className="space-y-2">
-                                            <h4 className="font-medium leading-none">Annotation Note</h4>
-                                            {(activeAnnotation || selection) && (
-                                            <p className="text-sm text-muted-foreground">
-                                                For your selection in {fullReference}:{activeAnnotation?.verse || selection?.verseElements[0].dataset.verseNumber}.
-                                            </p>
-                                            )}
-                                        </div>
-                                        <Textarea
-                                            placeholder="Your thoughts on this selection..."
-                                            value={note}
-                                            onChange={(e) => setNote(e.target.value)}
-                                            className="font-body text-sm"
-                                            rows={5}
-                                            autoFocus
-                                        />
-                                        <div className="flex gap-2 justify-end">
-                                            <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}>Save</Button>
-                                            <Button onClick={handleCancelEdit} size="sm" variant="ghost">Cancel</Button>
-                                        </div>
+                        <Popover open={isEditingNote} onOpenChange={(open) => {
+                            if (!open) handleCancelEdit();
+                            setIsEditingNote(open);
+                        }}>
+                            <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" onClick={onNote} disabled={!activeAnnotation && !selection}>
+                                        <StickyNote className="h-4 w-4" />
+                                    </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80">
+                                <div className="grid gap-4">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium leading-none">Annotation Note</h4>
+                                        {(activeAnnotation || selection) && (
+                                        <p className="text-sm text-muted-foreground">
+                                            For {fullReference}:{activeAnnotation?.verse || selection?.verseElements[0].dataset.verseNumber}.
+                                        </p>
+                                        )}
                                     </div>
-                                </PopoverContent>
-                            </Popover>
+                                    <Textarea
+                                        placeholder="Your thoughts..."
+                                        value={note}
+                                        onChange={(e) => setNote(e.target.value)}
+                                        className="font-body text-sm"
+                                        rows={4}
+                                        autoFocus
+                                    />
+                                    <div className="flex gap-2 justify-end">
+                                        <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}>Save</Button>
+                                        <Button onClick={handleCancelEdit} size="sm" variant="ghost">Cancel</Button>
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
 
-                            {activeAnnotation?.note && (
-                                <AiInsightGenerator
-                                    verse={`${fullReference}:${activeAnnotation.verse} ("${activeAnnotation.text}")`}
-                                    annotation={activeAnnotation.note}
-                                />
-                            )}
+                        {activeAnnotation?.note && (
+                            <AiInsightGenerator
+                                verse={`${fullReference}:${activeAnnotation.verse} ("${activeAnnotation.text}")`}
+                                annotation={activeAnnotation.note}
+                            />
+                        )}
 
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={handleDelete} disabled={!activeAnnotation}><Trash2 /></Button>
-                       </div>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 text-destructive" onClick={handleDelete} disabled={!activeAnnotation}><Trash2 className="h-4 w-4" /></Button>
                    </div>
-                )}
-                 {showToolbar && (
-                    <Button variant="ghost" size="icon" onClick={resetAnnotationState} className="h-6 w-6 absolute top-1 right-1">
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Close annotation</span>
-                    </Button>
-                )}
-            </div>
-        </Card>
+               </div>
+            )}
+             {showToolbar && (
+                <Button variant="ghost" size="icon" onClick={resetAnnotationState} className="h-4 w-4 md:h-6 md:w-6 absolute -top-1 -right-1 md:top-0.5 md:right-0.5 bg-background border rounded-full shadow-sm">
+                    <X className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="sr-only">Close</span>
+                </Button>
+            )}
+        </div>
     );
 }

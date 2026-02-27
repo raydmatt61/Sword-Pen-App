@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent } from "@/components/ui/card";
 import type { Book, Translation } from '@/lib/bible';
 import { ChevronsRight, ChevronLeft, ChevronRight, History, ChevronsUpDown, Hash } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
@@ -126,7 +125,6 @@ export function VerseSelector({
   
   useEffect(() => {
     if (!isBookSelectorOpen) {
-        // Reset state when popover/dialog is closed
         setTimeout(() => {
             setSelectionStep('book');
             setTempBook(defaultValues.book);
@@ -141,8 +139,8 @@ export function VerseSelector({
 
   const handleChapterSelect = (newChapter: number) => {
     navigate({ book: tempBook, chapter: String(newChapter) });
-    setIsBookSelectorOpen(false); // closes popover/dialog
-    setIsMobileSheetOpen(false); // closes sheet on mobile
+    setIsBookSelectorOpen(false); 
+    setIsMobileSheetOpen(false); 
   };
 
   const handleGoBack = () => {
@@ -165,76 +163,75 @@ export function VerseSelector({
   const maxChaptersForCurrentBook = useMemo(() => books.find(b => b.commonName === defaultValues.book)?.numberOfChapters || 1, [books, defaultValues.book]);
   
   const renderDesktopControls = () => (
-    <Card className="animate-in fade-in duration-500">
-      <CardContent className="pt-6">
-         <div className="flex items-center gap-2">
-            <Popover open={isBookSelectorOpen} onOpenChange={setIsBookSelectorOpen}>
-                <PopoverTrigger asChild>
-                     <Button variant="outline" className="w-[270px] justify-between">
-                        <span>{defaultValues.book} {defaultValues.chapter}</span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[340px] p-0">
-                    {selectionStep === 'book' ? (
-                        <BookSelectorGrid books={books} currentBook={defaultValues.book} onSelect={handleBookSelect} />
-                    ) : (
-                        <div>
-                            <div className="p-2 border-b flex items-center gap-2">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectionStep('book')}><ChevronLeft /></Button>
-                                <p className="font-medium">{tempBook}</p>
-                            </div>
-                            <ChapterSelectorGrid 
-                                numberOfChapters={books.find(b => b.commonName === tempBook)?.numberOfChapters || 1} 
-                                onSelect={handleChapterSelect} 
-                            />
+    <div className="flex items-center gap-2 animate-in fade-in duration-500">
+        <Popover open={isBookSelectorOpen} onOpenChange={setIsBookSelectorOpen}>
+            <PopoverTrigger asChild>
+                 <Button variant="outline" className="w-[200px] justify-between h-9">
+                    <span className="truncate">{defaultValues.book} {defaultValues.chapter}</span>
+                    <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[340px] p-0">
+                {selectionStep === 'book' ? (
+                    <BookSelectorGrid books={books} currentBook={defaultValues.book} onSelect={handleBookSelect} />
+                ) : (
+                    <div>
+                        <div className="p-2 border-b flex items-center gap-2">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectionStep('book')}><ChevronLeft /></Button>
+                            <p className="font-medium">{tempBook}</p>
                         </div>
-                    )}
-                </PopoverContent>
-            </Popover>
+                        <ChapterSelectorGrid 
+                            numberOfChapters={books.find(b => b.commonName === tempBook)?.numberOfChapters || 1} 
+                            onSelect={handleChapterSelect} 
+                        />
+                    </div>
+                )}
+            </PopoverContent>
+        </Popover>
 
-            <Select value={defaultValues.translation} onValueChange={(t) => navigate({ translation: t })}>
-                <SelectTrigger id="translation" aria-label="Translation" className="w-[90px]"><SelectValue placeholder="Translation" /></SelectTrigger>
-                <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id.toUpperCase()}</SelectItem>)}</SelectContent>
-            </Select>
-            
-             <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} aria-label="Previous Chapter">
-                <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook} aria-label="Next Chapter">
-                <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Popover open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
-                <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon" type="button" aria-label="Go to verse" disabled={maxVerses === 0}>
-                        <Hash className="h-4 w-4" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[340px] p-0">
-                    <VerseSelectorGrid 
-                        numberOfVerses={maxVerses} 
-                        onSelect={handleVerseSelect} 
-                    />
-                </PopoverContent>
-            </Popover>
-            <Button variant="outline" size="icon" type="button" onClick={handleGoBack} aria-label="Go to last location">
-                <History className="h-4 w-4" />
-            </Button>
-        </div>
-      </CardContent>
-    </Card>
+        <Select value={defaultValues.translation} onValueChange={(t) => navigate({ translation: t })}>
+            <SelectTrigger id="translation" aria-label="Translation" className="w-[80px] h-9 text-xs"><SelectValue placeholder="Tr" /></SelectTrigger>
+            <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id.toUpperCase()}</SelectItem>)}</SelectContent>
+        </Select>
+        
+         <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} className="h-9 w-9">
+            <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook} className="h-9 w-9">
+            <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Popover open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" size="icon" type="button" className="h-9 w-9" disabled={maxVerses === 0}>
+                    <Hash className="h-4 w-4" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[340px] p-0">
+                <VerseSelectorGrid 
+                    numberOfVerses={maxVerses} 
+                    onSelect={handleVerseSelect} 
+                />
+            </PopoverContent>
+        </Popover>
+        <Button variant="outline" size="icon" type="button" onClick={handleGoBack} className="h-9 w-9">
+            <History className="h-4 w-4" />
+        </Button>
+    </div>
   );
 
   const renderMobileControls = () => (
     <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
         <SheetTrigger asChild>
-            <Button variant="outline" className="w-full">
-                {defaultValues.book} {defaultValues.chapter} ({defaultValues.translation.toUpperCase()})
+            <Button variant="outline" className="w-full h-9 text-xs px-2 justify-between">
+                <span className="truncate">
+                    {defaultValues.book} {defaultValues.chapter} ({defaultValues.translation.toUpperCase()})
+                </span>
+                <ChevronsUpDown className="h-3 w-3 opacity-50 shrink-0" />
             </Button>
         </SheetTrigger>
         <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
             <SheetHeader>
-                <SheetTitle>Select a Verse</SheetTitle>
+                <SheetTitle>Navigation</SheetTitle>
             </SheetHeader>
             <div className="py-4 space-y-4">
                  <Dialog open={isBookSelectorOpen} onOpenChange={setIsBookSelectorOpen}>
@@ -284,7 +281,7 @@ export function VerseSelector({
                             numberOfVerses={maxVerses} 
                             onSelect={(v) => {
                                 handleVerseSelect(v);
-                                setIsMobileSheetOpen(false); // also close the main sheet
+                                setIsMobileSheetOpen(false);
                             }} 
                         />
                     </DialogContent>
@@ -296,9 +293,9 @@ export function VerseSelector({
                 </Select>
                 
                  <div className="flex gap-2 w-full">
-                    <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} aria-label="Previous Chapter"><ChevronLeft className="h-4 w-4" /></Button>
-                    <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook} aria-label="Next Chapter"><ChevronRight className="h-4 w-4" /></Button>
-                    <Button variant="outline" size="icon" type="button" onClick={handleGoBack} aria-label="Go to last location">
+                    <Button variant="outline" size="icon" className="flex-1" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1}><ChevronLeft className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon" className="flex-1" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook}><ChevronRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon" className="flex-1" onClick={handleGoBack}>
                         <History className="h-4 w-4" />
                     </Button>
                 </div>
@@ -309,11 +306,9 @@ export function VerseSelector({
 
   if (!isClient) {
     return (
-        <Card className="animate-in fade-in duration-500">
-            <CardContent className="pt-6">
-                 <Skeleton className="h-[40px] w-full" />
-            </CardContent>
-        </Card>
+        <div className="w-full animate-in fade-in duration-500">
+             <Skeleton className="h-9 w-full" />
+        </div>
     );
   }
 

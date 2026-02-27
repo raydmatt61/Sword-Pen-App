@@ -48,18 +48,15 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   }, [chapterData]);
 
   useEffect(() => {
-    // Only show toast if a fallback has actually occurred.
     if (chapterData && chapterData.translation.id !== initialTranslationId) {
         const isApiBibleTranslation = ['CSB', 'NIV', 'NASB'].includes(initialTranslationId);
         
         if (isApiBibleTranslation) {
-            // This case handles fallbacks from CSB, NIV, NASB which are likely permission issues.
             toast({
                 title: "Translation Permission Issue",
                 description: `Could not load ${initialTranslationId}. This may be a permission issue. Please ensure you have accepted the terms for this translation on api.bible. Displaying in BSB instead.`,
             });
         } else {
-            // This handles fallbacks from other translations.
             toast({
                 title: "Translation Fallback",
                 description: `Could not load ${initialBook} ${initialChapter} in ${TRANSLATIONS.find(t=>t.id === initialTranslationId)?.name || initialTranslationId}. Displaying in BSB instead.`,
@@ -75,7 +72,6 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     const isNewBook = newValues.book && newValues.book !== current.get('book');
     const isNewChapter = newValues.chapter && newValues.chapter !== current.get('chapter');
     
-    // If book or chapter changes, clear the verse param
     if (isNewBook || isNewChapter) {
         current.delete('verse');
     }
@@ -102,26 +98,22 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   }, [initialChapter, maxChapters, navigate]);
   
   useEffect(() => {
-    // Scroll to top when book or chapter changes
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
   }, [initialBook, initialChapter, initialTranslationId]);
 
   useEffect(() => {
-    // Scroll to verse if 'verse' param is present
     if (verseParam && chapterData && contentRef.current) {
         const verseElement = contentRef.current.querySelector(`div[data-verse-number="${verseParam}"]`);
         if (verseElement) {
             verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            // Add highlight effect
             verseElement.classList.add('verse-highlight');
             const timeoutId = setTimeout(() => {
                 verseElement.classList.remove('verse-highlight');
             }, 2500);
 
-            // Cleanup timeout on component unmount or param change
             return () => clearTimeout(timeoutId);
         }
     }
@@ -129,19 +121,19 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
 
   return (
     <AnnotationProvider key={providerKey} chapterData={chapterData}>
-      <main className="flex flex-col h-screen">
-        <header className="flex items-center justify-between border-b p-2 md:p-4">
+      <main className="flex flex-col h-screen overflow-hidden">
+        <header className="flex items-center justify-between border-b px-2 py-1 md:px-4 md:py-2 shrink-0">
           <div className="flex items-center gap-2">
             <div>
-              <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
+              <h1 className="text-lg md:text-2xl font-headline font-bold text-primary">
                 Verse Insights
               </h1>
-              <p className="text-xs text-muted-foreground mt-1 font-headline">
+              <p className="hidden md:block text-xs text-muted-foreground mt-1 font-headline">
                 Deepen your Bible study with annotations, notes and AI-powered insights.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             <SearchDialog translationId={initialTranslationId} navigate={navigate} />
             <StrongsLookupDialog navigate={navigate} />
             <FontSizeAdjuster />
@@ -150,8 +142,8 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
           </div>
         </header>
 
-        <div className="sticky top-0 z-20 grid grid-cols-1 md:grid-cols-5 gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
-          <div className="md:col-span-3">
+        <div className="sticky top-0 z-20 flex flex-row items-center gap-2 bg-background/80 backdrop-blur-sm px-2 py-1.5 md:px-4 md:py-2 border-b shrink-0">
+          <div className="flex-[3] min-w-0">
             <VerseSelector
                 defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslationId }}
                 books={books}
@@ -161,18 +153,18 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
                 maxVerses={maxVerses}
             />
           </div>
-          <div className="md:col-span-2">
+          <div className="flex-[2] min-w-0">
             {chapterData && <AnnotationWrapper />}
           </div>
         </div>
 
-        <div ref={contentRef} className="flex-grow overflow-y-auto p-4">
+        <div ref={contentRef} className="flex-grow overflow-y-auto p-2 md:p-4">
           {!chapterData ? (
             <Card className="mt-6 animate-in fade-in duration-500">
               <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">
+                <p className="text-center text-muted-foreground text-sm">
                   Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span> ({TRANSLATIONS.find(t=>t.id === initialTranslationId)?.name || initialTranslationId}).
-                  This may be due to a network issue or the chapter not being available in this translation. Please try a different selection.
+                  Please try a different selection.
                 </p>
               </CardContent>
             </Card>
@@ -230,8 +222,6 @@ function PageWithSearchParams() {
   const translationUrlParam = searchParams.get('translation') || 'BSB';
   const queryKey = `${book}-${chapter}-${translationUrlParam}`;
   
-  // This state is just to prevent a flash of default content on initial load
-  // if there are no search params and we need to load from local storage.
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -240,7 +230,6 @@ function PageWithSearchParams() {
       if (savedLocationRaw) {
         try {
           const savedLocation = JSON.parse(savedLocationRaw);
-          // Replace URL and let the component re-render with new params.
           router.replace(`${pathname}?book=${savedLocation.book}&chapter=${savedLocation.chapter}&translation=${savedLocation.translationId}`);
         } catch (e) {
           console.error("Failed to parse last location from localStorage", e);
@@ -254,9 +243,7 @@ function PageWithSearchParams() {
     }
   }, [searchParams, router, pathname]);
   
-  // Save to localStorage whenever the effective location changes.
   useEffect(() => {
-    // Only save if the book param is present, to avoid overwriting on initial load before redirect.
     if (searchParams.has('book')) {
       const location = { book, chapter, translationId: translationUrlParam };
       localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify(location));
@@ -296,10 +283,6 @@ function BibleDisplaySkeleton() {
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-1/2" />
         </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-1/4" />
-          <Skeleton className="h-4 w-2/3" />
-        </div>
       </CardContent>
     </Card>
   );
@@ -307,36 +290,32 @@ function BibleDisplaySkeleton() {
 
 function FullPageSkeleton() {
   return (
-    <main className="flex flex-col h-screen">
-      <header className="flex items-center justify-between border-b p-2 md:p-4">
+    <main className="flex flex-col h-screen overflow-hidden">
+      <header className="flex items-center justify-between border-b px-2 py-1 md:px-4 md:py-2 shrink-0">
         <div className="flex items-center gap-2">
           <div>
-            <h1 className="text-xl md:text-2xl font-headline font-bold text-primary">
+            <h1 className="text-lg md:text-2xl font-headline font-bold text-primary">
               Verse Insights
             </h1>
-            <p className="text-xs text-muted-foreground mt-1 font-headline">
-              Deepen your Bible study with annotations, notes and AI-powered insights.
-            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
             <Skeleton className="h-8 w-8" />
             <Skeleton className="h-8 w-8" />
             <Skeleton className="h-8 w-8" />
-            <Skeleton className="h-10 w-24" />
         </div>
       </header>
       
-      <div className="sticky top-0 z-20 grid grid-cols-1 md:grid-cols-5 gap-4 bg-background/80 backdrop-blur-sm p-4 border-b">
-        <div className="md:col-span-3">
-          <Skeleton className="h-[40px] w-full" />
+      <div className="sticky top-0 z-20 flex flex-row items-center gap-2 bg-background/80 backdrop-blur-sm px-2 py-1.5 md:px-4 md:py-2 border-b shrink-0">
+        <div className="flex-[3] min-w-0">
+          <Skeleton className="h-[36px] md:h-[40px] w-full" />
         </div>
-        <div className="md:col-span-2">
-          <Skeleton className="h-[56px] w-full" />
+        <div className="flex-[2] min-w-0">
+          <Skeleton className="h-[36px] md:h-[56px] w-full" />
         </div>
       </div>
 
-      <div className="flex-grow overflow-y-auto p-4">
+      <div className="flex-grow overflow-y-auto p-2 md:p-4">
          <BibleDisplaySkeleton />
       </div>
     </main>
