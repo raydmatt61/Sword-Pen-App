@@ -297,9 +297,14 @@ function FullPageSkeleton() {
             <h1 className="text-lg md:text-2xl font-headline font-bold text-primary">
               Verse Insights
             </h1>
+            <div className="hidden md:block">
+              <Skeleton className="h-3 w-48 mt-1" />
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1 md:gap-2">
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-8" />
             <Skeleton className="h-8 w-8" />
             <Skeleton className="h-8 w-8" />
             <Skeleton className="h-8 w-8" />
@@ -308,10 +313,10 @@ function FullPageSkeleton() {
       
       <div className="sticky top-0 z-20 flex flex-row items-center gap-2 bg-background/80 backdrop-blur-sm px-2 py-1.5 md:px-4 md:py-2 border-b shrink-0">
         <div className="flex-[3] min-w-0">
-          <Skeleton className="h-[36px] md:h-[40px] w-full" />
+          <Skeleton className="h-9 w-full" />
         </div>
         <div className="flex-[2] min-w-0">
-          <Skeleton className="h-[36px] md:h-[56px] w-full" />
+          <Skeleton className="h-9 w-full" />
         </div>
       </div>
 
