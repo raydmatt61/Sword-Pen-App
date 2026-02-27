@@ -99,9 +99,9 @@ export function AnnotationWrapper() {
     const showToolbar = (selection || activeAnnotation) && user;
 
     return (
-        <div className="relative flex items-center justify-center p-1 md:p-2 border rounded-lg bg-background/50 min-h-[36px] md:min-h-[48px] w-full">
+        <div className="relative flex items-center justify-center p-1 md:p-2 border rounded-lg bg-background/50 min-h-[40px] md:min-h-[56px] w-full">
             {!showToolbar ? (
-                <p className="text-[10px] md:text-xs text-muted-foreground text-center leading-tight">
+                <p className="text-sm md:text-lg font-bold text-muted-foreground text-center leading-tight">
                     {!user ? "Sign in" : "Select text to annotate"}
                 </p>
             ) : (
