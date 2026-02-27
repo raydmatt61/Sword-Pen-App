@@ -63,23 +63,23 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
 
 /**
  * Fetches Strong's concordance definition from bolls.life API.
- * Uses a robust fetching strategy with prefix inference and User-Agent headers.
+ * Uses a robust fetching strategy with trailing slashes and nested data handling.
  */
 export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
-    let cleanStrongs = strongsNumber.trim().toUpperCase();
+    const cleanStrongs = strongsNumber.trim().toUpperCase();
     if (!cleanStrongs) return null;
 
-    // Helper to fetch from bolls.life
     async function fetchFromBolls(code: string) {
         try {
-            // bolls.life API usually works best with a trailing slash
+            // bolls.life API requires the code as the final segment with a trailing slash
             const url = `https://bolls.life/api/strongs/${code}/`;
             const response = await fetch(url, { 
                 headers: { 'User-Agent': 'Mozilla/5.0 (VerseInsights/1.0)' },
-                next: { revalidate: 3600 } 
+                cache: 'no-store'
             });
             if (!response.ok) return null;
             const data = await response.json();
+            // The API returns an object where the key is the Strong's number
             return data[code] || null;
         } catch (e) {
             return null;
@@ -88,14 +88,16 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
 
     let strongsData = await fetchFromBolls(cleanStrongs);
     
-    // If no result and the input was just a number, try to infer 'G' (Greek) then 'H' (Hebrew)
-    if (!strongsData && /^\d+$/.test(cleanStrongs)) {
-        strongsData = await fetchFromBolls('G' + cleanStrongs);
-        if (!strongsData) {
-            strongsData = await fetchFromBolls('H' + cleanStrongs);
-            if (strongsData) cleanStrongs = 'H' + cleanStrongs;
-        } else {
-            cleanStrongs = 'G' + cleanStrongs;
+    // If no result, try to infer 'G' (Greek) then 'H' (Hebrew) prefixes if missing
+    if (!strongsData) {
+        const numOnly = cleanStrongs.replace(/^[GH]/, '');
+        if (/^\d+$/.test(numOnly)) {
+            if (!cleanStrongs.startsWith('G')) {
+                strongsData = await fetchFromBolls('G' + numOnly);
+            }
+            if (!strongsData && !cleanStrongs.startsWith('H')) {
+                strongsData = await fetchFromBolls('H' + numOnly);
+            }
         }
     }
     
@@ -107,10 +109,10 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
         strongsNumber: cleanStrongs,
         lemma: strongsData.lemma || '',
         transliteration: strongsData.xlit || '',
-        pronunciation: strongsData.pron,
+        pronunciation: strongsData.pron || '',
         shortDefinition: strongsData.strongs_def || '',
         kjvDefinition: strongsData.kjv_def || '',
-        strongsDerivation: strongsData.derivation,
+        strongsDerivation: strongsData.derivation || '',
     };
 
     return [detail];
@@ -127,25 +129,42 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
 }
 
 /**
- * Parses raw <S>strongsNum</S> tags from a string and returns VerseContent items.
+ * Parses raw <S>strongsNum</S> tags and other HTML-like tags (e.g. <sup>) from a string.
+ * It ignores non-Strong's tags and associates Strong's numbers with the preceding text.
  */
 function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
     const content: VerseContent[] = [];
-    // Regex to match text followed by a Strong's tag
-    const regex = /([^<]+)(?:<S>(\d+)<\/S>)?|(<S>(\d+)<\/S>)/g;
+    // Regex: Match text segments, <S> tags, or any other <tag>
+    const regex = /([^<]+)|(<S>(\d+)<\/S>)|(<[^>]+>)/g;
     let match;
 
     while ((match = regex.exec(text)) !== null) {
-        if (match[3]) { // Just a tag without leading text
-            content.push({ text: '', strongs: [prefix + match[4]] });
-        } else {
-            const wordText = match[1];
-            const strongsNum = match[2];
-            if (strongsNum) {
-                content.push({ text: wordText, strongs: [prefix + strongsNum] });
+        if (match[1]) { // Text segment
+            content.push(match[1]);
+        } else if (match[2]) { // Strong's tag <S>123</S>
+            const strongsNum = prefix + match[3];
+            const lastIdx = content.length - 1;
+            
+            if (lastIdx >= 0) {
+                const lastItem = content[lastIdx];
+                if (typeof lastItem === 'string') {
+                    // Convert preceding string to FormattedText with Strong's
+                    content[lastIdx] = { text: lastItem, strongs: [strongsNum] };
+                } else if (typeof lastItem === 'object' && 'text' in lastItem && !('noteId' in lastItem)) {
+                    const ft = lastItem as FormattedText;
+                    if (!ft.strongs) ft.strongs = [];
+                    if (!ft.strongs.includes(strongsNum)) {
+                        ft.strongs.push(strongsNum);
+                    }
+                } else {
+                    content.push({ text: '', strongs: [strongsNum] });
+                }
             } else {
-                content.push(wordText);
+                content.push({ text: '', strongs: [strongsNum] });
             }
+        } else if (match[4]) {
+            // Other tags (like <sup>, </sup>): We skip them to avoid "sup>" in the UI
+            // The text content between them is handled by the first group in subsequent iterations
         }
     }
 
@@ -158,7 +177,7 @@ function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
 
 /**
  * Collapses sequential text fragments into single FormattedText objects.
- * Intelligently handles spacing between fragments.
+ * Intelligently handles spacing between fragments, ignoring punctuation and empty text.
  */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length < 2) return content;
@@ -172,9 +191,8 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
         const currentObj = typeof currentItem === 'string' ? { text: currentItem } : currentItem as FormattedText;
         const nextObj = typeof nextItem === 'string' ? { text: nextItem } : nextItem as FormattedText;
 
-        // Check if items can be physically merged into one object
         const isJesusEqual = !!currentObj.wordsOfJesus === !!nextObj.wordsOfJesus;
-        const isStrongsEqual = !currentObj.strongs && !nextObj.strongs; 
+        const isStrongsEqual = JSON.stringify(currentObj.strongs) === JSON.stringify(nextObj.strongs); 
         
         const isSimpleMergeable = !('noteId' in currentObj) && !('noteId' in nextObj) && 
                                  !('heading' in currentObj) && !('heading' in nextObj) &&
@@ -183,7 +201,6 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
         const lastText = currentObj.text;
         const nextText = nextObj.text;
 
-        // Logic to determine if a space is needed between fragments
         const needsSpace = !(
             lastText.endsWith(' ') || 
             lastText.endsWith('\n') ||
@@ -191,18 +208,17 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
             lastText.endsWith('[') ||
             lastText.endsWith('"') ||
             lastText.endsWith("'") ||
+            nextText === '' ||
             nextText.startsWith(' ') || 
             nextText.startsWith('\n') ||
             /^[.,?!:;’”)}\]]/.test(nextText) 
         );
 
         if (isSimpleMergeable && isJesusEqual && isStrongsEqual) {
-            // MERGE: They are identical in style and Strong's, so merge into one object
             currentObj.text = lastText + (needsSpace ? ' ' : '') + nextText;
             currentItem = currentObj;
         } else {
-            // SEPARATE: They have different metadata (like Strong's), so they must stay separate.
-            if (needsSpace && !lastText.endsWith(' ')) {
+            if (needsSpace) {
                 currentObj.text = lastText + ' ';
             }
             collapsed.push(currentItem);
@@ -252,7 +268,6 @@ async function getKJVChapterFromBolls(
         const chapterContent: ChapterContentItem[] = bollsVerses.map(v => {
             let verseContent: VerseContent[] = [];
             
-            // Try to use structured strong's data first
             if (v.text_strongs && Array.isArray(v.text_strongs)) {
                 v.text_strongs.forEach(sw => {
                     const formattedText: FormattedText = { text: sw.w };
@@ -265,7 +280,6 @@ async function getKJVChapterFromBolls(
                     verseContent.push(formattedText);
                 });
             } else {
-                // Parse raw tags from the text field
                 verseContent = parseBollsStrongTags(v.text, prefix);
             }
 
