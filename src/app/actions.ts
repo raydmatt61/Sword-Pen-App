@@ -194,7 +194,7 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
         }
 
         const currentObj = typeof currentItem === 'string' ? { text: currentItem } : { ...currentItem } as FormattedText;
-        const nextObj = typeof nextItem === 'string' ? { text: nextItem } : nextItem as FormattedText;
+        const nextObj = typeof nextItem === 'string' ? { text: nextItem } : { ...nextItem } as FormattedText;
 
         const isJesusEqual = !!currentObj.wordsOfJesus === !!nextObj.wordsOfJesus;
         const isStrongsEqual = JSON.stringify(currentObj.strongs) === JSON.stringify(nextObj.strongs);
@@ -210,7 +210,7 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
         // 1. Neither side already has whitespace
         // 2. We aren't looking at opening/closing punctuation boundaries
         // 3. Neither side is an em-dash or hyphen
-        const needsSpace = !(
+        let needsSpace = !(
             !lastChar || !nextChar ||
             /\s/.test(lastChar) ||
             /\s/.test(nextChar) ||
@@ -219,6 +219,14 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
             /[—\-]/.test(lastChar) ||
             /[—\-]/.test(nextChar)
         );
+
+        // Special case for fragments split right after punctuation like "The elder,To"
+        if (!needsSpace && !/\s/.test(lastChar) && !/\s/.test(nextChar)) {
+            // If the first ends in a trailing punctuation and the next starts with a letter/number
+            if (/[.,!?:;]/.test(lastChar) && /[a-zA-Z0-9]/.test(nextChar)) {
+                needsSpace = true;
+            }
+        }
 
         if (isJesusEqual && isStrongsEqual) {
             // Mergeable
