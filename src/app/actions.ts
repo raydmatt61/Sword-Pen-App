@@ -1,4 +1,3 @@
-
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
@@ -64,48 +63,58 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
 
 /**
  * Fetches Strong's concordance definition from bolls.life API.
- * Uses a robust fetching strategy with trailing slashes and explicit no-cache.
+ * Uses a robust fetching strategy with prefix inference and User-Agent headers.
  */
 export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
-    const cleanStrongs = strongsNumber.trim().toUpperCase();
+    let cleanStrongs = strongsNumber.trim().toUpperCase();
     if (!cleanStrongs) return null;
 
-    try {
-        // bolls.life API usually requires a trailing slash for the Strong's endpoint
-        const url = `https://bolls.life/api/strongs/${cleanStrongs}/`;
-        const response = await fetch(url, { cache: 'no-store' });
-        
-        if (!response.ok) {
+    // Helper to fetch from bolls.life
+    async function fetchFromBolls(code: string) {
+        try {
+            // bolls.life API usually works best with a trailing slash
+            const url = `https://bolls.life/api/strongs/${code}/`;
+            const response = await fetch(url, { 
+                headers: { 'User-Agent': 'Mozilla/5.0 (VerseInsights/1.0)' },
+                next: { revalidate: 3600 } 
+            });
+            if (!response.ok) return null;
+            const data = await response.json();
+            return data[code] || null;
+        } catch (e) {
             return null;
         }
-        
-        const data = await response.json();
-        
-        // The API returns an object where the key is the Strong's number
-        const strongsData = data[cleanStrongs];
+    }
 
-        if (!strongsData || data.error) {
-            return null;
+    let strongsData = await fetchFromBolls(cleanStrongs);
+    
+    // If no result and the input was just a number, try to infer 'G' (Greek) then 'H' (Hebrew)
+    if (!strongsData && /^\d+$/.test(cleanStrongs)) {
+        strongsData = await fetchFromBolls('G' + cleanStrongs);
+        if (!strongsData) {
+            strongsData = await fetchFromBolls('H' + cleanStrongs);
+            if (strongsData) cleanStrongs = 'H' + cleanStrongs;
+        } else {
+            cleanStrongs = 'G' + cleanStrongs;
         }
-
-        const detail: StrongsDetail = {
-            strongsNumber: cleanStrongs,
-            lemma: strongsData.lemma || '',
-            transliteration: strongsData.xlit || '',
-            pronunciation: strongsData.pron,
-            shortDefinition: strongsData.strongs_def || '',
-            kjvDefinition: strongsData.kjv_def || '',
-            strongsDerivation: strongsData.derivation,
-        };
-
-        return [detail];
-
-    } catch (error) {
-        console.error("Error in getStrongsDetail action:", error);
+    }
+    
+    if (!strongsData || strongsData.error) {
         return null;
     }
-}
 
+    const detail: StrongsDetail = {
+        strongsNumber: cleanStrongs,
+        lemma: strongsData.lemma || '',
+        transliteration: strongsData.xlit || '',
+        pronunciation: strongsData.pron,
+        shortDefinition: strongsData.strongs_def || '',
+        kjvDefinition: strongsData.kjv_def || '',
+        strongsDerivation: strongsData.derivation,
+    };
+
+    return [detail];
+}
 
 export async function generateVerseInsights(input: GenerateVerseInsightsInput): Promise<GenerateVerseInsightsOutput> {
   try {
@@ -118,9 +127,38 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
 }
 
 /**
+ * Parses raw <S>strongsNum</S> tags from a string and returns VerseContent items.
+ */
+function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
+    const content: VerseContent[] = [];
+    // Regex to match text followed by a Strong's tag
+    const regex = /([^<]+)(?:<S>(\d+)<\/S>)?|(<S>(\d+)<\/S>)/g;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+        if (match[3]) { // Just a tag without leading text
+            content.push({ text: '', strongs: [prefix + match[4]] });
+        } else {
+            const wordText = match[1];
+            const strongsNum = match[2];
+            if (strongsNum) {
+                content.push({ text: wordText, strongs: [prefix + strongsNum] });
+            } else {
+                content.push(wordText);
+            }
+        }
+    }
+
+    if (content.length === 0 && text) {
+        content.push(text);
+    }
+
+    return content;
+}
+
+/**
  * Collapses sequential text fragments into single FormattedText objects.
- * Intelligently handles spacing between fragments, especially when they cannot be merged
- * (e.g., when they have different Strong's numbers or styling).
+ * Intelligently handles spacing between fragments.
  */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length < 2) return content;
@@ -164,8 +202,7 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
             currentItem = currentObj;
         } else {
             // SEPARATE: They have different metadata (like Strong's), so they must stay separate.
-            // But we still need a space between them if the text requires it.
-            if (needsSpace) {
+            if (needsSpace && !lastText.endsWith(' ')) {
                 currentObj.text = lastText + ' ';
             }
             collapsed.push(currentItem);
@@ -201,23 +238,26 @@ async function getKJVChapterFromBolls(
     const bookNumber = BIBLE_BOOK_NUMBERS[book as keyof typeof BIBLE_BOOK_NUMBERS];
     if (!bookNumber) return null;
 
+    const isOT = OLD_TESTAMENT_BOOK_NAMES.includes(book);
+    const prefix = isOT ? 'H' : 'G';
+
     try {
         const url = `https://bolls.life/get-chapter/KJV/${bookNumber}/${chapter}`;
         const response = await fetch(url);
-        if (!response.ok) {
-            return null;
-        }
+        if (!response.ok) return null;
         
         const bollsVerses: BollsVerse[] = await response.json();
         if (!bollsVerses || bollsVerses.length === 0) return null;
         
         const chapterContent: ChapterContentItem[] = bollsVerses.map(v => {
-            const verseContent: VerseContent[] = [];
+            let verseContent: VerseContent[] = [];
+            
+            // Try to use structured strong's data first
             if (v.text_strongs && Array.isArray(v.text_strongs)) {
                 v.text_strongs.forEach(sw => {
                     const formattedText: FormattedText = { text: sw.w };
                     if (sw.s && sw.s !== "0") {
-                        formattedText.strongs = [sw.s];
+                        formattedText.strongs = [prefix + sw.s];
                     }
                     if (sw.woc === '1') {
                         formattedText.wordsOfJesus = true;
@@ -225,7 +265,8 @@ async function getKJVChapterFromBolls(
                     verseContent.push(formattedText);
                 });
             } else {
-                verseContent.push(v.text);
+                // Parse raw tags from the text field
+                verseContent = parseBollsStrongTags(v.text, prefix);
             }
 
             return {
@@ -239,7 +280,7 @@ async function getKJVChapterFromBolls(
             book: { name: book, id: BIBLE_BOOKS_ABBR[book] },
             chapter: { number: parseInt(chapter, 10), content: chapterContent },
             translation: { name: 'King James Version', id: 'KJV' },
-            copyright: "Public Domain. Modified by bolls.life."
+            copyright: "Public Domain. Data from bolls.life."
         };
 
     } catch (error) {
