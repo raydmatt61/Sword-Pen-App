@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -17,11 +16,17 @@ const highlightColors = [
     { class: 'hl-green', color: '#bbf7d0' },
     { class: 'hl-blue', color: '#bfdbfe' },
     { class: 'hl-purple', color: '#e9d5ff' },
+    { class: 'hl-pink', color: '#fbcfe8' },
+    { class: 'hl-orange', color: '#fed7aa' },
+    { class: 'hl-teal', color: '#99f6e4' },
 ];
 const underlineColors = [
     { class: 'ul-red', color: '#991b1b' },
     { class: 'ul-blue', color: '#2563eb' },
     { class: 'ul-orange', color: '#ea580c' },
+    { class: 'ul-green', color: '#15803d' },
+    { class: 'ul-purple', color: '#7e22ce' },
+    { class: 'ul-teal', color: '#0f766e' },
 ];
 
 export function AnnotationWrapper() {
@@ -106,9 +111,17 @@ export function AnnotationWrapper() {
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8"><Highlighter className="h-4 w-4" /></Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-1" align="start">
-                                <div className="flex gap-1">
-                                    {highlightColors.map(h => <button key={h.class} onClick={() => onHighlight(h.class)} className="h-6 w-6 rounded" style={{ backgroundColor: h.color }}></button>)}
+                            <PopoverContent className="w-auto p-2" align="start">
+                                <div className="flex flex-wrap gap-2 max-w-[160px]">
+                                    {highlightColors.map(h => (
+                                        <button 
+                                            key={h.class} 
+                                            onClick={() => onHighlight(h.class)} 
+                                            className="h-6 w-6 rounded border shadow-sm hover:scale-110 transition-transform" 
+                                            style={{ backgroundColor: h.color }}
+                                            title={h.class.replace('hl-', '')}
+                                        />
+                                    ))}
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onHighlight(null)}><X className="h-4 w-4"/></Button>
                                 </div>
                             </PopoverContent>
@@ -117,9 +130,19 @@ export function AnnotationWrapper() {
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8"><Underline className="h-4 w-4" /></Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-1" align="start">
-                                <div className="flex gap-1 items-center">
-                                    {underlineColors.map(u => <button key={u.class} onClick={() => onUnderline(u.class)} className="h-6 w-6 rounded flex items-center justify-center" style={{ backgroundColor: u.color }}><div className="w-4 h-0.5 bg-white"></div></button>)}
+                            <PopoverContent className="w-auto p-2" align="start">
+                                <div className="flex flex-wrap gap-2 max-w-[160px]">
+                                    {underlineColors.map(u => (
+                                        <button 
+                                            key={u.class} 
+                                            onClick={() => onUnderline(u.class)} 
+                                            className="h-6 w-6 rounded border shadow-sm flex items-center justify-center hover:scale-110 transition-transform" 
+                                            style={{ borderColor: u.color }}
+                                            title={u.class.replace('ul-', '')}
+                                        >
+                                            <div className="w-4 h-0.5" style={{ backgroundColor: u.color }}></div>
+                                        </button>
+                                    ))}
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUnderline(null)}><X className="h-4 w-4"/></Button>
                                 </div>
                             </PopoverContent>
