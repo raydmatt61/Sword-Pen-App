@@ -48,7 +48,7 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
             verses: json.data.verses.map((v: any) => ({
                 id: v.id,
                 reference: v.reference,
-                text: v.text, // Assuming the API returns HTML with <mark> tags
+                text: v.text, 
                 bookId: v.bookId,
             }))
         };
@@ -62,30 +62,39 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
     }
 }
 
+/**
+ * Fetches Strong's concordance definition from bolls.life API.
+ * Uses a robust fetching strategy with trailing slashes and explicit no-cache.
+ */
 export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
+    const cleanStrongs = strongsNumber.trim().toUpperCase();
+    if (!cleanStrongs) return null;
+
     try {
-        const upperCaseStrongs = strongsNumber.toUpperCase();
-        // Force fresh fetch to avoid caching issues
-        const bollsResponse = await fetch(`https://bolls.life/api/strongs/${upperCaseStrongs}`, { cache: 'no-store' });
-        if (!bollsResponse.ok) {
+        // bolls.life API usually requires a trailing slash for the Strong's endpoint
+        const url = `https://bolls.life/api/strongs/${cleanStrongs}/`;
+        const response = await fetch(url, { cache: 'no-store' });
+        
+        if (!response.ok) {
             return null;
         }
-        const data = await bollsResponse.json();
-
-        // The API returns an object with the strongs number as the key
-        const strongsData = data[upperCaseStrongs];
+        
+        const data = await response.json();
+        
+        // The API returns an object where the key is the Strong's number
+        const strongsData = data[cleanStrongs];
 
         if (!strongsData || data.error) {
             return null;
         }
 
         const detail: StrongsDetail = {
-            strongsNumber: upperCaseStrongs,
-            lemma: strongsData.lemma,
-            transliteration: strongsData.xlit,
+            strongsNumber: cleanStrongs,
+            lemma: strongsData.lemma || '',
+            transliteration: strongsData.xlit || '',
             pronunciation: strongsData.pron,
-            shortDefinition: strongsData.strongs_def,
-            kjvDefinition: strongsData.kjv_def,
+            shortDefinition: strongsData.strongs_def || '',
+            kjvDefinition: strongsData.kjv_def || '',
             strongsDerivation: strongsData.derivation,
         };
 
@@ -93,10 +102,7 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
 
     } catch (error) {
         console.error("Error in getStrongsDetail action:", error);
-        if (error instanceof Error) {
-            throw error;
-        }
-        throw new Error("Failed to perform Strong's lookup due to an unexpected error.");
+        return null;
     }
 }
 
@@ -111,7 +117,11 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
   }
 }
 
-// Helper to collapse text fragments into single FormattedText objects with proper spacing
+/**
+ * Collapses sequential text fragments into single FormattedText objects.
+ * Intelligently handles spacing between fragments, especially when they cannot be merged
+ * (e.g., when they have different Strong's numbers or styling).
+ */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length < 2) return content;
 
@@ -121,35 +131,43 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     for (let i = 1; i < content.length; i++) {
         const nextItem = content[i];
 
-        // Only collapse if both are formatted text objects (or strings converted to them)
-        // and have identical non-text properties (Jesus words, strongs)
         const currentObj = typeof currentItem === 'string' ? { text: currentItem } : currentItem as FormattedText;
         const nextObj = typeof nextItem === 'string' ? { text: nextItem } : nextItem as FormattedText;
 
+        // Check if items can be physically merged into one object
         const isJesusEqual = !!currentObj.wordsOfJesus === !!nextObj.wordsOfJesus;
-        const isStrongsEqual = !currentObj.strongs && !nextObj.strongs; // Only merge segments without Strong's to keep mapping clean
+        const isStrongsEqual = !currentObj.strongs && !nextObj.strongs; 
         
-        // Footnotes and other special types shouldn't be merged
         const isSimpleMergeable = !('noteId' in currentObj) && !('noteId' in nextObj) && 
                                  !('heading' in currentObj) && !('heading' in nextObj) &&
                                  !('lineBreak' in currentObj) && !('lineBreak' in nextObj);
 
+        const lastText = currentObj.text;
+        const nextText = nextObj.text;
+
+        // Logic to determine if a space is needed between fragments
+        const needsSpace = !(
+            lastText.endsWith(' ') || 
+            lastText.endsWith('\n') ||
+            lastText.endsWith('(') || 
+            lastText.endsWith('[') ||
+            lastText.endsWith('"') ||
+            lastText.endsWith("'") ||
+            nextText.startsWith(' ') || 
+            nextText.startsWith('\n') ||
+            /^[.,?!:;’”)}\]]/.test(nextText) 
+        );
+
         if (isSimpleMergeable && isJesusEqual && isStrongsEqual) {
-            const lastText = currentObj.text;
-            const nextText = nextObj.text;
-
-            // Logic to determine if a space is needed
-            const needsSpace = !(
-                lastText.endsWith(' ') || 
-                lastText.endsWith('\n') ||
-                nextText.startsWith(' ') || 
-                nextText.startsWith('\n') ||
-                /^[.,?!:;’”)}\]]/.test(nextText) // No space before most punctuation
-            );
-
+            // MERGE: They are identical in style and Strong's, so merge into one object
             currentObj.text = lastText + (needsSpace ? ' ' : '') + nextText;
             currentItem = currentObj;
         } else {
+            // SEPARATE: They have different metadata (like Strong's), so they must stay separate.
+            // But we still need a space between them if the text requires it.
+            if (needsSpace) {
+                currentObj.text = lastText + ' ';
+            }
             collapsed.push(currentItem);
             currentItem = nextItem;
         }
@@ -168,7 +186,6 @@ const API_BIBLE_IDS = {
 };
 const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
 
-// Assumed from bolls.life API
 type BollsVerse = {
     book: string;
     chapter: number;
@@ -188,7 +205,6 @@ async function getKJVChapterFromBolls(
         const url = `https://bolls.life/get-chapter/KJV/${bookNumber}/${chapter}`;
         const response = await fetch(url);
         if (!response.ok) {
-            console.error(`Failed to fetch KJV data for ${book} ${chapter} from bolls.life. URL: ${url}`);
             return null;
         }
         
@@ -227,7 +243,6 @@ async function getKJVChapterFromBolls(
         };
 
     } catch (error) {
-        console.error("Error fetching/processing KJV from bolls.life", error);
         return null;
     }
 }
@@ -417,7 +432,6 @@ async function getChapter(
                   const data = JSON.parse(text);
                   if (data && data.chapter && data.chapter.content) {
                       chapterData = data as BibleChapterResponse;
-                      // Apply collapsing logic to the helloao data
                       chapterData.chapter.content.forEach(item => {
                         if (item.type === 'verse' && item.content) {
                             item.content = collapseVerseContent(item.content);
