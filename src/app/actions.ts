@@ -130,25 +130,22 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
 
 /**
  * Parses raw <S>strongsNum</S> tags and other HTML-like tags (e.g. <sup>) from a string.
- * It ignores non-Strong's tags and associates Strong's numbers with the preceding text.
  */
 function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
     const content: VerseContent[] = [];
-    // Regex: Match text segments, <S> tags, or any other <tag>
     const regex = /([^<]+)|(<S>(\d+)<\/S>)|(<[^>]+>)/g;
     let match;
 
     while ((match = regex.exec(text)) !== null) {
-        if (match[1]) { // Text segment
+        if (match[1]) { 
             content.push(match[1]);
-        } else if (match[2]) { // Strong's tag <S>123</S>
+        } else if (match[2]) {
             const strongsNum = prefix + match[3];
             const lastIdx = content.length - 1;
             
             if (lastIdx >= 0) {
                 const lastItem = content[lastIdx];
                 if (typeof lastItem === 'string') {
-                    // Convert preceding string to FormattedText with Strong's
                     content[lastIdx] = { text: lastItem, strongs: [strongsNum] };
                 } else if (typeof lastItem === 'object' && 'text' in lastItem && !('noteId' in lastItem)) {
                     const ft = lastItem as FormattedText;
@@ -162,9 +159,6 @@ function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
             } else {
                 content.push({ text: '', strongs: [strongsNum] });
             }
-        } else if (match[4]) {
-            // Other tags (like <sup>, </sup>): We skip them to avoid "sup>" in the UI
-            // The text content between them is handled by the first group in subsequent iterations
         }
     }
 
@@ -177,7 +171,7 @@ function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
 
 /**
  * Collapses sequential text fragments into single FormattedText objects.
- * Intelligently handles spacing between fragments, ignoring punctuation and empty text.
+ * Intelligently handles spacing between fragments based on context and punctuation.
  */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length < 2) return content;
@@ -188,40 +182,54 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     for (let i = 1; i < content.length; i++) {
         const nextItem = content[i];
 
-        const currentObj = typeof currentItem === 'string' ? { text: currentItem } : currentItem as FormattedText;
+        // Type guard for objects that have text content
+        const isTextLike = (item: any) => 
+            typeof item === 'string' || 
+            (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item));
+
+        if (!isTextLike(currentItem) || !isTextLike(nextItem)) {
+            collapsed.push(currentItem);
+            currentItem = nextItem;
+            continue;
+        }
+
+        const currentObj = typeof currentItem === 'string' ? { text: currentItem } : { ...currentItem } as FormattedText;
         const nextObj = typeof nextItem === 'string' ? { text: nextItem } : nextItem as FormattedText;
 
         const isJesusEqual = !!currentObj.wordsOfJesus === !!nextObj.wordsOfJesus;
-        const isStrongsEqual = JSON.stringify(currentObj.strongs) === JSON.stringify(nextObj.strongs); 
-        
-        const isSimpleMergeable = !('noteId' in currentObj) && !('noteId' in nextObj) && 
-                                 !('heading' in currentObj) && !('heading' in nextObj) &&
-                                 !('lineBreak' in currentObj) && !('lineBreak' in nextObj);
+        const isStrongsEqual = JSON.stringify(currentObj.strongs) === JSON.stringify(nextObj.strongs);
 
         const lastText = currentObj.text;
         const nextText = nextObj.text;
 
+        // Extract last character of current and first character of next for boundary analysis
+        const lastChar = lastText.slice(-1);
+        const nextChar = nextText.charAt(0);
+
+        // A space is needed if:
+        // 1. Neither side already has whitespace
+        // 2. We aren't looking at opening/closing punctuation boundaries
+        // 3. Neither side is an em-dash or hyphen
         const needsSpace = !(
-            lastText.endsWith(' ') || 
-            lastText.endsWith('\n') ||
-            lastText.endsWith('(') || 
-            lastText.endsWith('[') ||
-            lastText.endsWith('"') ||
-            lastText.endsWith("'") ||
-            nextText === '' ||
-            nextText.startsWith(' ') || 
-            nextText.startsWith('\n') ||
-            /^[.,?!:;’”)}\]]/.test(nextText) 
+            !lastChar || !nextChar ||
+            /\s/.test(lastChar) ||
+            /\s/.test(nextChar) ||
+            /[(\["'‘“]/.test(lastChar) ||
+            /[.,!?:;’”)}\]'’]/.test(nextChar) ||
+            /[—\-]/.test(lastChar) ||
+            /[—\-]/.test(nextChar)
         );
 
-        if (isSimpleMergeable && isJesusEqual && isStrongsEqual) {
+        if (isJesusEqual && isStrongsEqual) {
+            // Mergeable
             currentObj.text = lastText + (needsSpace ? ' ' : '') + nextText;
             currentItem = currentObj;
         } else {
+            // Not mergeable, but might need a space in the first one to prevent running together
             if (needsSpace) {
                 currentObj.text = lastText + ' ';
             }
-            collapsed.push(currentItem);
+            collapsed.push(currentObj);
             currentItem = nextItem;
         }
     }
