@@ -1,3 +1,4 @@
+
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
@@ -69,7 +70,8 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
             });
             if (!response.ok) return null;
             const data = await response.json();
-            return data[code] || null;
+            // Bolls Life nests the data under the Strong's number key
+            return data[code] || data[code.toLowerCase()] || null;
         } catch (e) {
             return null;
         }
@@ -77,6 +79,7 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
 
     let strongsData = await fetchFromBolls(cleanStrongs);
     
+    // Fallback prefix logic
     if (!strongsData) {
         const numOnly = cleanStrongs.replace(/^[GH]/, '');
         if (/^\d+$/.test(numOnly)) {
@@ -112,6 +115,7 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
 
 function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
     const content: VerseContent[] = [];
+    // Matches: [1] Regular text, [2] Strong's tag <S>123</S>, [3] Any other HTML tag
     const regex = /([^<]+)|(<S>(\d+)<\/S>)|(<[^>]+>)/g;
     let match;
 
@@ -173,26 +177,32 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
         const lastChar = lastText.slice(-1);
         const nextChar = nextText.charAt(0);
 
-        let needsSpace = !(
-            !lastChar || !nextChar ||
-            /\s/.test(lastChar) ||
-            /\s/.test(nextChar) ||
-            /[(\["'‘“]/.test(lastChar) ||
-            /[.,!?:;’”)}\]'’]/.test(nextChar) ||
-            /[—\-]/.test(lastChar) ||
-            /[—\-]/.test(nextChar)
-        );
+        // INTELLIGENT SPACING LOGIC
+        // A space is needed UNLESS:
+        // 1. One of the chars is empty.
+        // 2. Either char is already whitespace.
+        // 3. lastChar is an opening symbol (e.g., "(", "[", "“").
+        // 4. nextChar is a closing punctuation (e.g., ".", ",", "!", "?").
+        // 5. Either is a dash or hyphen.
+        
+        let needsSpace = true;
+        if (!lastChar || !nextChar) needsSpace = false;
+        else if (/\s/.test(lastChar) || /\s/.test(nextChar)) needsSpace = false;
+        else if (/[(\["'‘“]/.test(lastChar)) needsSpace = false;
+        else if (/[.,!?:;’”)}\]'’]/.test(nextChar)) needsSpace = false;
+        else if (/[—\-]/.test(lastChar) || /[—\-]/.test(nextChar)) needsSpace = false;
 
-        if (!needsSpace && !/\s/.test(lastChar) && !/\s/.test(nextChar)) {
-            if (/[.,!?:;]/.test(lastChar) && /[a-zA-Z0-9]/.test(nextChar)) {
-                needsSpace = true;
-            }
+        // Special case: if lastChar is punctuation (like , or .) we DO need a space if the next is a word.
+        // This explicitly handles "The elder,To" -> "The elder, To"
+        if (!needsSpace && /[.,!?:;]/.test(lastChar) && /[a-zA-Z0-9]/.test(nextChar)) {
+            needsSpace = true;
         }
 
         if (isJesusEqual && isStrongsEqual) {
             currentObj.text = lastText + (needsSpace ? ' ' : '') + nextText;
             currentItem = currentObj;
         } else {
+            // If we can't merge them (different styling/strongs), we must ensure the first one ends with a space if needed
             if (needsSpace) currentObj.text = lastText + ' ';
             collapsed.push(currentObj);
             currentItem = nextItem;
@@ -212,14 +222,14 @@ const API_BIBLE_IDS = {
 };
 const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
 
-async function getKJVChapterFromBolls(book: string, chapter: string): Promise<BibleChapterResponse | null> {
+async function getChapterFromBolls(translationCode: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
     const bookNumber = BIBLE_BOOK_NUMBERS[book as keyof typeof BIBLE_BOOK_NUMBERS];
     if (!bookNumber) return null;
     const isOT = OLD_TESTAMENT_BOOK_NAMES.includes(book);
     const prefix = isOT ? 'H' : 'G';
 
     try {
-        const url = `https://bolls.life/get-chapter/KJV/${bookNumber}/${chapter}`;
+        const url = `https://bolls.life/get-chapter/${translationCode}/${bookNumber}/${chapter}`;
         const response = await fetch(url);
         if (!response.ok) return null;
         const bollsVerses: any[] = await response.json();
@@ -231,11 +241,13 @@ async function getKJVChapterFromBolls(book: string, chapter: string): Promise<Bi
             content: collapseVerseContent(parseBollsStrongTags(v.text, prefix))
         }));
 
+        const translationName = TRANSLATIONS.find(t => t.id === translationCode)?.name || translationCode;
+
         return {
             book: { name: book, id: BIBLE_BOOKS_ABBR[book] },
             chapter: { number: parseInt(chapter, 10), content: chapterContent },
-            translation: { name: 'King James Version', id: 'KJV' },
-            copyright: "Public Domain. Data from bolls.life."
+            translation: { name: translationName, id: translationCode },
+            copyright: `Public Domain (or as specified by ${translationCode}). Data from bolls.life.`
         };
     } catch (error) { return null; }
 }
@@ -328,11 +340,16 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
 async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
-  if (translationId === 'KJV') {
-    chapterData = await getKJVChapterFromBolls(book, chapter);
-  } else if (API_BIBLE_TRANSLATIONS.includes(translationId)) {
+  // Prefer Bolls Life for KJV and BSB as they often include Strong's tagging
+  if (translationId === 'KJV' || translationId === 'BSB') {
+    chapterData = await getChapterFromBolls(translationId, book, chapter);
+  } 
+  
+  if (!chapterData && API_BIBLE_TRANSLATIONS.includes(translationId)) {
     chapterData = await getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
-  } else {
+  } 
+  
+  if (!chapterData) {
     const bookId = BIBLE_BOOKS_ABBR[book] || book;
     try {
         const response = await fetch(`https://bible.helloao.org/api/${translationId}/${bookId}/${chapter}.json`);
@@ -349,6 +366,7 @@ async function getChapter(book: string, chapter: string, translationId: string, 
   }
 
   if (chapterData) return chapterData;
+  // Final fallback to BSB (plain text via HelloAO if Bolls fails)
   if (!isFallbackAttempt && translationId !== 'BSB') return await getChapter(book, chapter, 'BSB', true);
   return null;
 }
