@@ -1,11 +1,10 @@
-
 "use client";
 
 import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
-import type { BibleChapterResponse, Book, Translation, CrossRefChapterResponse, SearchResultVerse } from '@/lib/bible';
+import type { BibleChapterResponse, Book, CrossRefChapterResponse } from '@/lib/bible';
 import { TRANSLATIONS } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -49,58 +48,31 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
 
   useEffect(() => {
     if (chapterData && chapterData.translation.id !== initialTranslationId) {
-        const isApiBibleTranslation = ['CSB', 'NIV', 'NASB'].includes(initialTranslationId);
-        
-        if (isApiBibleTranslation) {
-            toast({
-                title: "Translation Permission Issue",
-                description: `Could not load ${initialTranslationId}. This may be a permission issue. Please ensure you have accepted the terms for this translation on api.bible. Displaying in BSB instead.`,
-            });
-        } else {
-            toast({
-                title: "Translation Fallback",
-                description: `Could not load ${initialBook} ${initialChapter} in ${TRANSLATIONS.find(t=>t.id === initialTranslationId)?.name || initialTranslationId}. Displaying in BSB instead.`,
-            });
-        }
+        toast({
+            title: "Translation Fallback",
+            description: `Displaying in BSB as ${initialTranslationId} was unavailable.`,
+        });
     }
-  }, [chapterData, initialTranslationId, initialBook, initialChapter, toast]);
+  }, [chapterData, initialTranslationId, toast]);
 
-  const searchParamsString = searchParams.toString();
   const navigate = useCallback((newValues: Partial<{ book: string; chapter: string; translation: string; verse: string }>) => {
-    const current = new URLSearchParams(searchParamsString);
-    
-    const isNewBook = newValues.book && newValues.book !== current.get('book');
-    const isNewChapter = newValues.chapter && newValues.chapter !== current.get('chapter');
-    
-    if (isNewBook || isNewChapter) {
-        current.delete('verse');
-    }
-
+    const current = new URLSearchParams(searchParams.toString());
+    if (newValues.book || newValues.chapter) current.delete('verse');
     for (const [key, value] of Object.entries(newValues)) {
-        if (value) {
-            current.set(key, value);
-        }
+        if (value) current.set(key, value);
     }
-    const newSearch = current.toString();
-    router.push(`${pathname}?${newSearch}`);
-  }, [router, pathname, searchParamsString]);
+    router.push(`${pathname}?${current.toString()}`);
+  }, [router, pathname, searchParams]);
 
   const handleChapterNav = useCallback((direction: 'prev' | 'next') => {
     let currentChapter = parseInt(initialChapter);
-    if (direction === 'prev' && currentChapter > 1) {
-        currentChapter--;
-    }
-    if (direction === 'next' && currentChapter < maxChapters) {
-        currentChapter++;
-    }
-    const newChapter = currentChapter.toString();
-    navigate({ chapter: newChapter });
+    if (direction === 'prev' && currentChapter > 1) currentChapter--;
+    if (direction === 'next' && currentChapter < maxChapters) currentChapter++;
+    navigate({ chapter: currentChapter.toString() });
   }, [initialChapter, maxChapters, navigate]);
   
   useEffect(() => {
-    if (contentRef.current) {
-      contentRef.current.scrollTop = 0;
-    }
+    if (contentRef.current) contentRef.current.scrollTop = 0;
   }, [initialBook, initialChapter, initialTranslationId]);
 
   useEffect(() => {
@@ -108,12 +80,8 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
         const verseElement = contentRef.current.querySelector(`div[data-verse-number="${verseParam}"]`);
         if (verseElement) {
             verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
             verseElement.classList.add('verse-highlight');
-            const timeoutId = setTimeout(() => {
-                verseElement.classList.remove('verse-highlight');
-            }, 2500);
-
+            const timeoutId = setTimeout(() => verseElement.classList.remove('verse-highlight'), 2500);
             return () => clearTimeout(timeoutId);
         }
     }
@@ -129,7 +97,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
                 Verse Insights
               </h1>
               <p className="hidden md:block text-xs text-muted-foreground mt-1 font-headline">
-                Deepen your Bible study with annotations, notes and AI-powered insights.
+                Deepen your Bible study with annotations and AI insights.
               </p>
             </div>
           </div>
@@ -160,11 +128,10 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
 
         <div ref={contentRef} className="flex-grow overflow-y-auto p-2 md:p-4">
           {!chapterData ? (
-            <Card className="mt-6 animate-in fade-in duration-500">
+            <Card className="mt-6">
               <CardContent className="pt-6">
                 <p className="text-center text-muted-foreground text-sm">
-                  Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span> ({TRANSLATIONS.find(t=>t.id === initialTranslationId)?.name || initialTranslationId}).
-                  Please try a different selection.
+                  Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span>.
                 </p>
               </CardContent>
             </Card>
@@ -185,12 +152,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
 }
 
 function ChapterLoader({ book, chapter, translationId }: { book: string; chapter: string; translationId: string; }) {
-  const [pageData, setPageData] = useState<{
-      books: Book[];
-      chapterData: BibleChapterResponse | null;
-      crossRefs: CrossRefChapterResponse | null;
-  } | null>(null);
-
+  const [pageData, setPageData] = useState<{ books: Book[]; chapterData: BibleChapterResponse | null; crossRefs: CrossRefChapterResponse | null; } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -203,9 +165,7 @@ function ChapterLoader({ book, chapter, translationId }: { book: string; chapter
     loadData();
   }, [book, chapter, translationId]);
 
-  if (isLoading || !pageData) {
-    return <FullPageSkeleton />;
-  }
+  if (isLoading || !pageData) return <FullPageSkeleton />;
 
   return <PageContent books={pageData.books} chapterData={pageData.chapterData} crossRefs={pageData.crossRefs} initialBook={book} initialChapter={chapter} initialTranslationId={translationId} />;
 }
@@ -216,49 +176,33 @@ function PageWithSearchParams() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  
   const book = searchParams.get('book') || 'John';
   const chapter = searchParams.get('chapter') || '1';
   const translationUrlParam = searchParams.get('translation') || 'BSB';
   const queryKey = `${book}-${chapter}-${translationUrlParam}`;
-  
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (!searchParams.has('book')) {
-      const savedLocationRaw = localStorage.getItem(LAST_LOCATION_KEY);
-      if (savedLocationRaw) {
+      const saved = localStorage.getItem(LAST_LOCATION_KEY);
+      if (saved) {
         try {
-          const savedLocation = JSON.parse(savedLocationRaw);
-          router.replace(`${pathname}?book=${savedLocation.book}&chapter=${savedLocation.chapter}&translation=${savedLocation.translationId}`);
-        } catch (e) {
-          console.error("Failed to parse last location from localStorage", e);
-          setIsReady(true);
-        }
-      } else {
-        setIsReady(true);
-      }
-    } else {
-      setIsReady(true);
-    }
+          const loc = JSON.parse(saved);
+          router.replace(`${pathname}?book=${loc.book}&chapter=${loc.chapter}&translation=${loc.translationId}`);
+        } catch { setIsReady(true); }
+      } else setIsReady(true);
+    } else setIsReady(true);
   }, [searchParams, router, pathname]);
   
   useEffect(() => {
     if (searchParams.has('book')) {
-      const location = { book, chapter, translationId: translationUrlParam };
-      localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify(location));
+      localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ book, chapter, translationId: translationUrlParam }));
     }
   }, [book, chapter, translationUrlParam, searchParams]);
   
-  const translation = TRANSLATIONS.find(t => t.id === translationUrlParam) || TRANSLATIONS[0];
-
-  if (!isReady) {
-    return <FullPageSkeleton />;
-  }
-  
-  return <ChapterLoader key={queryKey} book={book} chapter={chapter} translationId={translation.id} />
+  if (!isReady) return <FullPageSkeleton />;
+  return <ChapterLoader key={queryKey} book={book} chapter={chapter} translationId={translationUrlParam} />
 }
-
 
 export default function Home() {
   return (
@@ -268,60 +212,24 @@ export default function Home() {
   );
 }
 
-function BibleDisplaySkeleton() {
-  return (
-    <Card>
-      <CardContent className="pt-6 space-y-6">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-1/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-1/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function FullPageSkeleton() {
   return (
     <main className="flex flex-col h-screen overflow-hidden">
       <header className="flex items-center justify-between border-b px-2 py-1 md:px-4 md:py-2 shrink-0">
         <div className="flex items-center gap-2">
           <div>
-            <h1 className="text-lg md:text-2xl font-headline font-bold text-primary">
-              Verse Insights
-            </h1>
-            <div className="hidden md:block">
-              <Skeleton className="h-3 w-48 mt-1" />
-            </div>
+            <h1 className="text-lg md:text-2xl font-headline font-bold text-primary">Verse Insights</h1>
+            <div className="hidden md:block"><Skeleton className="h-3 w-48 mt-1" /></div>
           </div>
         </div>
-        <div className="flex items-center gap-1 md:gap-2">
-            <Skeleton className="h-8 w-8" />
-            <Skeleton className="h-8 w-8" />
-            <Skeleton className="h-8 w-8" />
-            <Skeleton className="h-8 w-8" />
-            <Skeleton className="h-8 w-8" />
-        </div>
+        <div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-8 w-8 rounded" /></div>
       </header>
-      
       <div className="sticky top-0 z-20 flex flex-row items-center gap-2 bg-background/80 backdrop-blur-sm px-2 py-1.5 md:px-4 md:py-2 border-b shrink-0">
-        <div className="flex-[3] min-w-0">
-          <Skeleton className="h-9 w-full" />
-        </div>
-        <div className="flex-[2] min-w-0">
-          <Skeleton className="h-9 w-full" />
-        </div>
+        <div className="flex-[3]"><Skeleton className="h-9 w-full" /></div>
+        <div className="flex-[2]"><Skeleton className="h-9 w-full" /></div>
       </div>
-
       <div className="flex-grow overflow-y-auto p-2 md:p-4">
-         <BibleDisplaySkeleton />
+         <Card><CardContent className="pt-6 space-y-4"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-full" /></CardContent></Card>
       </div>
     </main>
   );

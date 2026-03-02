@@ -9,7 +9,6 @@ import { AiInsightGenerator } from './ai-insight-generator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { useAnnotationContext } from '@/contexts/annotation-context';
-import { cn } from '@/lib/utils';
 
 const highlightColors = [
     { class: 'hl-yellow', color: '#fef08a' },
@@ -51,9 +50,7 @@ export function AnnotationWrapper() {
     const fullReference = chapterData ? `${chapterData.book.name} ${chapterData.chapter.number}` : "";
 
     const handleDelete = () => {
-        if (activeAnnotation) {
-            deleteAnnotation(activeAnnotation);
-        }
+        if (activeAnnotation) deleteAnnotation(activeAnnotation);
         resetAnnotationState();
     }
     
@@ -89,11 +86,8 @@ export function AnnotationWrapper() {
     };
 
     const onNote = () => {
-        if (activeAnnotation) {
-            setIsEditingNote(true);
-        } else if (selection) {
-            createOrUpdateAnnotation({ note: '' });
-        }
+        if (activeAnnotation) setIsEditingNote(true);
+        else if (selection) createOrUpdateAnnotation({ note: '' });
     };
     
     const showToolbar = (selection || activeAnnotation) && user;
@@ -101,7 +95,7 @@ export function AnnotationWrapper() {
     return (
         <div className="relative flex items-center justify-center p-1 md:p-2 border rounded-lg bg-background/50 min-h-[52px] md:min-h-[56px] w-full">
             {!showToolbar ? (
-                <p className="text-lg md:text-2xl font-black text-muted-foreground text-center leading-tight">
+                <p className="text-xl md:text-2xl font-black text-muted-foreground text-center leading-tight uppercase tracking-tight">
                     {!user ? "Sign in" : "Select text to annotate"}
                 </p>
             ) : (
@@ -119,7 +113,6 @@ export function AnnotationWrapper() {
                                             onClick={() => onHighlight(h.class)} 
                                             className="h-6 w-6 rounded border shadow-sm hover:scale-110 transition-transform" 
                                             style={{ backgroundColor: h.color }}
-                                            title={h.class.replace('hl-', '')}
                                         />
                                     ))}
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onHighlight(null)}><X className="h-4 w-4"/></Button>
@@ -138,7 +131,6 @@ export function AnnotationWrapper() {
                                             onClick={() => onUnderline(u.class)} 
                                             className="h-6 w-6 rounded border shadow-sm flex items-center justify-center hover:scale-110 transition-transform" 
                                             style={{ borderColor: u.color }}
-                                            title={u.class.replace('ul-', '')}
                                         >
                                             <div className="w-4 h-0.5" style={{ backgroundColor: u.color }}></div>
                                         </button>
@@ -197,7 +189,6 @@ export function AnnotationWrapper() {
              {showToolbar && (
                 <Button variant="ghost" size="icon" onClick={resetAnnotationState} className="h-4 w-4 md:h-6 md:w-6 absolute -top-1 -right-1 md:top-0.5 md:right-0.5 bg-background border rounded-full shadow-sm">
                     <X className="h-3 w-3 md:h-4 md:w-4" />
-                    <span className="sr-only">Close</span>
                 </Button>
             )}
         </div>
