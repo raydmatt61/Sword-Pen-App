@@ -111,20 +111,20 @@ export function StrongsPopover({ children, strongsNumber, navigate }: StrongsPop
                                     <p><span className="font-bold">Short Definition:</span> {item.shortDefinition}</p>
                                     {item.kjvDefinition && (
                                         <div>
-                                            <p className="font-bold">KJV Definition:</p>
+                                            <p className="font-bold">Usage/Context:</p>
                                             <p className="italic">{item.kjvDefinition}</p>
                                         </div>
                                     )}
                                     {item.strongsDerivation && (
                                         <div>
-                                            <p className="font-bold">Derivation:</p>
+                                            <p className="font-bold">Detailed Lexicon/Derivation:</p>
                                             <RenderHtmlWithNavigation htmlString={item.strongsDerivation} onNavigate={handleLinkNavigate} />
                                         </div>
                                     )}
                                 </CardContent>
                                 <CardFooter>
                                   <p className="text-xs text-muted-foreground">
-                                    Data from bolls.life.
+                                    Data from OpenScriptures & Bolls.
                                   </p>
                                 </CardFooter>
                             </Card>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -9,6 +10,7 @@ import { AiInsightGenerator } from './ai-insight-generator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { useAnnotationContext } from '@/contexts/annotation-context';
+import { cn } from '@/lib/utils';
 
 const highlightColors = [
     { class: 'hl-yellow', color: '#fef08a' },
@@ -95,7 +97,10 @@ export function AnnotationWrapper() {
     return (
         <div className="relative flex items-center justify-center p-1 md:p-2 border rounded-lg bg-background/50 min-h-[52px] md:min-h-[56px] w-full">
             {!showToolbar ? (
-                <p className="text-lg md:text-xl font-bold text-muted-foreground text-center leading-tight uppercase tracking-tight">
+                <p className={cn(
+                    "font-bold text-muted-foreground text-center leading-tight uppercase tracking-tight select-none",
+                    "text-lg md:text-sm lg:text-base" // Larger on mobile, smaller/balanced on desktop
+                )}>
                     {!user ? "Sign in" : "SELECT TEXT TO ANNOTATE"}
                 </p>
             ) : (

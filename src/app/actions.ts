@@ -4,6 +4,25 @@
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
 import { API_BIBLE_IDS_SEARCH, BIBLE_BOOKS_ABBR, BIBLE_BOOK_NUMBERS, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from "@/lib/bible";
 import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, StrongsDetail, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, VerseFootnoteReference } from "@/lib/bible";
+import strongs from 'strongs';
+
+// Build a normalized index for Strong's lookups from the npm package
+const strongsIndex = (() => {
+    const index: Record<string, any> = {};
+    const g = strongs.greek || {};
+    const h = strongs.hebrew || {};
+    
+    // Normalize keys to have a single H/G prefix followed by numbers (removing extra zeros)
+    Object.keys(g).forEach(k => {
+        const num = k.replace(/^G/, '').replace(/^0+/, '');
+        index[`G${num}`] = { ...g[k], language: 'greek' };
+    });
+    Object.keys(h).forEach(k => {
+        const num = k.replace(/^H/, '').replace(/^0+/, '');
+        index[`H${num}`] = { ...h[k], language: 'hebrew' };
+    });
+    return index;
+})();
 
 interface SearchBibleInput {
     query: string;
@@ -57,62 +76,49 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
     }
 }
 
-export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
-    const cleanStrongs = strongsNumber.trim().toUpperCase();
-    if (!cleanStrongs) return null;
+export async function getStrongsDetail(id: string): Promise<StrongsDetail[] | null> {
+    if (!id) return null;
+    
+    const norm = id.toString().toUpperCase().replace(/^0+/, '');
+    const withPrefixH = norm.startsWith('H') ? norm : `H${norm}`;
+    const withPrefixG = norm.startsWith('G') ? norm : `G${norm}`;
 
-    async function fetchFromBolls(code: string) {
-        // We try multiple variants of the Bolls Strong's API to ensure maximum coverage
-        const urls = [
-            `https://bolls.life/api/strongs/${code}/`,
-            `https://bolls.life/api/strongs/BSB/${code}/`,
-            `https://bolls.life/api/strongs/KJV/${code}/`
-        ];
+    const entry = strongsIndex[norm] || strongsIndex[withPrefixH] || strongsIndex[withPrefixG];
 
-        for (const url of urls) {
-            try {
-                const response = await fetch(url, { cache: 'no-store' });
-                if (response.ok) {
-                    const data = await response.json();
-                    // The API returns an object where keys are Strong's numbers (e.g., {"G2424": {...}})
-                    // We iterate keys to find the first valid non-error entry
-                    for (const key in data) {
-                        const entry = data[key];
-                        if (entry && !entry.error && (entry.lemma || entry.strongs_def)) {
-                            return entry;
-                        }
+    if (!entry) {
+        // Fallback to external API if not found in package
+        try {
+            const response = await fetch(`https://bolls.life/api/strongs/${encodeURIComponent(id)}/`, { cache: 'no-store' });
+            if (response.ok) {
+                const data = await response.json();
+                for (const key in data) {
+                    const fallback = data[key];
+                    if (fallback && !fallback.error) {
+                        return [{
+                            strongsNumber: id,
+                            lemma: fallback.lemma || '',
+                            transliteration: fallback.xlit || '',
+                            pronunciation: fallback.pron || '',
+                            shortDefinition: fallback.strongs_def || '',
+                            kjvDefinition: fallback.kjv_def || '',
+                            strongsDerivation: fallback.derivation || '',
+                        }];
                     }
                 }
-            } catch (e) {}
-        }
+            }
+        } catch (e) {}
         return null;
     }
 
-    let strongsData = await fetchFromBolls(cleanStrongs);
-    
-    // Fallback logic for Greek/Hebrew if prefix was missing from user input
-    if (!strongsData) {
-        const numOnly = cleanStrongs.replace(/^[GH]/, '');
-        if (/^\d+$/.test(numOnly)) {
-            if (!cleanStrongs.startsWith('G')) {
-                strongsData = await fetchFromBolls('G' + numOnly);
-            }
-            if (!strongsData && !cleanStrongs.startsWith('H')) {
-                strongsData = await fetchFromBolls('H' + numOnly);
-            }
-        }
-    }
-    
-    if (!strongsData) return null;
-
+    // Map OpenScriptures data fields to our internal format
     return [{
-        strongsNumber: cleanStrongs,
-        lemma: strongsData.lemma || '',
-        transliteration: strongsData.xlit || '',
-        pronunciation: strongsData.pron || '',
-        shortDefinition: strongsData.strongs_def || '',
-        kjvDefinition: strongsData.kjv_def || '',
-        strongsDerivation: strongsData.derivation || '',
+        strongsNumber: id,
+        lemma: entry.lemma || '',
+        transliteration: entry.translit || entry.xlit || '',
+        pronunciation: entry.pron || '',
+        shortDefinition: entry.strongs_def || entry.shortDef || entry.def || '',
+        kjvDefinition: entry.kjv_def || entry.usage || '',
+        strongsDerivation: entry.derivation || entry.longDef || '',
     }];
 }
 
@@ -157,6 +163,10 @@ function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
     return content;
 }
 
+/**
+ * Collapses Bible verse content fragments while ensuring correct word spacing,
+ * specifically handling punctuation-to-word boundaries to avoid issues like "The elder,To".
+ */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
 
@@ -183,20 +193,21 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
 
             let needsSpace = false;
             if (lastChar && firstChar) {
-                const isLastPunct = /[.,!?:;’”)}\]'’]/.test(lastChar);
-                const isFirstPunct = /[.,!?:;’”)}\]'’]/.test(firstChar);
                 const isLastSpace = /\s/.test(lastChar);
                 const isFirstSpace = /\s/.test(firstChar);
+                const isLastPunct = /[.,!?:;’”)}\]'’]/.test(lastChar);
+                const isFirstPunct = /[.,!?:;’”)}\]'’]/.test(firstChar);
                 const isLastOpener = /[(\["'‘“]/.test(lastChar);
 
                 // Standard word-to-word spacing
-                if (!isLastSpace && !isFirstSpace && !isLastOpener && !isFirstPunct) {
-                    needsSpace = true;
-                }
-                
-                // Fix punctuation-to-word cases (e.g., "The elder,To" -> "The elder, To")
-                if (isLastPunct && !isLastSpace && !isFirstSpace && /[a-zA-Z0-9]/.test(firstChar)) {
-                    needsSpace = true;
+                if (!isLastSpace && !isFirstSpace) {
+                    if (!isLastOpener && !isFirstPunct) {
+                        needsSpace = true;
+                    }
+                    // Explicitly handle punctuation followed by word (e.g., "elder,To" -> "elder, To")
+                    if (isLastPunct && /[a-zA-Z0-9]/.test(firstChar)) {
+                        needsSpace = true;
+                    }
                 }
             }
 
