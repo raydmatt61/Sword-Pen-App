@@ -63,6 +63,7 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
 
     async function fetchFromBolls(code: string) {
         try {
+            // Use cache: 'no-store' and ensure trailing slash for Bolls API
             const url = `https://bolls.life/api/strongs/${code}/`;
             const response = await fetch(url, { 
                 headers: { 'User-Agent': 'Mozilla/5.0 (VerseInsights/1.0)' },
@@ -70,8 +71,11 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
             });
             if (!response.ok) return null;
             const data = await response.json();
-            // Bolls Life nests the data under the Strong's number key
-            return data[code] || data[code.toLowerCase()] || null;
+            
+            // Bolls Life nests the data under the Strong's number key (case varies)
+            const entry = data[code] || data[code.toLowerCase()] || data[Object.keys(data)[0]];
+            if (!entry || entry.error) return null;
+            return entry;
         } catch (e) {
             return null;
         }
@@ -79,7 +83,7 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
 
     let strongsData = await fetchFromBolls(cleanStrongs);
     
-    // Fallback prefix logic
+    // Fallback prefix logic for Greek/Hebrew
     if (!strongsData) {
         const numOnly = cleanStrongs.replace(/^[GH]/, '');
         if (/^\d+$/.test(numOnly)) {
@@ -92,7 +96,7 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
         }
     }
     
-    if (!strongsData || strongsData.error) return null;
+    if (!strongsData) return null;
 
     return [{
         strongsNumber: cleanStrongs,

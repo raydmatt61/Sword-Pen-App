@@ -107,9 +107,9 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Strong's Concordance Lookup</DialogTitle>
-          <DialogDescription>
-            Enter a Strong's number (e.g., G2424 or H8064) to see its definition.
+          <DialogTitle className="text-xl font-bold">Strong's Concordance Lookup</DialogTitle>
+          <DialogDescription className="text-sm">
+            Enter a Strong's number (e.g., <span className="text-blue-600 font-medium">G2424</span> or <span className="text-blue-600 font-medium">H8064</span>) to see its definition.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleLookup} className="flex gap-2">
@@ -118,8 +118,9 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoCapitalize="characters"
+            className="flex-grow"
           />
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading} className="bg-primary text-primary-foreground hover:bg-primary/90">
             {isLoading ? <Loader2 className="animate-spin" /> : "Lookup"}
           </Button>
         </form>
