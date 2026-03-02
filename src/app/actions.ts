@@ -1,3 +1,4 @@
+
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
@@ -61,7 +62,7 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
     if (!cleanStrongs) return null;
 
     async function fetchFromBolls(code: string) {
-        // Try multiple standard endpoints for better coverage
+        // We try multiple variants of the Bolls Strong's API to ensure maximum coverage
         const urls = [
             `https://bolls.life/api/strongs/${code}/`,
             `https://bolls.life/api/strongs/BSB/${code}/`,
@@ -73,23 +74,23 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
                 const response = await fetch(url, { cache: 'no-store' });
                 if (response.ok) {
                     const data = await response.json();
-                    // The API returns an object where keys are Strong's numbers
+                    // The API returns an object where keys are Strong's numbers (e.g., {"G2424": {...}})
+                    // We iterate keys to find the first valid non-error entry
                     for (const key in data) {
-                        if (data[key] && !data[key].error) {
-                            return data[key];
+                        const entry = data[key];
+                        if (entry && !entry.error && (entry.lemma || entry.strongs_def)) {
+                            return entry;
                         }
                     }
                 }
-            } catch (e) {
-                // Continue to next URL on failure
-            }
+            } catch (e) {}
         }
         return null;
     }
 
     let strongsData = await fetchFromBolls(cleanStrongs);
     
-    // Fallback prefix logic for Greek/Hebrew if prefix was missing
+    // Fallback logic for Greek/Hebrew if prefix was missing from user input
     if (!strongsData) {
         const numOnly = cleanStrongs.replace(/^[GH]/, '');
         if (/^\d+$/.test(numOnly)) {
@@ -125,7 +126,6 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
 
 function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
     const content: VerseContent[] = [];
-    // Matches: [1] Regular text, [2] Strong's tag <S>123</S>, [3] Any other HTML tag
     const regex = /([^<]+)|(<S>(\d+)<\/S>)|(<[^>]+>)/g;
     let match;
 
@@ -169,32 +169,18 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
 
         if (!currentIsText) {
             result.push(item);
+            lastTextItem = null;
             continue;
         }
 
         const currentObj = typeof item === 'string' ? { text: item } : { ...item } as FormattedText;
         
-        // Handle empty fragments (Strong's tags with no text)
-        if (currentObj.text === "") {
-            if (lastTextItem && currentObj.strongs) {
-                if (!lastTextItem.strongs) lastTextItem.strongs = [];
-                currentObj.strongs.forEach(s => {
-                    if (!lastTextItem!.strongs!.includes(s)) lastTextItem!.strongs!.push(s);
-                });
-            } else if (!lastTextItem) {
-                result.push(currentObj);
-                lastTextItem = currentObj;
-            }
-            continue;
-        }
-
         if (lastTextItem) {
             const lastText = lastTextItem.text;
             const currentText = currentObj.text;
             const lastChar = lastText.slice(-1);
             const firstChar = currentText.charAt(0);
 
-            // Determine if a space is needed
             let needsSpace = false;
             if (lastChar && firstChar) {
                 const isLastPunct = /[.,!?:;’”)}\]'’]/.test(lastChar);
@@ -208,13 +194,12 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
                     needsSpace = true;
                 }
                 
-                // Explicitly fix punctuation-to-word cases like "The elder,To" -> "The elder, To"
+                // Fix punctuation-to-word cases (e.g., "The elder,To" -> "The elder, To")
                 if (isLastPunct && !isLastSpace && !isFirstSpace && /[a-zA-Z0-9]/.test(firstChar)) {
                     needsSpace = true;
                 }
             }
 
-            // Determine if we can merge these segments
             const isJesusEqual = !!lastTextItem.wordsOfJesus === !!currentObj.wordsOfJesus;
             const isStrongsEqual = JSON.stringify(lastTextItem.strongs) === JSON.stringify(currentObj.strongs);
 
@@ -388,7 +373,6 @@ async function getChapter(book: string, chapter: string, translationId: string, 
   }
 
   if (chapterData) return chapterData;
-  // Final fallback to BSB (plain text via HelloAO if Bolls fails)
   if (!isFallbackAttempt && translationId !== 'BSB') return await getChapter(book, chapter, 'BSB', true);
   return null;
 }

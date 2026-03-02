@@ -55,7 +55,6 @@ function VerseComponent({
     const renderedContent = useMemo(() => {
         let charOffset = 0;
         const finalNodes: React.ReactNode[] = [];
-        
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
 
         verse.content.forEach((item, itemIndex) => {
@@ -89,7 +88,6 @@ function VerseComponent({
 
                 const segmentStart = charOffset;
                 const segmentEnd = segmentStart + text.length;
-
                 const boundaries = new Set([0, text.length]);
                 sortedAnnotations.forEach(ann => {
                     if (ann.start < segmentEnd && ann.end > segmentStart) {
@@ -99,24 +97,18 @@ function VerseComponent({
                 });
 
                 const sortedBoundaries = Array.from(boundaries).sort((a, b) => a - b);
-                
                 const subSpans = sortedBoundaries.map((start, i) => {
                     const end = sortedBoundaries[i+1];
                     if (start >= end) return null;
-
                     const subText = text.substring(start, end);
                     if (!subText) return null;
-                    
                     const subMidpoint = segmentStart + start + (end - start) / 2;
-                    
                     const coveringAnnotations = sortedAnnotations.filter(a => a.start <= subMidpoint && a.end > subMidpoint);
-            
                     const primaryAnnotation = coveringAnnotations.length > 0 
                         ? coveringAnnotations.reduce((prev, current) => ((prev.end - prev.start) > (current.end - current.start)) ? prev : current) 
                         : null;
 
                     const hasNote = primaryAnnotation?.note && primaryAnnotation.note.trim() !== '';
-
                     const highlightClasses = [...new Set(coveringAnnotations.map(a => a.highlight).filter(Boolean))].join(' ');
                     const underlineClasses = [...new Set(coveringAnnotations.map(a => a.underline).filter(Boolean))].join(' ');
                     
@@ -144,10 +136,12 @@ function VerseComponent({
                 const annotatedContent = <Fragment key={`frag-${itemIndex}`}>{subSpans}</Fragment>;
 
                 if (strongs && strongs.length > 0) {
+                    const displayNum = strongs[0].replace(/^([GH])0+/, '$1');
                     finalNodes.push(
                         <StrongsPopover key={`sp-${itemIndex}`} strongsNumber={strongs[0]} navigate={navigate}>
-                            <span className={cn("text-primary hover:underline cursor-pointer", isWoj && 'words-of-jesus')}>
+                            <span className={cn("text-primary hover:underline cursor-pointer relative", isWoj && 'words-of-jesus')}>
                                 {annotatedContent}
+                                <sup className="text-[0.65em] ml-0.5 text-muted-foreground/70 font-sans font-bold select-none">{displayNum}</sup>
                             </span>
                         </StrongsPopover>
                     );
@@ -158,7 +152,6 @@ function VerseComponent({
                         </span>
                     );
                 }
-                
                 charOffset += text.length;
             }
         });
@@ -169,16 +162,12 @@ function VerseComponent({
         const supElement = event.currentTarget;
         const pElement = supElement.parentElement;
         if (!pElement) return;
-
         const selection = window.getSelection();
         if (!selection) return;
-
         const range = document.createRange();
         const verseTextWrapper = pElement.querySelector('.verse-text-wrapper');
         if (!verseTextWrapper) return;
-
         range.selectNodeContents(verseTextWrapper);
-        
         selection.removeAllRanges();
         selection.addRange(range);
         document.dispatchEvent(new Event('selectionchange'));
@@ -188,7 +177,7 @@ function VerseComponent({
         const bookName = BIBLE_ABBR_BOOKS[bookAbbr];
         if (bookName) {
             navigate({ book: bookName, chapter: String(chapter) });
-            setIsCrossRefOpen(false); // Close dialog on navigation
+            setIsCrossRefOpen(false);
         }
     };
 
@@ -291,23 +280,14 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
 
     useEffect(() => {
         if (!emblaApi) return;
-    
         const handleSwipe = () => {
           const progress = emblaApi.scrollProgress();
-          emblaApi.scrollTo(0, true); // Prevent snap-back
-          
-          if (progress < -0.1) { // Right swipe
-            onChapterNav('prev');
-          } else if (progress > 0.1) { // Left swipe
-            onChapterNav('next');
-          }
+          emblaApi.scrollTo(0, true);
+          if (progress < -0.1) onChapterNav('prev');
+          else if (progress > 0.1) onChapterNav('next');
         };
-    
         emblaApi.on('pointerUp', handleSwipe);
-    
-        return () => {
-          emblaApi.off('pointerUp', handleSwipe);
-        };
+        return () => emblaApi.off('pointerUp', handleSwipe);
       }, [emblaApi, onChapterNav]);
 
     const crossRefMap = useMemo(() => {
@@ -330,8 +310,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
 
         if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
             const range = sel.getRangeAt(0);
-
-            // Ensure the selection is within our bible content
             const contentContainer = bibleContentRef.current;
             if (!contentContainer || !contentContainer.contains(range.commonAncestorContainer)) {
                 setSelection(null);
@@ -344,7 +322,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
             let startNode = range.startContainer;
             let endNode = range.endContainer;
 
-            // Traverse up to find the parent verse elements
             const startVerseEl = startNode.nodeType === 3 ? startNode.parentElement?.closest('[data-verse-number]') : (startNode as Element).closest('[data-verse-number]');
             const endVerseEl = endNode.nodeType === 3 ? endNode.parentElement?.closest('[data-verse-number]') : (endNode as Element).closest('[data-verse-number]');
 
@@ -361,29 +338,19 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                 return;
             }
 
-            // Slice to get all verse elements within the selection
             const selectedVerseElements = allVerseElements.slice(startIndex, endIndex + 1);
-
             if (selectedVerseElements.length > 0) {
                  setSelection({ range, verseElements: selectedVerseElements });
                  setActiveAnnotation(null);
             }
         } else if (sel && sel.isCollapsed) {
-            // When the selection is collapsed (e.g., user taps away), clear the selection state.
-            // We need to be careful not to clear it if the user is interacting with the annotation toolbar.
             const toolbar = document.getElementById('annotation-toolbar');
-            if (toolbar && sel.anchorNode && toolbar.contains(sel.anchorNode)) {
-                // The click was inside the toolbar, so don't clear the selection.
-                return;
-            }
+            if (toolbar && sel.anchorNode && toolbar.contains(sel.anchorNode)) return;
             setSelection(null);
         }
     }, [user, setSelection, setActiveAnnotation]);
     
     useEffect(() => {
-        // Using `selectionchange` is more reliable for tracking text selection,
-        // especially on mobile devices. `touchend` is a fallback to ensure the
-        // final selection state is captured after a drag gesture.
         document.addEventListener('selectionchange', handleTextSelect);
         document.addEventListener('touchend', handleTextSelect);
         return () => {
@@ -434,8 +401,8 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
             <div ref={emblaRef} className="pt-4 relative overflow-hidden">
                 <div className="flex">
                     <div className="min-w-0 flex-shrink-0 flex-grow-0 basis-full">
-                        <Card>
-                            <CardHeader>
+                        <Card className="border-none shadow-none bg-transparent">
+                            <CardHeader className="px-0 pt-0">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
@@ -465,14 +432,14 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent className="pb-0">
+                            <CardContent className="p-0">
                                 <div ref={bibleContentRef} className={cn("select-text bible-content", textClasses)}>
                                     <div className="space-y-2">
                                         {chapterData.chapter.content.map(renderContentItem)}
                                     </div>
                                 </div>
                             </CardContent>
-                            <CardFooter className="pt-6 flex flex-col items-start gap-4">
+                            <CardFooter className="px-0 pt-6 flex flex-col items-start gap-4">
                                 {chapterData.translation.id === 'engnet' ? (
                                     <p className="text-xs text-muted-foreground">
                                         NET Bible® Copyright | For full NET Bible notes, please see{' '}
@@ -500,28 +467,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                         <p className="text-xs text-muted-foreground italic">{chapterData.copyright}</p>
                                     )
                                 )}
-                                <div className="w-full md:hidden flex justify-center gap-2 pt-4">
-                                     <Button
-                                        variant="outline"
-                                        size="icon"
-                                        type="button"
-                                        onClick={() => onChapterNav('prev')}
-                                        disabled={currentChapter <= 1}
-                                        aria-label="Previous Chapter"
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        type="button"
-                                        onClick={() => onChapterNav('next')}
-                                        disabled={currentChapter >= maxChapters}
-                                        aria-label="Next Chapter"
-                                    >
-                                        <ChevronRight className="h-4 w-4" />
-                                    </Button>
-                                </div>
                             </CardFooter>
                         </Card>
                     </div>
@@ -530,6 +475,3 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         </TooltipProvider>
     );
 }
-
-    
-
