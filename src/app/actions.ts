@@ -1,4 +1,3 @@
-
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
@@ -75,7 +74,6 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
                 if (response.ok) {
                     const data = await response.json();
                     // The API returns an object where keys are Strong's numbers
-                    // Iterate and find the first non-error object
                     for (const key in data) {
                         if (data[key] && !data[key].error) {
                             return data[key];
