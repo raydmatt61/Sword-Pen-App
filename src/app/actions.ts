@@ -62,28 +62,36 @@ export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDe
     if (!cleanStrongs) return null;
 
     async function fetchFromBolls(code: string) {
-        try {
-            // Use cache: 'no-store' and ensure trailing slash for Bolls API
-            const url = `https://bolls.life/api/strongs/${code}/`;
-            const response = await fetch(url, { 
-                headers: { 'User-Agent': 'Mozilla/5.0 (VerseInsights/1.0)' },
-                cache: 'no-store'
-            });
-            if (!response.ok) return null;
-            const data = await response.json();
-            
-            // Bolls Life nests the data under the Strong's number key (case varies)
-            const entry = data[code] || data[code.toLowerCase()] || data[Object.keys(data)[0]];
-            if (!entry || entry.error) return null;
-            return entry;
-        } catch (e) {
-            return null;
+        // Try multiple standard endpoints for better coverage
+        const urls = [
+            `https://bolls.life/api/strongs/${code}/`,
+            `https://bolls.life/api/strongs/BSB/${code}/`,
+            `https://bolls.life/api/strongs/KJV/${code}/`
+        ];
+
+        for (const url of urls) {
+            try {
+                const response = await fetch(url, { cache: 'no-store' });
+                if (response.ok) {
+                    const data = await response.json();
+                    // The API returns an object where keys are Strong's numbers
+                    // Iterate and find the first non-error object
+                    for (const key in data) {
+                        if (data[key] && !data[key].error) {
+                            return data[key];
+                        }
+                    }
+                }
+            } catch (e) {
+                // Continue to next URL on failure
+            }
         }
+        return null;
     }
 
     let strongsData = await fetchFromBolls(cleanStrongs);
     
-    // Fallback prefix logic for Greek/Hebrew
+    // Fallback prefix logic for Greek/Hebrew if prefix was missing
     if (!strongsData) {
         const numOnly = cleanStrongs.replace(/^[GH]/, '');
         if (/^\d+$/.test(numOnly)) {
@@ -152,68 +160,80 @@ function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
 }
 
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
-    if (!content || content.length < 2) return content;
+    if (!content || content.length === 0) return [];
 
-    const collapsed: VerseContent[] = [];
-    let currentItem = content[0];
+    const result: VerseContent[] = [];
+    let lastTextItem: FormattedText | null = null;
 
-    for (let i = 1; i < content.length; i++) {
-        const nextItem = content[i];
+    for (let i = 0; i < content.length; i++) {
+        const item = content[i];
+        const currentIsText = typeof item === 'string' || (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item));
 
-        const isTextLike = (item: any) => 
-            typeof item === 'string' || 
-            (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item));
-
-        if (!isTextLike(currentItem) || !isTextLike(nextItem)) {
-            collapsed.push(currentItem);
-            currentItem = nextItem;
+        if (!currentIsText) {
+            result.push(item);
             continue;
         }
 
-        const currentObj = typeof currentItem === 'string' ? { text: currentItem } : { ...currentItem } as FormattedText;
-        const nextObj = typeof nextItem === 'string' ? { text: nextItem } : { ...nextItem } as FormattedText;
-
-        const isJesusEqual = !!currentObj.wordsOfJesus === !!nextObj.wordsOfJesus;
-        const isStrongsEqual = JSON.stringify(currentObj.strongs) === JSON.stringify(nextObj.strongs);
-
-        const lastText = currentObj.text;
-        const nextText = nextObj.text;
-        const lastChar = lastText.slice(-1);
-        const nextChar = nextText.charAt(0);
-
-        // INTELLIGENT SPACING LOGIC
-        // A space is needed UNLESS:
-        // 1. One of the chars is empty.
-        // 2. Either char is already whitespace.
-        // 3. lastChar is an opening symbol (e.g., "(", "[", "“").
-        // 4. nextChar is a closing punctuation (e.g., ".", ",", "!", "?").
-        // 5. Either is a dash or hyphen.
+        const currentObj = typeof item === 'string' ? { text: item } : { ...item } as FormattedText;
         
-        let needsSpace = true;
-        if (!lastChar || !nextChar) needsSpace = false;
-        else if (/\s/.test(lastChar) || /\s/.test(nextChar)) needsSpace = false;
-        else if (/[(\["'‘“]/.test(lastChar)) needsSpace = false;
-        else if (/[.,!?:;’”)}\]'’]/.test(nextChar)) needsSpace = false;
-        else if (/[—\-]/.test(lastChar) || /[—\-]/.test(nextChar)) needsSpace = false;
-
-        // Special case: if lastChar is punctuation (like , or .) we DO need a space if the next is a word.
-        // This explicitly handles "The elder,To" -> "The elder, To"
-        if (!needsSpace && /[.,!?:;]/.test(lastChar) && /[a-zA-Z0-9]/.test(nextChar)) {
-            needsSpace = true;
+        // Handle empty fragments (Strong's tags with no text)
+        if (currentObj.text === "") {
+            if (lastTextItem && currentObj.strongs) {
+                if (!lastTextItem.strongs) lastTextItem.strongs = [];
+                currentObj.strongs.forEach(s => {
+                    if (!lastTextItem!.strongs!.includes(s)) lastTextItem!.strongs!.push(s);
+                });
+            } else if (!lastTextItem) {
+                result.push(currentObj);
+                lastTextItem = currentObj;
+            }
+            continue;
         }
 
-        if (isJesusEqual && isStrongsEqual) {
-            currentObj.text = lastText + (needsSpace ? ' ' : '') + nextText;
-            currentItem = currentObj;
+        if (lastTextItem) {
+            const lastText = lastTextItem.text;
+            const currentText = currentObj.text;
+            const lastChar = lastText.slice(-1);
+            const firstChar = currentText.charAt(0);
+
+            // Determine if a space is needed
+            let needsSpace = false;
+            if (lastChar && firstChar) {
+                const isLastPunct = /[.,!?:;’”)}\]'’]/.test(lastChar);
+                const isFirstPunct = /[.,!?:;’”)}\]'’]/.test(firstChar);
+                const isLastSpace = /\s/.test(lastChar);
+                const isFirstSpace = /\s/.test(firstChar);
+                const isLastOpener = /[(\["'‘“]/.test(lastChar);
+
+                // Standard word-to-word spacing
+                if (!isLastSpace && !isFirstSpace && !isLastOpener && !isFirstPunct) {
+                    needsSpace = true;
+                }
+                
+                // Explicitly fix punctuation-to-word cases like "The elder,To" -> "The elder, To"
+                if (isLastPunct && !isLastSpace && !isFirstSpace && /[a-zA-Z0-9]/.test(firstChar)) {
+                    needsSpace = true;
+                }
+            }
+
+            // Determine if we can merge these segments
+            const isJesusEqual = !!lastTextItem.wordsOfJesus === !!currentObj.wordsOfJesus;
+            const isStrongsEqual = JSON.stringify(lastTextItem.strongs) === JSON.stringify(currentObj.strongs);
+
+            if (isJesusEqual && isStrongsEqual) {
+                lastTextItem.text += (needsSpace ? ' ' : '') + currentText;
+            } else {
+                if (needsSpace) lastTextItem.text += ' ';
+                result.push(currentObj);
+                lastTextItem = currentObj;
+            }
         } else {
-            // If we can't merge them (different styling/strongs), we must ensure the first one ends with a space if needed
-            if (needsSpace) currentObj.text = lastText + ' ';
-            collapsed.push(currentObj);
-            currentItem = nextItem;
+            result.push(currentObj);
+            lastTextItem = currentObj;
         }
     }
-    collapsed.push(currentItem);
-    return collapsed;
+
+    return result;
 }
 
 const API_BIBLE_IDS = {

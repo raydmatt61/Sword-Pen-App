@@ -97,7 +97,7 @@ export function AnnotationWrapper() {
         <div className="relative flex items-center justify-center p-1 md:p-2 border rounded-lg bg-background/50 min-h-[52px] md:min-h-[56px] w-full">
             {!showToolbar ? (
                 <p className="text-xl md:text-3xl font-black text-muted-foreground text-center leading-tight uppercase tracking-tight">
-                    {!user ? "Sign in" : "Select text to annotate"}
+                    {!user ? "Sign in" : "SELECT TEXT TO ANNOTATE"}
                 </p>
             ) : (
                <div ref={toolbarRef} id="annotation-toolbar" className="w-full">
