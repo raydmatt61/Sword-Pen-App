@@ -70,11 +70,12 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
     const [bsbConcordance, setBsbConcordance] = useState<BsbConcordanceMap | null>(null);
     const [bsbConcordanceLoading, setBsbConcordanceLoading] = useState(false);
 
-    // Load BSB Concordance data if needed - Fetch via Server Action to bypass CORS
+    // Load BSB Concordance data if needed - Fetch filtered data via Server Action
     useEffect(() => {
-        if (chapterData?.translation.id === 'BSB' && !bsbConcordance && !bsbConcordanceLoading) {
+        if (chapterData?.translation.id === 'BSB' && chapterData?.book?.name) {
             setBsbConcordanceLoading(true);
-            getBsbConcordanceText()
+            setBsbConcordance(null); // Clear old chapter's data
+            getBsbConcordanceText(chapterData.book.name, chapterData.chapter.number)
                 .then(text => {
                     setBsbConcordance(parseBsbTSV(text));
                     setBsbConcordanceLoading(false);
@@ -83,8 +84,11 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
                     console.error("Failed to load BSB Concordance:", err);
                     setBsbConcordanceLoading(false);
                 });
+        } else {
+            setBsbConcordance(null);
+            setBsbConcordanceLoading(false);
         }
-    }, [chapterData?.translation.id, bsbConcordance, bsbConcordanceLoading]);
+    }, [chapterData?.translation.id, chapterData?.book?.name, chapterData?.chapter?.number]);
 
     const annotationsQuery = useMemoFirebase(() => {
         if (!user || !firestore) return null;

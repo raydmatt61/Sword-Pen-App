@@ -413,12 +413,20 @@ export async function getPageData(book: string, chapter: string, translationId: 
     return { books: booksData, chapterData: chapterContent, crossRefs: crossRefData };
 }
 
-export async function getBsbConcordanceText(): Promise<string> {
+export async function getBsbConcordanceText(book: string, chapter: number): Promise<string> {
   const TSV_URL = "https://bereanbible.com/bsb_tables.tsv";
   try {
     const response = await fetch(TSV_URL);
     if (!response.ok) throw new Error(`TSV fetch failed: ${response.status}`);
-    return await response.text();
+    const fullText = await response.text();
+    
+    // Filter rows on server to avoid "Single item size exceeds maxSize" error (10MB -> few KB)
+    const lines = fullText.split('\n');
+    const header = lines[0];
+    const prefix = `${book} ${chapter}:`;
+    const filteredLines = lines.filter(line => line.startsWith(prefix));
+    
+    return [header, ...filteredLines].join('\n');
   } catch (error) {
     console.error("Server-side BSB Concordance fetch error:", error);
     throw new Error("Failed to retrieve Bible concordance data.");
