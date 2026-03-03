@@ -1,8 +1,7 @@
-
 "use client";
 
-import { createContext, useContext, ReactNode, useState, Dispatch, SetStateAction, useCallback, useMemo } from 'react';
-import type { Annotation, BibleChapterResponse } from '@/lib/bible';
+import { createContext, useContext, ReactNode, useState, Dispatch, SetStateAction, useCallback, useMemo, useEffect } from 'react';
+import type { Annotation, BibleChapterResponse, BsbConcordanceMap, BsbConcordanceEntry } from '@/lib/bible';
 import { useUser, useFirestore, setDocumentNonBlocking, deleteDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 
@@ -26,6 +25,8 @@ interface AnnotationContextType {
     createOrUpdateAnnotation: (data: Partial<Omit<Annotation, 'id' | 'userId'>>) => void;
     deleteAnnotation: (annotation: Annotation) => void;
     resetAnnotationState: () => void;
+    bsbConcordance: BsbConcordanceMap | null;
+    bsbConcordanceLoading: boolean;
 }
 
 const AnnotationContext = createContext<AnnotationContextType | undefined>(undefined);
@@ -35,6 +36,30 @@ interface AnnotationProviderProps {
     chapterData: BibleChapterResponse | null;
 }
 
+const TSV_URL = "https://bereanbible.com/bsb_tables.tsv";
+
+function parseBsbTSV(text: string): BsbConcordanceMap {
+  const lines = text.split("\n");
+  const map: BsbConcordanceMap = {};
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split("\t");
+    if (cols.length < 8) continue;
+    const ref = cols[0].trim();
+    const word = cols[1].trim();
+    const lang = cols[2].trim() as 'H' | 'G' | 'A';
+    const strongs = cols[3].trim();
+    const morph = cols[4].trim();
+    const translit = cols[5].trim();
+    const original = cols[6].trim();
+    const strongsDef = cols[7].trim();
+    const blbDef = cols[8] ? cols[8].trim() : "";
+    
+    if (!map[ref]) map[ref] = [];
+    map[ref].push({ word, lang, strongs, morph, translit, original, strongsDef, blbDef });
+  }
+  return map;
+}
+
 export const AnnotationProvider = ({ children, chapterData }: AnnotationProviderProps) => {
     const { user } = useUser();
     const firestore = useFirestore();
@@ -42,6 +67,26 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
     const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
     const [fontSize, setFontSize] = useState<FontSize>('md');
     
+    const [bsbConcordance, setBsbConcordance] = useState<BsbConcordanceMap | null>(null);
+    const [bsbConcordanceLoading, setBsbConcordanceLoading] = useState(false);
+
+    // Load BSB Concordance data if needed
+    useEffect(() => {
+        if (chapterData?.translation.id === 'BSB' && !bsbConcordance && !bsbConcordanceLoading) {
+            setBsbConcordanceLoading(true);
+            fetch(TSV_URL)
+                .then(r => r.text())
+                .then(text => {
+                    setBsbConcordance(parseBsbTSV(text));
+                    setBsbConcordanceLoading(false);
+                })
+                .catch(err => {
+                    console.error("Failed to load BSB Concordance:", err);
+                    setBsbConcordanceLoading(false);
+                });
+        }
+    }, [chapterData?.translation.id, bsbConcordance, bsbConcordanceLoading]);
+
     const annotationsQuery = useMemoFirebase(() => {
         if (!user || !firestore) return null;
         return collection(firestore, `users/${user.uid}/annotations`);
@@ -193,6 +238,8 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
         createOrUpdateAnnotation,
         deleteAnnotation,
         resetAnnotationState,
+        bsbConcordance,
+        bsbConcordanceLoading
     };
 
     return <AnnotationContext.Provider value={value}>{children}</AnnotationContext.Provider>;

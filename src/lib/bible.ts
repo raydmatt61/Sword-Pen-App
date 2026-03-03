@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export type Translation = {
@@ -200,3 +199,16 @@ export type StrongsDetail = {
   kjvDefinition: string;
   strongsDerivation?: string;
 };
+
+export type BsbConcordanceEntry = {
+    word: string;
+    lang: 'H' | 'G' | 'A';
+    strongs: string;
+    morph: string;
+    translit: string;
+    original: string;
+    strongsDef: string;
+    blbDef: string;
+};
+
+export type BsbConcordanceMap = Record<string, BsbConcordanceEntry[]>;
