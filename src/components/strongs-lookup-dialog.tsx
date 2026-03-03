@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
@@ -155,7 +154,7 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
                 </CardContent>
                 <CardFooter>
                     <p className="text-xs text-muted-foreground">
-                        Data from bolls.life.
+                        Data from OpenScriptures & Bolls.
                     </p>
                 </CardFooter>
               </Card>

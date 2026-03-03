@@ -5,13 +5,13 @@ import { API_BIBLE_IDS_SEARCH, BIBLE_BOOKS_ABBR, BIBLE_BOOK_NUMBERS, TRANSLATION
 import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, StrongsDetail, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, VerseFootnoteReference } from "@/lib/bible";
 import strongs from 'strongs';
 
-// Build a normalized index for Strong's lookups from the npm package
+// Build a normalized index for Strong's lookups from the OpenScriptures 'strongs' package
 const strongsIndex = (() => {
     const index: Record<string, any> = {};
     const g = strongs.greek || {};
     const h = strongs.hebrew || {};
     
-    // Normalize keys to have a single H/G prefix followed by numbers (removing extra zeros)
+    // Normalize keys to have a single H/G prefix followed by numbers
     Object.keys(g).forEach(k => {
         const num = k.replace(/^G/, '').replace(/^0+/, '');
         index[`G${num}`] = { ...g[k], language: 'greek' };
@@ -82,10 +82,11 @@ export async function getStrongsDetail(id: string): Promise<StrongsDetail[] | nu
     const withPrefixH = norm.startsWith('H') ? norm : `H${norm}`;
     const withPrefixG = norm.startsWith('G') ? norm : `G${norm}`;
 
+    // Try local OpenScriptures package index first
     const entry = strongsIndex[norm] || strongsIndex[withPrefixH] || strongsIndex[withPrefixG];
 
     if (!entry) {
-        // Fallback to external API if not found in package
+        // Fallback to external API if not found locally
         try {
             const response = await fetch(`https://bolls.life/api/strongs/${encodeURIComponent(id)}/`, { cache: 'no-store' });
             if (response.ok) {
@@ -109,7 +110,6 @@ export async function getStrongsDetail(id: string): Promise<StrongsDetail[] | nu
         return null;
     }
 
-    // Map OpenScriptures data fields to our internal format
     return [{
         strongsNumber: id,
         lemma: entry.lemma || '',
@@ -163,8 +163,8 @@ function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
 }
 
 /**
- * Collapses Bible verse content fragments while ensuring correct word spacing,
- * specifically handling punctuation-to-word boundaries to avoid issues like "The elder,To".
+ * Collapses Bible verse content fragments while ensuring correct word spacing.
+ * Specifically handles punctuation-to-word boundaries to fix issues like "The elder,To".
  */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
@@ -198,12 +198,11 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
                 const isFirstPunct = /[.,!?:;’”)}\]'’]/.test(firstChar);
                 const isLastOpener = /[(\["'‘“]/.test(lastChar);
 
-                // Standard word-to-word spacing
                 if (!isLastSpace && !isFirstSpace) {
                     if (!isLastOpener && !isFirstPunct) {
                         needsSpace = true;
                     }
-                    // Explicitly handle punctuation followed by word (e.g., "elder,To" -> "elder, To")
+                    // Fix: Ensure space after punctuation if followed by a word character
                     if (isLastPunct && /[a-zA-Z0-9]/.test(firstChar)) {
                         needsSpace = true;
                     }
@@ -357,7 +356,7 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
 async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
-  // Prefer Bolls Life for KJV and BSB as they often include Strong's tagging
+  // Bolls Life handles KJV and BSB well with Strong's
   if (translationId === 'KJV' || translationId === 'BSB') {
     chapterData = await getChapterFromBolls(translationId, book, chapter);
   } 
@@ -416,10 +415,10 @@ export async function getBsbConcordanceText(book: string, chapter: number): Prom
   const TSV_URL = "https://bereanbible.com/bsb_tables.tsv";
   try {
     const response = await fetch(TSV_URL);
-    if (!response.ok) throw new Error(`TSV fetch failed: ${response.status}`);
+    if (!response.ok) throw new Error(`TSV fetch failed: ${r.status}`);
     const fullText = await response.text();
     
-    // Filter rows on server to avoid "Single item size exceeds maxSize" error (10MB -> few KB)
+    // Server-side filtering to avoid payload size errors
     const lines = fullText.split('\n');
     const header = lines[0];
     const prefix = `${book} ${chapter}:`;
@@ -427,7 +426,7 @@ export async function getBsbConcordanceText(book: string, chapter: number): Prom
     
     return [header, ...filteredLines].join('\n');
   } catch (error) {
-    console.error("Server-side BSB Concordance fetch error:", error);
+    console.error("Concordance fetch error:", error);
     throw new Error("Failed to retrieve Bible concordance data.");
   }
 }

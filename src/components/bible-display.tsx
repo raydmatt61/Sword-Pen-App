@@ -104,7 +104,7 @@ function VerseComponent({
         const bsbEntries = concordanceRef ? bsbConcordance![concordanceRef] : null;
 
         if (bsbEntries) {
-            // Special rendering for BSB concordance
+            // Precise tokenization from example
             const rawText = verse.content.map(item => typeof item === 'string' ? item : (typeof item === 'object' && 'text' in item ? (item as FormattedText).text : '')).join('');
             const tokens = rawText.match(/(\s+|[^\s]+)/g) || [];
             let entryIdx = 0;
@@ -135,7 +135,6 @@ function VerseComponent({
             });
         }
 
-        // Standard rendering for other translations
         let charOffset = 0;
         const finalNodes: React.ReactNode[] = [];
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
