@@ -98,7 +98,7 @@ export function AnnotationWrapper() {
             {!showToolbar ? (
                 <p className={cn(
                     "font-bold text-muted-foreground text-center leading-tight uppercase tracking-tight select-none",
-                    "text-lg md:text-sm lg:text-base" // Larger on mobile, smaller/balanced on desktop
+                    "text-[11px] md:text-xs"
                 )}>
                     {!user ? "Sign in" : "SELECT TEXT TO ANNOTATE"}
                 </p>
