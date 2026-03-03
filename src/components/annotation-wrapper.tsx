@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -98,7 +99,7 @@ export function AnnotationWrapper() {
             {!showToolbar ? (
                 <p className={cn(
                     "font-bold text-muted-foreground text-center leading-tight uppercase tracking-tight select-none",
-                    "text-[11px] md:text-xs"
+                    "text-[10px] md:text-[11px]"
                 )}>
                     {!user ? "Sign in" : "SELECT TEXT TO ANNOTATE"}
                 </p>

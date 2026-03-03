@@ -1,3 +1,4 @@
+
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
@@ -415,10 +416,10 @@ export async function getBsbConcordanceText(book: string, chapter: number): Prom
   const TSV_URL = "https://bereanbible.com/bsb_tables.tsv";
   try {
     const response = await fetch(TSV_URL);
-    if (!response.ok) throw new Error(`TSV fetch failed: ${r.status}`);
+    if (!response.ok) throw new Error(`TSV fetch failed: ${response.status}`);
     const fullText = await response.text();
     
-    // Server-side filtering to avoid payload size errors
+    // Server-side filtering to avoid payload size errors (10MB -> ~200KB)
     const lines = fullText.split('\n');
     const header = lines[0];
     const prefix = `${book} ${chapter}:`;

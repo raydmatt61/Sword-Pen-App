@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useEffect, useRef, useState, useCallback, Fragment } from 'react';
@@ -104,7 +105,6 @@ function VerseComponent({
         const bsbEntries = concordanceRef ? bsbConcordance![concordanceRef] : null;
 
         if (bsbEntries) {
-            // Precise tokenization from example
             const rawText = verse.content.map(item => typeof item === 'string' ? item : (typeof item === 'object' && 'text' in item ? (item as FormattedText).text : '')).join('');
             const tokens = rawText.match(/(\s+|[^\s]+)/g) || [];
             let entryIdx = 0;
@@ -121,10 +121,13 @@ function VerseComponent({
                     return (
                         <BsbConcordancePopup key={`w-${ti}`} entry={entry}>
                             <button className={cn(
-                                "cursor-pointer hover:border-b hover:border-primary transition-colors",
-                                entry.lang === 'H' || entry.lang === 'A' ? "text-amber-900 dark:text-amber-500" : "text-blue-900 dark:text-blue-500"
+                                "cursor-pointer group relative transition-colors",
+                                entry.lang === 'H' || entry.lang === 'A' ? "text-amber-900 dark:text-amber-500 hover:text-amber-700" : "text-blue-900 dark:text-blue-500 hover:text-blue-700"
                             )}>
                                 {token}
+                                <sup className="text-[0.65em] font-bold opacity-60 ml-0.5 group-hover:opacity-100 transition-opacity">
+                                    {entry.strongs.replace(/^([HG])0*/, "$1")}
+                                </sup>
                             </button>
                         </BsbConcordancePopup>
                     );
@@ -200,6 +203,11 @@ function VerseComponent({
                             onClick={primaryAnnotation ? (e) => { e.stopPropagation(); onAnnotationClick(primaryAnnotation); } : undefined}
                         >
                             {subText}
+                            {ftItem?.strongs?.map(sn => (
+                                <sup key={sn} className="text-[0.6em] text-muted-foreground opacity-70 ml-0.5 select-none">
+                                    {sn.replace(/^([HG])0*/, "$1")}
+                                </sup>
+                            ))}
                         </span>
                     );
 
@@ -258,70 +266,72 @@ function VerseComponent({
     );
 
     return (
-        <div data-verse-number={verse.number}>
-            <div className={textClasses}>
+        <div data-verse-number={verse.number} className="relative group/verse">
+            <div className={cn(textClasses, "flex flex-wrap items-baseline")}>
                 <sup 
-                    className="font-headline font-bold text-primary mr-2 select-none cursor-pointer"
+                    className="font-headline font-bold text-primary mr-1.5 select-none cursor-pointer"
                     onClick={handleVerseNumberClick}
                 >
                     {verse.number}
                 </sup>
-                {verseNotes.length > 0 && (
-                     <Dialog>
-                        <DialogTrigger asChild>
-                             <button data-dialog-trigger className="relative -top-1 mx-1 p-1 align-middle text-muted-foreground hover:text-primary rounded-full hover:bg-secondary">
-                                <StickyNote className="h-4 w-4" />
-                                <span className="sr-only">View notes for verse {verse.number}</span>
-                            </button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Notes for {chapterData.book.name} {chapterData.chapter.number}:{verse.number}</DialogTitle>
-                            </DialogHeader>
-                             <div className="py-4 font-body whitespace-pre-wrap space-y-4 text-sm max-h-[60vh] overflow-y-auto">
-                                {verseNotes.map((note, index) => (
-                                    <div key={index} className="border-l-4 border-primary/70 pl-4 bg-secondary/30 py-2 rounded-r-md">{note}</div>
-                                ))}
-                            </div>
-                        </DialogContent>
-                    </Dialog>
-                )}
-                {crossReferences && crossReferences.length > 0 && (
-                     <Dialog open={isCrossRefOpen} onOpenChange={setIsCrossRefOpen}>
-                        <DialogTrigger asChild>
-                             <button className="relative -top-1 mx-1 p-1 align-middle text-muted-foreground hover:text-primary rounded-full hover:bg-secondary">
-                                <LinkIcon className="h-4 w-4" />
-                                <span className="sr-only">View cross-references for verse {verse.number}</span>
-                            </button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-lg">
-                            <DialogHeader>
-                                <DialogTitle>Cross-References for {chapterData.book.name} {chapterData.chapter.number}:{verse.number}</DialogTitle>
-                            </DialogHeader>
-                             <ScrollArea className="py-4 text-sm max-h-[60vh] -mx-6">
-                                 <div className="px-6 space-y-2">
-                                    {crossReferences.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((cr, index) => {
-                                        const refString = `${cr.book} ${cr.chapter}:${cr.verse}${cr.endVerse ? `-${cr.endVerse}` : ''}`;
-                                        return (
-                                            <div key={index} className="flex items-center gap-4">
-                                                <Button
-                                                    variant="link"
-                                                    className="p-0 h-auto font-body"
-                                                    onClick={() => handleRefClick(cr.book, cr.chapter)}
-                                                >
-                                                    {refString}
-                                                </Button>
-                                                <div className="flex-1 h-px bg-border"></div>
-                                                <span className="text-xs text-muted-foreground">{(cr.score ?? 0).toFixed(2)}</span>
-                                            </div>
-                                        );
-                                    })}
+                
+                <div className="inline-flex items-center gap-0.5 mr-2 -translate-y-[0.2em]">
+                    {verseNotes.length > 0 && (
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <button className="p-0.5 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors">
+                                    <StickyNote className="h-3.5 w-3.5" />
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>Notes for {chapterData.book.name} {chapterData.chapter.number}:{verse.number}</DialogTitle>
+                                </DialogHeader>
+                                <div className="py-4 font-body whitespace-pre-wrap space-y-4 text-sm max-h-[60vh] overflow-y-auto">
+                                    {verseNotes.map((note, index) => (
+                                        <div key={index} className="border-l-4 border-primary/70 pl-4 bg-secondary/30 py-2 rounded-r-md">{note}</div>
+                                    ))}
                                 </div>
-                            </ScrollArea>
-                        </DialogContent>
-                    </Dialog>
-                )}
-                <span className="verse-text-wrapper">{renderedContent}</span>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                    {crossReferences && crossReferences.length > 0 && (
+                        <Dialog open={isCrossRefOpen} onOpenChange={setIsCrossRefOpen}>
+                            <DialogTrigger asChild>
+                                <button className="p-0.5 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors">
+                                    <LinkIcon className="h-3.5 w-3.5" />
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-lg">
+                                <DialogHeader>
+                                    <DialogTitle>Cross-References for {chapterData.book.name} {chapterData.chapter.number}:{verse.number}</DialogTitle>
+                                </DialogHeader>
+                                <ScrollArea className="py-4 text-sm max-h-[60vh] -mx-6">
+                                    <div className="px-6 space-y-2">
+                                        {crossReferences.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((cr, index) => {
+                                            const refString = `${cr.book} ${cr.chapter}:${cr.verse}${cr.endVerse ? `-${cr.endVerse}` : ''}`;
+                                            return (
+                                                <div key={index} className="flex items-center gap-4">
+                                                    <Button
+                                                        variant="link"
+                                                        className="p-0 h-auto font-body"
+                                                        onClick={() => handleRefClick(cr.book, cr.chapter)}
+                                                    >
+                                                        {refString}
+                                                    </Button>
+                                                    <div className="flex-1 h-px bg-border"></div>
+                                                    <span className="text-xs text-muted-foreground">{(cr.score ?? 0).toFixed(2)}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </ScrollArea>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                </div>
+
+                <span className="verse-text-wrapper inline">{renderedContent}</span>
             </div>
         </div>
     );
