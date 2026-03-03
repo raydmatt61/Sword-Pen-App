@@ -1,9 +1,11 @@
+
 "use client";
 
 import { createContext, useContext, ReactNode, useState, Dispatch, SetStateAction, useCallback, useMemo, useEffect } from 'react';
 import type { Annotation, BibleChapterResponse, BsbConcordanceMap, BsbConcordanceEntry } from '@/lib/bible';
 import { useUser, useFirestore, setDocumentNonBlocking, deleteDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { getBsbConcordanceText } from '@/app/actions';
 
 export type FontSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
@@ -35,8 +37,6 @@ interface AnnotationProviderProps {
     children: ReactNode;
     chapterData: BibleChapterResponse | null;
 }
-
-const TSV_URL = "https://bereanbible.com/bsb_tables.tsv";
 
 function parseBsbTSV(text: string): BsbConcordanceMap {
   const lines = text.split("\n");
@@ -70,12 +70,11 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
     const [bsbConcordance, setBsbConcordance] = useState<BsbConcordanceMap | null>(null);
     const [bsbConcordanceLoading, setBsbConcordanceLoading] = useState(false);
 
-    // Load BSB Concordance data if needed
+    // Load BSB Concordance data if needed - Fetch via Server Action to bypass CORS
     useEffect(() => {
         if (chapterData?.translation.id === 'BSB' && !bsbConcordance && !bsbConcordanceLoading) {
             setBsbConcordanceLoading(true);
-            fetch(TSV_URL)
-                .then(r => r.text())
+            getBsbConcordanceText()
                 .then(text => {
                     setBsbConcordance(parseBsbTSV(text));
                     setBsbConcordanceLoading(false);
@@ -212,7 +211,7 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
              Object.values(chapterAnnotations).flat().forEach(ann => {
                  if (ann.groupId === annotationToDelete.groupId) {
                      annotationsToDelete.push(ann);
-                 }
+                     }
              });
          } else {
              annotationsToDelete.push(annotationToDelete);

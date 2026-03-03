@@ -412,3 +412,15 @@ export async function getPageData(book: string, chapter: string, translationId: 
     ]);
     return { books: booksData, chapterData: chapterContent, crossRefs: crossRefData };
 }
+
+export async function getBsbConcordanceText(): Promise<string> {
+  const TSV_URL = "https://bereanbible.com/bsb_tables.tsv";
+  try {
+    const response = await fetch(TSV_URL);
+    if (!response.ok) throw new Error(`TSV fetch failed: ${response.status}`);
+    return await response.text();
+  } catch (error) {
+    console.error("Server-side BSB Concordance fetch error:", error);
+    throw new Error("Failed to retrieve Bible concordance data.");
+  }
+}
