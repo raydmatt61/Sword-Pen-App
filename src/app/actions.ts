@@ -166,6 +166,7 @@ function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
 /**
  * Collapses Bible verse content fragments while ensuring correct word spacing.
  * Specifically handles punctuation-to-word boundaries to fix issues like "The elder,To".
+ * This is an internal utility and not a Server Action.
  */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
@@ -357,8 +358,8 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
 async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
-  // Bolls Life handles KJV and BSB well with Strong's
-  if (translationId === 'KJV' || translationId === 'BSB') {
+  // BSB and KJV handle Strong's well
+  if (translationId === 'BSB' || translationId === 'KJV') {
     chapterData = await getChapterFromBolls(translationId, book, chapter);
   } 
   

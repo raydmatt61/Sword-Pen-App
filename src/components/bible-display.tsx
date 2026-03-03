@@ -23,7 +23,7 @@ function BsbConcordancePopup({ entry, children }: { entry: BsbConcordanceEntry, 
             <DialogTrigger asChild>
                 {children}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md bg-stone-900 text-stone-100 border-stone-800">
+            <DialogContent className="sm:max-w-md bg-stone-950 text-stone-100 border-stone-800 shadow-2xl">
                 <DialogHeader>
                     <div className="flex items-center gap-3 mb-2">
                         <span className={cn(
@@ -44,18 +44,18 @@ function BsbConcordancePopup({ entry, children }: { entry: BsbConcordanceEntry, 
                         <div className="text-sm italic text-stone-400 font-serif">{entry.translit}</div>
                     </div>
                     
-                    <div className="space-y-3 pt-2 border-t border-stone-800">
+                    <div className="space-y-3 pt-4 border-t border-stone-800">
                         <div className="text-sm leading-relaxed text-stone-300">
                             <span className="text-[10px] font-bold uppercase text-stone-500 mr-2">Strong's</span>
                             {entry.strongsDef}
                         </div>
                         {entry.blbDef && entry.blbDef !== entry.strongsDef && (
-                            <div className="text-sm leading-relaxed text-stone-400 pt-2 border-t border-stone-800/50">
+                            <div className="text-sm leading-relaxed text-stone-400 pt-3 border-t border-stone-800/50">
                                 <span className="text-[10px] font-bold uppercase text-stone-500 mr-2">BLB</span>
                                 {entry.blbDef}
                             </div>
                         )}
-                        <div className="text-[10px] font-mono text-stone-600 pt-2 border-t border-stone-800/50">
+                        <div className="text-[10px] font-mono text-stone-600 pt-3 border-t border-stone-800/50">
                             Morphology: {entry.morph}
                         </div>
                     </div>
@@ -105,6 +105,7 @@ function VerseComponent({
         const bsbEntries = concordanceRef ? bsbConcordance![concordanceRef] : null;
 
         if (bsbEntries) {
+            // Flatten content to string for word-tokenization
             const rawText = verse.content.map(item => typeof item === 'string' ? item : (typeof item === 'object' && 'text' in item ? (item as FormattedText).text : '')).join('');
             const tokens = rawText.match(/(\s+|[^\s]+)/g) || [];
             let entryIdx = 0;
@@ -113,7 +114,7 @@ function VerseComponent({
                 if (/^\s+$/.test(token)) {
                     return <span key={`sp-${ti}`}>{token}</span>;
                 }
-                const clean = token.replace(/[.,;:!?"'—()\[\]*/]/g, "").trim();
+                const clean = token.replace(/[.,;:!?"'—()\[\]*/]/g, "").trim().toLowerCase();
                 const entry = bsbEntries[entryIdx];
 
                 if (entry && clean.length > 0) {
@@ -121,11 +122,11 @@ function VerseComponent({
                     return (
                         <BsbConcordancePopup key={`w-${ti}`} entry={entry}>
                             <button className={cn(
-                                "cursor-pointer group relative transition-colors",
+                                "cursor-pointer group relative transition-colors bsb-word-btn",
                                 entry.lang === 'H' || entry.lang === 'A' ? "text-amber-900 dark:text-amber-500 hover:text-amber-700" : "text-blue-900 dark:text-blue-500 hover:text-blue-700"
                             )}>
                                 {token}
-                                <sup className="text-[0.65em] font-bold opacity-60 ml-0.5 group-hover:opacity-100 transition-opacity">
+                                <sup className="text-[0.65em] font-bold opacity-60 ml-0.5 group-hover:opacity-100 transition-opacity select-none">
                                     {entry.strongs.replace(/^([HG])0*/, "$1")}
                                 </sup>
                             </button>
@@ -204,7 +205,7 @@ function VerseComponent({
                         >
                             {subText}
                             {ftItem?.strongs?.map(sn => (
-                                <sup key={sn} className="text-[0.6em] text-muted-foreground opacity-70 ml-0.5 select-none">
+                                <sup key={sn} className="text-[0.6em] text-muted-foreground opacity-70 ml-0.5 select-none font-bold">
                                     {sn.replace(/^([HG])0*/, "$1")}
                                 </sup>
                             ))}
@@ -275,7 +276,7 @@ function VerseComponent({
                     {verse.number}
                 </sup>
                 
-                <div className="inline-flex items-center gap-0.5 mr-2 -translate-y-[0.2em]">
+                <div className="inline-flex items-center gap-0.5 mr-2 -translate-y-[0.1em]">
                     {verseNotes.length > 0 && (
                         <Dialog>
                             <DialogTrigger asChild>
