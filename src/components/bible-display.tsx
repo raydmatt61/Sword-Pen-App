@@ -101,11 +101,11 @@ function VerseComponent({
 
     const renderedContent = useMemo(() => {
         const isBsb = chapterData.translation.id === 'BSB';
-        const concordanceRef = isBsb && bsbConcordance ? `${chapterData.book.name} ${chapterData.chapter.number}:${verse.number}` : null;
-        const bsbEntries = concordanceRef ? bsbConcordance![concordanceRef] : null;
+        const normalizedBook = chapterData.book.name === 'Song of Solomon' ? 'Song of Solomon' : chapterData.book.name;
+        const concordanceRefBase = isBsb && bsbConcordance ? `${normalizedBook} ${chapterData.chapter.number}:${verse.number}` : null;
+        const bsbEntries = concordanceRefBase ? bsbConcordance![concordanceRefBase] : null;
 
         if (bsbEntries) {
-            // Flatten content to string for word-tokenization
             const rawText = verse.content.map(item => typeof item === 'string' ? item : (typeof item === 'object' && 'text' in item ? (item as FormattedText).text : '')).join('');
             const tokens = rawText.match(/(\s+|[^\s]+)/g) || [];
             let entryIdx = 0;
@@ -122,11 +122,11 @@ function VerseComponent({
                     return (
                         <BsbConcordancePopup key={`w-${ti}`} entry={entry}>
                             <button className={cn(
-                                "cursor-pointer group relative transition-colors bsb-word-btn",
+                                "cursor-pointer group relative transition-colors bsb-word-btn inline-flex items-baseline gap-0.5",
                                 entry.lang === 'H' || entry.lang === 'A' ? "text-amber-900 dark:text-amber-500 hover:text-amber-700" : "text-blue-900 dark:text-blue-500 hover:text-blue-700"
                             )}>
                                 {token}
-                                <sup className="text-[0.65em] font-bold opacity-60 ml-0.5 group-hover:opacity-100 transition-opacity select-none">
+                                <sup className="text-[0.65em] font-bold opacity-60 group-hover:opacity-100 transition-opacity select-none">
                                     {entry.strongs.replace(/^([HG])0*/, "$1")}
                                 </sup>
                             </button>

@@ -89,19 +89,20 @@ export async function getStrongsDetail(id: string): Promise<StrongsDetail[] | nu
             const response = await fetch(`https://bolls.life/api/strongs/${encodeURIComponent(id)}/`, { cache: 'no-store' });
             if (response.ok) {
                 const data = await response.json();
-                for (const key in data) {
-                    const fallback = data[key];
-                    if (fallback && !fallback.error) {
-                        return [{
-                            strongsNumber: id,
-                            lemma: fallback.lemma || '',
-                            transliteration: fallback.xlit || '',
-                            pronunciation: fallback.pron || '',
-                            shortDefinition: fallback.strongs_def || '',
-                            kjvDefinition: fallback.kjv_def || '',
-                            strongsDerivation: fallback.derivation || '',
-                        }];
-                    }
+                // Bolls returns an object keyed by Strong's number, e.g., { "G2424": { ... } }
+                const entryKey = Object.keys(data)[0];
+                const fallback = entryKey ? data[entryKey] : null;
+                
+                if (fallback && !fallback.error) {
+                    return [{
+                        strongsNumber: id,
+                        lemma: fallback.lemma || '',
+                        transliteration: fallback.xlit || '',
+                        pronunciation: fallback.pron || '',
+                        shortDefinition: fallback.strongs_def || '',
+                        kjvDefinition: fallback.kjv_def || '',
+                        strongsDerivation: fallback.derivation || '',
+                    }];
                 }
             }
         } catch (e) {}
@@ -127,39 +128,21 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
   }
 }
 
-function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
-    const content: VerseContent[] = [];
-    const regex = /([^<]+)|(<S>(\d+)<\/S>)|(<[^>]+>)/g;
-    let match;
-
-    while ((match = regex.exec(text)) !== null) {
-        if (match[1]) { 
-            content.push(match[1]);
-        } else if (match[2]) {
-            const strongsNum = prefix + match[3];
-            const lastIdx = content.length - 1;
-            
-            if (lastIdx >= 0) {
-                const lastItem = content[lastIdx];
-                if (typeof lastItem === 'string') {
-                    content[lastIdx] = { text: lastItem, strongs: [strongsNum] };
-                } else if (typeof lastItem === 'object' && 'text' in lastItem && !('noteId' in lastItem)) {
-                    const ft = lastItem as FormattedText;
-                    if (!ft.strongs) ft.strongs = [];
-                    if (!ft.strongs.includes(strongsNum)) ft.strongs.push(strongsNum);
-                } else {
-                    content.push({ text: '', strongs: [strongsNum] });
-                }
-            } else {
-                content.push({ text: '', strongs: [strongsNum] });
-            }
-        }
-    }
-
-    if (content.length === 0 && text) content.push(text);
-    return content;
+/**
+ * Normalizes book names for BSB TSV matching.
+ */
+function normalizeBsbBookName(name: string): string {
+  const aliases: Record<string, string> = {
+    'Song of Songs': 'Song of Solomon',
+    'SNG': 'Song of Solomon',
+  };
+  return aliases[name] || name;
 }
 
+/**
+ * Utility function to collapse verse content into logical segments.
+ * Specifically handles punctuation-to-word boundaries to fix issues like "The elder,To".
+ */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
 
@@ -231,6 +214,39 @@ const API_BIBLE_IDS = {
 };
 const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
 
+async function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): Promise<VerseContent[]> {
+    const content: VerseContent[] = [];
+    const regex = /([^<]+)|(<S>(\d+)<\/S>)|(<[^>]+>)/g;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+        if (match[1]) { 
+            content.push(match[1]);
+        } else if (match[2]) {
+            const strongsNum = prefix + match[3];
+            const lastIdx = content.length - 1;
+            
+            if (lastIdx >= 0) {
+                const lastItem = content[lastIdx];
+                if (typeof lastItem === 'string') {
+                    content[lastIdx] = { text: lastItem, strongs: [strongsNum] };
+                } else if (typeof lastItem === 'object' && 'text' in lastItem && !('noteId' in lastItem)) {
+                    const ft = lastItem as FormattedText;
+                    if (!ft.strongs) ft.strongs = [];
+                    if (!ft.strongs.includes(strongsNum)) ft.strongs.push(strongsNum);
+                } else {
+                    content.push({ text: '', strongs: [strongsNum] });
+                }
+            } else {
+                content.push({ text: '', strongs: [strongsNum] });
+            }
+        }
+    }
+
+    if (content.length === 0 && text) content.push(text);
+    return content;
+}
+
 async function getChapterFromBolls(translationCode: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
     const bookNumber = BIBLE_BOOK_NUMBERS[book as keyof typeof BIBLE_BOOK_NUMBERS];
     if (!bookNumber) return null;
@@ -244,11 +260,11 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
         const bollsVerses: any[] = await response.json();
         if (!bollsVerses || bollsVerses.length === 0) return null;
         
-        const chapterContent: ChapterContentItem[] = bollsVerses.map(v => ({
+        const chapterContent: ChapterContentItem[] = await Promise.all(bollsVerses.map(async v => ({
             type: 'verse',
             number: v.verse,
-            content: collapseVerseContent(parseBollsStrongTags(v.text, prefix))
-        }));
+            content: collapseVerseContent(await parseBollsStrongTags(v.text, prefix))
+        })));
 
         const translationName = TRANSLATIONS.find(t => t.id === translationCode)?.name || translationCode;
 
@@ -405,6 +421,7 @@ export async function getPageData(book: string, chapter: string, translationId: 
 
 export async function getBsbConcordanceText(book: string, chapter: number): Promise<string> {
   const TSV_URL = "https://bereanbible.com/bsb_tables.tsv";
+  const normalizedBook = normalizeBsbBookName(book);
   try {
     const response = await fetch(TSV_URL);
     if (!response.ok) throw new Error(`TSV fetch failed: ${response.status}`);
@@ -412,7 +429,7 @@ export async function getBsbConcordanceText(book: string, chapter: number): Prom
     
     const lines = fullText.split('\n');
     const header = lines[0];
-    const prefix = `${book} ${chapter}:`;
+    const prefix = `${normalizedBook} ${chapter}:`;
     const filteredLines = lines.filter(line => line.startsWith(prefix));
     
     return [header, ...filteredLines].join('\n');

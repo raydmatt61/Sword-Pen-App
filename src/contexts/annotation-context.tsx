@@ -75,6 +75,7 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
         if (chapterData?.translation.id === 'BSB' && chapterData?.book?.name) {
             setBsbConcordanceLoading(true);
             setBsbConcordance(null); // Clear old chapter's data
+            
             getBsbConcordanceText(chapterData.book.name, chapterData.chapter.number)
                 .then(text => {
                     setBsbConcordance(parseBsbTSV(text));
