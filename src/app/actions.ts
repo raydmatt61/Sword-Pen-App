@@ -9,10 +9,9 @@ import strongs from 'strongs';
 // Build a normalized index for Strong's lookups from the OpenScriptures 'strongs' package
 const strongsIndex = (() => {
     const index: Record<string, any> = {};
-    const g = strongs.greek || {};
-    const h = strongs.hebrew || {};
+    const g = (strongs as any).greek || (strongs as any).Greek || (strongs as any).g || {};
+    const h = (strongs as any).hebrew || (strongs as any).Hebrew || (strongs as any).h || {};
     
-    // Normalize keys to have a single H/G prefix followed by numbers
     Object.keys(g).forEach(k => {
         const num = k.replace(/^G/, '').replace(/^0+/, '');
         index[`G${num}`] = { ...g[k], language: 'greek' };
@@ -83,11 +82,9 @@ export async function getStrongsDetail(id: string): Promise<StrongsDetail[] | nu
     const withPrefixH = norm.startsWith('H') ? norm : `H${norm}`;
     const withPrefixG = norm.startsWith('G') ? norm : `G${norm}`;
 
-    // Try local OpenScriptures package index first
     const entry = strongsIndex[norm] || strongsIndex[withPrefixH] || strongsIndex[withPrefixG];
 
     if (!entry) {
-        // Fallback to external API if not found locally
         try {
             const response = await fetch(`https://bolls.life/api/strongs/${encodeURIComponent(id)}/`, { cache: 'no-store' });
             if (response.ok) {
@@ -163,11 +160,6 @@ function parseBollsStrongTags(text: string, prefix: 'G' | 'H'): VerseContent[] {
     return content;
 }
 
-/**
- * Collapses Bible verse content fragments while ensuring correct word spacing.
- * Specifically handles punctuation-to-word boundaries to fix issues like "The elder,To".
- * This is an internal utility and not a Server Action.
- */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
 
@@ -204,7 +196,6 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
                     if (!isLastOpener && !isFirstPunct) {
                         needsSpace = true;
                     }
-                    // Fix: Ensure space after punctuation if followed by a word character
                     if (isLastPunct && /[a-zA-Z0-9]/.test(firstChar)) {
                         needsSpace = true;
                     }
@@ -358,7 +349,6 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
 async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
-  // BSB and KJV handle Strong's well
   if (translationId === 'BSB' || translationId === 'KJV') {
     chapterData = await getChapterFromBolls(translationId, book, chapter);
   } 
@@ -420,7 +410,6 @@ export async function getBsbConcordanceText(book: string, chapter: number): Prom
     if (!response.ok) throw new Error(`TSV fetch failed: ${response.status}`);
     const fullText = await response.text();
     
-    // Server-side filtering to avoid payload size errors (10MB -> ~200KB)
     const lines = fullText.split('\n');
     const header = lines[0];
     const prefix = `${book} ${chapter}:`;

@@ -522,6 +522,34 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                         {chapterData.chapter.content.map(renderContentItem)}
                                     </div>
                                 </div>
+
+                                <div className="mt-12 flex items-center justify-between border-t pt-8">
+                                    <Button
+                                        variant="ghost"
+                                        className="flex flex-col items-start gap-1 h-auto py-4 px-6 group"
+                                        onClick={() => onChapterNav('prev')}
+                                        disabled={currentChapter <= 1}
+                                    >
+                                        <span className="text-xs uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Previous Chapter</span>
+                                        <div className="flex items-center gap-2 font-headline font-bold text-lg">
+                                            <ChevronLeft className="h-5 w-5" />
+                                            {chapterData.book.name} {currentChapter - 1}
+                                        </div>
+                                    </Button>
+
+                                    <Button
+                                        variant="ghost"
+                                        className="flex flex-col items-end gap-1 h-auto py-4 px-6 group"
+                                        onClick={() => onChapterNav('next')}
+                                        disabled={currentChapter >= maxChapters}
+                                    >
+                                        <span className="text-xs uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Next Chapter</span>
+                                        <div className="flex items-center gap-2 font-headline font-bold text-lg text-right">
+                                            {chapterData.book.name} {currentChapter + 1}
+                                            <ChevronRight className="h-5 w-5" />
+                                        </div>
+                                    </Button>
+                                </div>
                             </CardContent>
                             <CardFooter className="px-0 pt-6 flex flex-col items-start gap-4">
                                 {chapterData.translation.id === 'engnet' ? (
