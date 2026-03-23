@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useEffect, useRef, useState, useCallback, Fragment } from 'react';
@@ -126,7 +125,7 @@ function VerseComponent({
                                 entry.lang === 'H' || entry.lang === 'A' ? "text-amber-900 dark:text-amber-500 hover:text-amber-700" : "text-blue-900 dark:text-blue-500 hover:text-blue-700"
                             )}>
                                 {token}
-                                <sup className="text-[0.65em] font-bold opacity-60 group-hover:opacity-100 transition-opacity select-none">
+                                <sup className="text-[0.6em] font-bold opacity-60 group-hover:opacity-100 transition-opacity select-none -translate-y-[0.1em]">
                                     {entry.strongs.replace(/^([HG])0*/, "$1")}
                                 </sup>
                             </button>
@@ -205,7 +204,7 @@ function VerseComponent({
                         >
                             {subText}
                             {ftItem?.strongs?.map(sn => (
-                                <sup key={sn} className="text-[0.6em] text-muted-foreground opacity-70 ml-0.5 select-none font-bold">
+                                <sup key={sn} className="text-[0.6em] text-muted-foreground opacity-70 ml-0.5 select-none font-bold -translate-y-[0.1em]">
                                     {sn.replace(/^([HG])0*/, "$1")}
                                 </sup>
                             ))}
@@ -268,7 +267,7 @@ function VerseComponent({
 
     return (
         <div data-verse-number={verse.number} className="relative group/verse">
-            <div className={cn(textClasses, "flex flex-wrap items-baseline")}>
+            <div className={cn(textClasses, "flex flex-wrap items-baseline mb-2")}>
                 <sup 
                     className="font-headline font-bold text-primary mr-1.5 select-none cursor-pointer"
                     onClick={handleVerseNumberClick}
@@ -276,7 +275,7 @@ function VerseComponent({
                     {verse.number}
                 </sup>
                 
-                <div className="inline-flex items-center gap-0.5 mr-2 -translate-y-[0.1em]">
+                <div className="inline-flex items-center gap-0.5 mr-3 -translate-y-[0.1em]">
                     {verseNotes.length > 0 && (
                         <Dialog>
                             <DialogTrigger asChild>
@@ -446,7 +445,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
 
     const renderContentItem = (item: ChapterContentItem, index: number) => {
         if (item.type === 'heading') {
-            return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 select-none"><Balancer>{item.content.join(' ')}</Balancer></h4>;
+            return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 mb-4 select-none"><Balancer>{item.content.join(' ')}</Balancer></h4>;
         }
         if (item.type === 'verse') {
             return <VerseComponent 
@@ -518,7 +517,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                             </CardHeader>
                             <CardContent className="p-0">
                                 <div ref={bibleContentRef} className={cn("select-text bible-content", textClasses)}>
-                                    <div className="space-y-2">
+                                    <div className="space-y-1">
                                         {chapterData.chapter.content.map(renderContentItem)}
                                     </div>
                                 </div>

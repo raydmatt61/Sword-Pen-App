@@ -1,4 +1,3 @@
-
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
@@ -89,7 +88,6 @@ export async function getStrongsDetail(id: string): Promise<StrongsDetail[] | nu
             const response = await fetch(`https://bolls.life/api/strongs/${encodeURIComponent(id)}/`, { cache: 'no-store' });
             if (response.ok) {
                 const data = await response.json();
-                // Bolls returns an object keyed by Strong's number, e.g., { "G2424": { ... } }
                 const entryKey = Object.keys(data)[0];
                 const fallback = entryKey ? data[entryKey] : null;
                 

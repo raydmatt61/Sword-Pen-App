@@ -64,7 +64,7 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
       } else {
         toast({
           title: "No Results",
-          description: `No Strong's definition found for "${query}".`,
+          description: `No Strong's definition found for "${query.trim().toUpperCase()}".`,
         });
       }
     } catch (error) {
@@ -104,9 +104,9 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
           <span className="sr-only">Strongs Lookup</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl bg-[#faf8f3]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Strong's Concordance Lookup</DialogTitle>
+          <DialogTitle className="text-xl font-bold font-headline">Strong's Concordance Lookup</DialogTitle>
           <DialogDescription className="text-sm">
             Enter a Strong's number (e.g., <span className="text-blue-600 font-medium">G2424</span> or <span className="text-blue-600 font-medium">H8064</span>) to see its definition.
           </DialogDescription>
@@ -117,9 +117,9 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoCapitalize="characters"
-            className="flex-grow"
+            className="flex-grow font-headline bg-white"
           />
-          <Button type="submit" disabled={isLoading} className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button type="submit" disabled={isLoading} className="bg-primary text-primary-foreground hover:bg-primary/90 px-6">
             {isLoading ? <Loader2 className="animate-spin" /> : "Lookup"}
           </Button>
         </form>
@@ -131,7 +131,7 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
                 </div>
             )}
             {results && results.map((item) => (
-              <Card key={item.strongsNumber}>
+              <Card key={item.strongsNumber} className="border-stone-200">
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl flex items-baseline justify-between">
                         <span>{item.lemma} ({item.transliteration})</span>

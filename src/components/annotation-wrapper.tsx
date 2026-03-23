@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -98,10 +97,10 @@ export function AnnotationWrapper() {
         <div className="relative flex items-center justify-center p-1 md:p-2 border rounded-lg bg-background/50 min-h-[52px] md:min-h-[56px] w-full">
             {!showToolbar ? (
                 <p className={cn(
-                    "font-bold text-muted-foreground text-center leading-tight uppercase tracking-tight select-none",
+                    "font-bold text-muted-foreground/80 text-center leading-tight uppercase tracking-[0.05em] select-none",
                     "text-[10px] md:text-[11px]"
                 )}>
-                    {!user ? "Sign in" : "SELECT TEXT TO ANNOTATE"}
+                    {!user ? "Sign in" : "Select text to annotate"}
                 </p>
             ) : (
                <div ref={toolbarRef} id="annotation-toolbar" className="w-full">
