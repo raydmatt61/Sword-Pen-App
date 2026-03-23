@@ -1,4 +1,3 @@
-
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
@@ -68,6 +67,7 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
 /**
  * Utility function to collapse verse content into logical segments.
  * Internal to this file to avoid Server Action overhead.
+ * Specifically handles punctuation-to-word boundaries to fix issues like "The elder, To".
  */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
@@ -77,9 +77,13 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
 
     for (let i = 0; i < content.length; i++) {
         const item = content[i];
-        const currentIsText = typeof item === 'string' || (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item));
+        
+        // A current item is "collapsible" into the previous one ONLY if:
+        // 1. It is a text item (string or FormattedText)
+        // 2. It does NOT have a Strong's number
+        const currentIsPlainText = typeof item === 'string' || (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item) && !('strongs' in item));
 
-        if (!currentIsText) {
+        if (!currentIsPlainText) {
             result.push(item);
             lastTextItem = null;
             continue;
@@ -150,11 +154,57 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
         const bollsVerses: any[] = await response.json();
         if (!bollsVerses || bollsVerses.length === 0) return null;
         
-        const chapterContent: ChapterContentItem[] = bollsVerses.map(v => ({
-            type: 'verse',
-            number: v.verse,
-            content: collapseVerseContent([v.text.replace(/<[^>]+>/g, '')])
-        }));
+        const isOT = OLD_TESTAMENT_BOOK_NAMES.includes(book);
+        const prefix = isOT ? 'H' : 'G';
+
+        const chapterContent: ChapterContentItem[] = bollsVerses.map(v => {
+            // Text can contain things like: "In the beginning<S>7225</S> God<S>430</S>"
+            const segments: VerseContent[] = [];
+            // Split by the tags themselves: "In the beginning", "<S>7225</S>", " God", "<S>430</S>"
+            const parts = v.text.split(/(<S>\d+<\/S>)/);
+            
+            parts.forEach(part => {
+                if (!part) return;
+                const strongsMatch = part.match(/<S>(\d+)<\/S>/);
+                if (strongsMatch) {
+                    const number = strongsMatch[1];
+                    const fullStrongs = prefix + number;
+                    
+                    // Attach to the last segment if it's text
+                    if (segments.length > 0) {
+                        const lastIndex = segments.length - 1;
+                        const last = segments[lastIndex];
+                        
+                        if (typeof last === 'string') {
+                            // Split last segment to isolate the actual word this Strong's belongs to
+                            const words = last.split(/(\s+)/);
+                            if (words.length > 0) {
+                                const lastWord = words.pop() || "";
+                                const preceding = words.join("");
+                                if (preceding) {
+                                    segments[lastIndex] = preceding;
+                                    segments.push({ text: lastWord, strongs: fullStrongs });
+                                } else {
+                                    segments[lastIndex] = { text: lastWord, strongs: fullStrongs };
+                                }
+                            }
+                        } else if (typeof last === 'object' && 'text' in last && !('noteId' in last)) {
+                            // If it's already an object (like words of Jesus), attach strongs to it
+                            (last as FormattedText).strongs = fullStrongs;
+                        }
+                    }
+                } else {
+                    // Plain text, strip other HTML tags but keep content
+                    segments.push(part.replace(/<[^>]+>/g, ''));
+                }
+            });
+
+            return {
+                type: 'verse',
+                number: v.verse,
+                content: collapseVerseContent(segments)
+            };
+        });
 
         const translationName = TRANSLATIONS.find(t => t.id === translationCode)?.name || translationCode;
 

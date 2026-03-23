@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
@@ -81,6 +80,7 @@ function VerseComponent({
 
                 const ftItem = typeof item === 'object' ? (item as FormattedText) : null;
                 const isWoj = ftItem?.wordsOfJesus;
+                const strongs = ftItem?.strongs;
 
                 const segmentStart = charOffset;
                 const segmentEnd = segmentStart + text.length;
@@ -111,10 +111,28 @@ function VerseComponent({
                     const span = (
                         <span
                             key={`s-${itemIndex}-${i}`}
-                            className={cn(highlightClasses, underlineClasses, hasNote && 'cursor-help border-b-2 border-dashed border-primary')}
-                            onClick={primaryAnnotation ? (e) => { e.stopPropagation(); onAnnotationClick(primaryAnnotation); } : undefined}
+                            className={cn(
+                                highlightClasses, 
+                                underlineClasses, 
+                                hasNote && 'cursor-help border-b-2 border-dashed border-primary',
+                                strongs && 'cursor-pointer hover:text-primary transition-colors decoration-primary/30'
+                            )}
+                            onClick={(e) => {
+                                if (strongs) {
+                                    e.stopPropagation();
+                                    window.open(`https://www.blueletterbible.org/lexicon/${strongs}/kjv/`, '_blank');
+                                } else if (primaryAnnotation) {
+                                    e.stopPropagation();
+                                    onAnnotationClick(primaryAnnotation);
+                                }
+                            }}
                         >
                             {subText}
+                            {strongs && (
+                                <sup className="ml-0.5 text-[10px] font-bold text-muted-foreground/60 select-none">
+                                    {strongs}
+                                </sup>
+                            )}
                         </span>
                     );
 
@@ -433,7 +451,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                         <span className="text-xs uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Previous Chapter</span>
                                         <div className="flex items-center gap-2 font-headline font-bold text-lg">
                                             <ChevronLeft className="h-5 w-5" />
-                                            {chapterData.book.name} {currentChapter - 1}
+                                            {chapterData.book.name} {currentChapter > 1 ? currentChapter - 1 : currentChapter}
                                         </div>
                                     </Button>
 
@@ -445,7 +463,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                     >
                                         <span className="text-xs uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Next Chapter</span>
                                         <div className="flex items-center gap-2 font-headline font-bold text-lg text-right">
-                                            {chapterData.book.name} {currentChapter + 1}
+                                            {chapterData.book.name} {currentChapter < maxChapters ? currentChapter + 1 : currentChapter}
                                             <ChevronRight className="h-5 w-5" />
                                         </div>
                                     </Button>

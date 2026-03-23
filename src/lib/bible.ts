@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export type Translation = {
@@ -60,6 +59,7 @@ export type FormattedText = {
     text: string;
     poem?: number;
     wordsOfJesus?: boolean;
+    strongs?: string;
 };
 
 export type InlineHeading = {
