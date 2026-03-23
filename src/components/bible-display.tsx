@@ -1,68 +1,20 @@
+
 "use client";
 
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, type VerseContent, FormattedText, VerseFootnoteReference, BsbConcordanceEntry } from '@/lib/bible';
+import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, type VerseContent, FormattedText, VerseFootnoteReference } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Balancer from 'react-wrap-balancer';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useUser } from '@/firebase';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
-
-
-function BsbConcordancePopup({ entry, children }: { entry: BsbConcordanceEntry, children: React.ReactNode }) {
-    return (
-        <Dialog>
-            <DialogTrigger asChild>
-                {children}
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md bg-stone-950 text-stone-100 border-stone-800 shadow-2xl">
-                <DialogHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                        <span className={cn(
-                            "px-2 py-0.5 rounded text-xs font-bold font-mono tracking-wider",
-                            (entry.lang === 'H' || entry.lang === 'A') ? "bg-amber-700 text-amber-100" : "bg-blue-800 text-blue-100"
-                        )}>
-                            {entry.strongs}
-                        </span>
-                        <span className="text-[10px] uppercase tracking-widest text-stone-500 font-headline">
-                            {entry.lang === 'H' ? 'Hebrew' : entry.lang === 'A' ? 'Aramaic' : 'Greek'}
-                        </span>
-                    </div>
-                </DialogHeader>
-                <div className="space-y-4">
-                    <div>
-                        <div className="text-xl font-bold text-stone-100 mb-1">{entry.word}</div>
-                        <div className="text-2xl font-serif text-amber-500 mb-1">{entry.original}</div>
-                        <div className="text-sm italic text-stone-400 font-serif">{entry.translit}</div>
-                    </div>
-                    
-                    <div className="space-y-3 pt-4 border-t border-stone-800">
-                        <div className="text-sm leading-relaxed text-stone-300">
-                            <span className="text-[10px] font-bold uppercase text-stone-500 mr-2">Strong's</span>
-                            {entry.strongsDef}
-                        </div>
-                        {entry.blbDef && entry.blbDef !== entry.strongsDef && (
-                            <div className="text-sm leading-relaxed text-stone-400 pt-3 border-t border-stone-800/50">
-                                <span className="text-[10px] font-bold uppercase text-stone-500 mr-2">BLB</span>
-                                {entry.blbDef}
-                            </div>
-                        )}
-                        <div className="text-[10px] font-mono text-stone-600 pt-3 border-t border-stone-800/50">
-                            Morphology: {entry.morph}
-                        </div>
-                    </div>
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
-}
 
 function VerseComponent({
     verse,
@@ -79,7 +31,7 @@ function VerseComponent({
     chapterData: BibleChapterResponse;
     navigate: (newValues: Partial<{ book: string; chapter: string; translation: string; verse: string; }>) => void;
 }) {
-    const { fontSize, bsbConcordance } = useAnnotationContext();
+    const { fontSize } = useAnnotationContext();
     const [isCrossRefOpen, setIsCrossRefOpen] = useState(false);
 
     const footnotesMap = useMemo(() => {
@@ -97,47 +49,7 @@ function VerseComponent({
         return Array.from(notes);
     }, [annotations]);
 
-
     const renderedContent = useMemo(() => {
-        const isBsb = chapterData.translation.id === 'BSB';
-        const normalizedBook = chapterData.book.name === 'Song of Solomon' ? 'Song of Solomon' : chapterData.book.name;
-        const concordanceRefBase = isBsb && bsbConcordance ? `${normalizedBook} ${chapterData.chapter.number}:${verse.number}` : null;
-        const bsbEntries = concordanceRefBase ? bsbConcordance![concordanceRefBase] : null;
-
-        if (bsbEntries) {
-            const rawText = verse.content.map(item => typeof item === 'string' ? item : (typeof item === 'object' && 'text' in item ? (item as FormattedText).text : '')).join('');
-            const tokens = rawText.match(/(\s+|[^\s]+)/g) || [];
-            let entryIdx = 0;
-            
-            return tokens.map((token, ti) => {
-                if (/^\s+$/.test(token)) {
-                    return <span key={`sp-${ti}`}>{token}</span>;
-                }
-                const clean = token.replace(/[.,;:!?"'—()\[\]*/]/g, "").trim().toLowerCase();
-                const entry = bsbEntries[entryIdx];
-
-                if (entry && clean.length > 0) {
-                    entryIdx++;
-                    return (
-                        <BsbConcordancePopup key={`w-${ti}`} entry={entry}>
-                            <button className={cn(
-                                "cursor-pointer group relative transition-colors bsb-word-btn inline-flex items-baseline gap-0.5",
-                                entry.lang === 'H' || entry.lang === 'A' ? "text-amber-900 dark:text-amber-500 hover:text-amber-700" : "text-blue-900 dark:text-blue-500 hover:text-blue-700"
-                            )}>
-                                {token}
-                                <sup className="text-[0.6em] font-bold opacity-60 group-hover:opacity-100 transition-opacity select-none -translate-y-[0.1em]">
-                                    {entry.strongs.replace(/^([HG])0*/, "$1")}
-                                </sup>
-                            </button>
-                        </BsbConcordancePopup>
-                    );
-                } else {
-                    if (clean.length > 0) entryIdx++;
-                    return <span key={`w-${ti}`}>{token}</span>;
-                }
-            });
-        }
-
         let charOffset = 0;
         const finalNodes: React.ReactNode[] = [];
         const sortedAnnotations = [...annotations].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
@@ -203,11 +115,6 @@ function VerseComponent({
                             onClick={primaryAnnotation ? (e) => { e.stopPropagation(); onAnnotationClick(primaryAnnotation); } : undefined}
                         >
                             {subText}
-                            {ftItem?.strongs?.map(sn => (
-                                <sup key={sn} className="text-[0.6em] text-muted-foreground opacity-70 ml-0.5 select-none font-bold -translate-y-[0.1em]">
-                                    {sn.replace(/^([HG])0*/, "$1")}
-                                </sup>
-                            ))}
                         </span>
                     );
 
@@ -231,7 +138,7 @@ function VerseComponent({
             }
         });
         return finalNodes;
-    }, [verse.content, annotations, onAnnotationClick, footnotesMap, chapterData, bsbConcordance]);
+    }, [verse.content, annotations, onAnnotationClick, footnotesMap]);
     
     const handleVerseNumberClick = (event: React.MouseEvent<HTMLElement>) => {
         const supElement = event.currentTarget;
@@ -350,7 +257,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         setActiveAnnotation,
         fontSize,
         chapterAnnotations,
-        bsbConcordanceLoading
     } = useAnnotationContext();
     const { user } = useUser();
     const bibleContentRef = useRef<HTMLDivElement>(null);
@@ -477,11 +383,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     return (
         <TooltipProvider>
             <div ref={emblaRef} className="pt-4 relative overflow-hidden">
-                {bsbConcordanceLoading && (
-                    <div className="absolute top-0 right-0 p-4 z-10">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    </div>
-                )}
                 <div className="flex">
                     <div className="min-w-0 flex-shrink-0 flex-grow-0 basis-full">
                         <Card className="border-none shadow-none bg-transparent">

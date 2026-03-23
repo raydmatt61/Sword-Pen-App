@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export type Translation = {
@@ -59,7 +60,6 @@ export type FormattedText = {
     text: string;
     poem?: number;
     wordsOfJesus?: boolean;
-    strongs?: string[];
 };
 
 export type InlineHeading = {
@@ -186,29 +186,5 @@ export const GenerateVerseInsightsOutputSchema = z.object({
     insights: z.string().describe('AI-generated insights for the verse based on user annotations.'),
 });
 
-
 export type GenerateVerseInsightsInput = z.infer<typeof GenerateVerseInsightsInputSchema>;
 export type GenerateVerseInsightsOutput = z.infer<typeof GenerateVerseInsightsOutputSchema>;
-
-export type StrongsDetail = {
-  strongsNumber: string;
-  lemma: string;
-  transliteration: string;
-  pronunciation?: string;
-  shortDefinition: string;
-  kjvDefinition: string;
-  strongsDerivation?: string;
-};
-
-export type BsbConcordanceEntry = {
-    word: string;
-    lang: 'H' | 'G' | 'A';
-    strongs: string;
-    morph: string;
-    translit: string;
-    original: string;
-    strongsDef: string;
-    blbDef: string;
-};
-
-export type BsbConcordanceMap = Record<string, BsbConcordanceEntry[]>;
