@@ -120,6 +120,7 @@ function VerseComponent({
                             onClick={(e) => {
                                 if (strongs) {
                                     e.stopPropagation();
+                                    // External link to Blue Letter Bible Lexicon
                                     window.open(`https://www.blueletterbible.org/lexicon/${strongs}/kjv/`, '_blank');
                                 } else if (primaryAnnotation) {
                                     e.stopPropagation();

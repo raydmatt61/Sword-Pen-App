@@ -158,9 +158,8 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
         const prefix = isOT ? 'H' : 'G';
 
         const chapterContent: ChapterContentItem[] = bollsVerses.map(v => {
-            // Text can contain things like: "In the beginning<S>7225</S> God<S>430</S>"
             const segments: VerseContent[] = [];
-            // Split by the tags themselves: "In the beginning", "<S>7225</S>", " God", "<S>430</S>"
+            // Split by Strong's tags: <S>1234</S>
             const parts = v.text.split(/(<S>\d+<\/S>)/);
             
             parts.forEach(part => {
@@ -170,13 +169,11 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
                     const number = strongsMatch[1];
                     const fullStrongs = prefix + number;
                     
-                    // Attach to the last segment if it's text
                     if (segments.length > 0) {
                         const lastIndex = segments.length - 1;
                         const last = segments[lastIndex];
                         
                         if (typeof last === 'string') {
-                            // Split last segment to isolate the actual word this Strong's belongs to
                             const words = last.split(/(\s+)/);
                             if (words.length > 0) {
                                 const lastWord = words.pop() || "";
@@ -189,12 +186,11 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
                                 }
                             }
                         } else if (typeof last === 'object' && 'text' in last && !('noteId' in last)) {
-                            // If it's already an object (like words of Jesus), attach strongs to it
                             (last as FormattedText).strongs = fullStrongs;
                         }
                     }
                 } else {
-                    // Plain text, strip other HTML tags but keep content
+                    // Strip other HTML tags
                     segments.push(part.replace(/<[^>]+>/g, ''));
                 }
             });
