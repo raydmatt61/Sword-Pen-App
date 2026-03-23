@@ -120,7 +120,6 @@ function VerseComponent({
                             onClick={(e) => {
                                 if (strongs) {
                                     e.stopPropagation();
-                                    // External link to Blue Letter Bible Lexicon
                                     window.open(`https://www.blueletterbible.org/lexicon/${strongs}/kjv/`, '_blank');
                                 } else if (primaryAnnotation) {
                                     e.stopPropagation();
@@ -184,11 +183,11 @@ function VerseComponent({
 
     const textClasses = cn(
         "font-body",
-        fontSize === 'sm' && 'text-sm leading-relaxed',
-        fontSize === 'md' && 'text-base leading-relaxed',
-        fontSize === 'lg' && 'text-lg leading-relaxed',
-        fontSize === 'xl' && 'text-xl leading-relaxed',
-        fontSize === '2xl' && 'text-2xl leading-relaxed',
+        fontSize === 'sm' && 'text-base md:text-sm leading-relaxed',
+        fontSize === 'md' && 'text-xl md:text-base leading-relaxed',
+        fontSize === 'lg' && 'text-2xl md:text-lg leading-relaxed',
+        fontSize === 'xl' && 'text-3xl md:text-xl leading-relaxed',
+        fontSize === '2xl' && 'text-4xl md:text-2xl leading-relaxed',
     );
 
     return (
@@ -389,11 +388,11 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     
     const textClasses = cn(
         "font-body",
-        fontSize === 'sm' && 'text-sm leading-relaxed',
-        fontSize === 'md' && 'text-base leading-relaxed',
-        fontSize === 'lg' && 'text-lg leading-relaxed',
-        fontSize === 'xl' && 'text-xl leading-relaxed',
-        fontSize === '2xl' && 'text-2xl leading-relaxed',
+        fontSize === 'sm' && 'text-base md:text-sm leading-relaxed',
+        fontSize === 'md' && 'text-xl md:text-base leading-relaxed',
+        fontSize === 'lg' && 'text-2xl md:text-lg leading-relaxed',
+        fontSize === 'xl' && 'text-3xl md:text-xl leading-relaxed',
+        fontSize === '2xl' && 'text-4xl md:text-2xl leading-relaxed',
     );
 
 
