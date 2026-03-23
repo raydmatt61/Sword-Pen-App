@@ -67,6 +67,7 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
 
 /**
  * Utility function to collapse verse content into logical segments.
+ * Internal to this file to avoid Server Action overhead.
  */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
