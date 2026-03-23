@@ -104,10 +104,10 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
           <span className="sr-only">Strongs Lookup</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl bg-[#faf8f3]">
+      <DialogContent className="sm:max-w-2xl bg-[#faf8f3] border-stone-200">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold font-headline">Strong's Concordance Lookup</DialogTitle>
-          <DialogDescription className="text-sm">
+          <DialogTitle className="text-xl font-bold font-headline text-stone-900">Strong's Concordance Lookup</DialogTitle>
+          <DialogDescription className="text-sm text-stone-600">
             Enter a Strong's number (e.g., <span className="text-blue-600 font-medium">G2424</span> or <span className="text-blue-600 font-medium">H8064</span>) to see its definition.
           </DialogDescription>
         </DialogHeader>
@@ -117,7 +117,7 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoCapitalize="characters"
-            className="flex-grow font-headline bg-white"
+            className="flex-grow font-headline bg-white border-stone-200"
           />
           <Button type="submit" disabled={isLoading} className="bg-primary text-primary-foreground hover:bg-primary/90 px-6">
             {isLoading ? <Loader2 className="animate-spin" /> : "Lookup"}
@@ -131,15 +131,15 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
                 </div>
             )}
             {results && results.map((item) => (
-              <Card key={item.strongsNumber} className="border-stone-200">
+              <Card key={item.strongsNumber} className="border-stone-200 bg-white">
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl flex items-baseline justify-between">
-                        <span>{item.lemma} ({item.transliteration})</span>
+                        <span className="text-stone-900">{item.lemma} ({item.transliteration})</span>
                         <span className="text-lg font-bold text-primary">{item.strongsNumber}</span>
                     </CardTitle>
-                     {item.pronunciation && <p className="text-sm text-muted-foreground -mt-2">{item.pronunciation}</p>}
+                     {item.pronunciation && <p className="text-sm text-stone-500 -mt-2">{item.pronunciation}</p>}
                 </CardHeader>
-                <CardContent className="space-y-4 font-body">
+                <CardContent className="space-y-4 font-body text-stone-800">
                     <p><span className="font-bold">Short Definition:</span> {item.shortDefinition}</p>
                      <div>
                         <p className="font-bold">KJV Definition:</p>
@@ -153,7 +153,7 @@ export function StrongsLookupDialog({ navigate }: StrongsLookupDialogProps) {
                     )}
                 </CardContent>
                 <CardFooter>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-stone-400">
                         Data from OpenScriptures & Bolls.
                     </p>
                 </CardFooter>

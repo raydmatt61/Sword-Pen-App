@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect, useRef, useState, useCallback, Fragment } from 'react';
+import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, type VerseContent, FormattedText, VerseFootnoteReference, BsbConcordanceEntry } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import Balancer from 'react-wrap-balancer';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useUser } from '@/firebase';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Loader2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
