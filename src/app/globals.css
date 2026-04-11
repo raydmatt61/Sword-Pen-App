@@ -120,21 +120,6 @@
 .citation-box a:hover {
     text-decoration: underline;
 }
-    
-.strongs-html-content {
-    line-height: 1.6;
-}
-
-.strongs-html-content a {
-    color: hsl(var(--primary));
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    cursor: pointer;
-}
-
-.strongs-html-content a:hover {
-    text-decoration: none;
-}
 
 .verse-highlight {
   background-color: hsl(var(--accent));
@@ -144,4 +129,8 @@
 
 .dark .verse-highlight {
   background-color: hsl(var(--accent) / 0.3);
+}
+
+.bible-content sup {
+    line-height: 0;
 }

@@ -31,7 +31,6 @@ function VerseComponent({
     navigate: (newValues: Partial<{ book: string; chapter: string; translation: string; verse: string; }>) => void;
 }) {
     const { fontSize } = useAnnotationContext();
-    const [isCrossRefOpen, setIsCrossRefOpen] = useState(false);
 
     const footnotesMap = useMemo(() => {
         if (!chapterData.chapter.footnotes) return new Map<string, string>();
@@ -115,7 +114,7 @@ function VerseComponent({
                                 highlightClasses, 
                                 underlineClasses, 
                                 hasNote && 'cursor-help border-b-2 border-dashed border-primary',
-                                strongs && 'cursor-pointer hover:text-primary transition-colors decoration-primary/30'
+                                strongs && 'cursor-pointer text-primary hover:underline'
                             )}
                             onClick={(e) => {
                                 if (strongs) {
@@ -129,7 +128,7 @@ function VerseComponent({
                         >
                             {subText}
                             {strongs && (
-                                <sup className="ml-0.5 text-[10px] font-bold text-muted-foreground/60 select-none">
+                                <sup className="ml-0.5 text-[0.6em] font-bold opacity-60">
                                     {strongs}
                                 </sup>
                             )}
@@ -177,21 +176,20 @@ function VerseComponent({
         const bookName = BIBLE_ABBR_BOOKS[bookAbbr];
         if (bookName) {
             navigate({ book: bookName, chapter: String(chapter) });
-            setIsCrossRefOpen(false);
         }
     };
 
     const textClasses = cn(
         "font-body",
-        fontSize === 'sm' && 'text-base md:text-sm leading-relaxed',
-        fontSize === 'md' && 'text-xl md:text-base leading-relaxed',
-        fontSize === 'lg' && 'text-2xl md:text-lg leading-relaxed',
-        fontSize === 'xl' && 'text-3xl md:text-xl leading-relaxed',
-        fontSize === '2xl' && 'text-4xl md:text-2xl leading-relaxed',
+        fontSize === 'sm' && 'text-[19px] md:text-sm leading-relaxed',
+        fontSize === 'md' && 'text-[21px] md:text-base leading-relaxed',
+        fontSize === 'lg' && 'text-[24px] md:text-lg leading-relaxed',
+        fontSize === 'xl' && 'text-[26px] md:text-xl leading-relaxed',
+        fontSize === '2xl' && 'text-[30px] md:text-2xl leading-relaxed',
     );
 
     return (
-        <div data-verse-number={verse.number} className={cn("relative group/verse mb-2", textClasses)}>
+        <div data-verse-number={verse.number} className={cn("inline", textClasses)}>
             <sup 
                 className="font-headline font-bold text-primary mr-1 select-none cursor-pointer align-baseline"
                 onClick={handleVerseNumberClick}
@@ -199,7 +197,7 @@ function VerseComponent({
                 {verse.number}
             </sup>
             
-            <span className="inline-flex items-center gap-0.5 mr-2 align-baseline translate-y-[-0.05em]">
+            <span className="inline-flex items-center gap-0.5 mr-2 align-baseline">
                 {verseNotes.length > 0 && (
                     <Dialog>
                         <DialogTrigger asChild>
@@ -220,7 +218,7 @@ function VerseComponent({
                     </Dialog>
                 )}
                 {crossReferences && crossReferences.length > 0 && (
-                    <Dialog open={isCrossRefOpen} onOpenChange={setIsCrossRefOpen}>
+                    <Dialog>
                         <DialogTrigger asChild>
                             <button className="p-0.5 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors">
                                 <LinkIcon className="h-3.5 w-3.5" />
@@ -256,6 +254,7 @@ function VerseComponent({
             </span>
 
             <span className="verse-text-wrapper">{renderedContent}</span>
+            <span className="mr-2"> </span>
         </div>
     );
 }
@@ -367,7 +366,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
 
     const renderContentItem = (item: ChapterContentItem, index: number) => {
         if (item.type === 'heading') {
-            return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 mb-4 select-none"><Balancer>{item.content.join(' ')}</Balancer></h4>;
+            return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 mb-4 select-none block"><Balancer>{item.content.join(' ')}</Balancer></h4>;
         }
         if (item.type === 'verse') {
             return <VerseComponent 
@@ -381,18 +380,18 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                     />;
         }
         if (item.type === 'line_break') {
-            return <div key={`p-br-${index}`} className="h-4" />;
+            return <div key={`p-br-${index}`} className="h-4 block" />;
         }
         return null;
     };
     
     const textClasses = cn(
         "font-body",
-        fontSize === 'sm' && 'text-base md:text-sm leading-relaxed',
-        fontSize === 'md' && 'text-xl md:text-base leading-relaxed',
-        fontSize === 'lg' && 'text-2xl md:text-lg leading-relaxed',
-        fontSize === 'xl' && 'text-3xl md:text-xl leading-relaxed',
-        fontSize === '2xl' && 'text-4xl md:text-2xl leading-relaxed',
+        fontSize === 'sm' && 'text-[19px] md:text-sm leading-relaxed',
+        fontSize === 'md' && 'text-[21px] md:text-base leading-relaxed',
+        fontSize === 'lg' && 'text-[24px] md:text-lg leading-relaxed',
+        fontSize === 'xl' && 'text-[26px] md:text-xl leading-relaxed',
+        fontSize === '2xl' && 'text-[30px] md:text-2xl leading-relaxed',
     );
 
 
@@ -434,7 +433,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                             </CardHeader>
                             <CardContent className="p-0">
                                 <div ref={bibleContentRef} className={cn("select-text bible-content", textClasses)}>
-                                    <div className="space-y-1">
+                                    <div className="block">
                                         {chapterData.chapter.content.map(renderContentItem)}
                                     </div>
                                 </div>
