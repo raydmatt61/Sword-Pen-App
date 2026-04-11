@@ -136,7 +136,7 @@ export function AuthManager() {
     createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword)
         .then((newUserCredential) => {
             handleUserDocCreation(newUserCredential);
-            toast({ title: "Account Created!", description: `Welcome to Verse Insights, ${signUpEmail}!` });
+            toast({ title: "Account Created!", description: `Welcome to The Sword and Pen, ${signUpEmail}!` });
             setIsAuthModalOpen(false);
         })
         .catch((error: any) => {
@@ -189,7 +189,7 @@ export function AuthManager() {
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Verse Insights</DialogTitle>
+            <DialogTitle>The Sword and Pen</DialogTitle>
             <DialogDescription>
               Sign in or create an account to save your notes and highlights.
             </DialogDescription>

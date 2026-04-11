@@ -4,7 +4,7 @@ import './globals.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'Verse Insights',
+  title: 'The Sword and Pen',
   description: 'A modern Bible study tool for notes and insights.',
 };
 

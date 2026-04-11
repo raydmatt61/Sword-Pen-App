@@ -94,7 +94,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
           <div className="flex items-center gap-2">
             <div>
               <h1 className="text-lg md:text-2xl font-headline font-bold text-primary">
-                Verse Insights
+                The Sword and Pen
               </h1>
               <p className="hidden md:block text-xs text-muted-foreground mt-1 font-headline">
                 Deepen your Bible study with annotations and AI insights.
@@ -217,7 +217,7 @@ function FullPageSkeleton() {
       <header className="flex items-center justify-between border-b px-2 py-1 md:px-4 md:py-2 shrink-0">
         <div className="flex items-center gap-2">
           <div>
-            <h1 className="text-lg md:text-2xl font-headline font-bold text-primary">Verse Insights</h1>
+            <h1 className="text-lg md:text-2xl font-headline font-bold text-primary">The Sword and Pen</h1>
             <div className="hidden md:block"><Skeleton className="h-3 w-48 mt-1" /></div>
           </div>
         </div>
