@@ -376,7 +376,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         if (item.type === 'verse') {
             return (
                 <VerseComponent 
-                    key={item.number} 
+                    key={`v-${item.number}-${index}`} 
                     verse={item} 
                     annotations={chapterAnnotations[item.number] || []}
                     crossReferences={crossRefMap[item.number] || []}
