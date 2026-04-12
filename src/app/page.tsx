@@ -10,8 +10,7 @@ import { TRANSLATIONS } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
-import { QrCodeGenerator } from '@/components/qr-code-generator';
-import { AnnotationWrapper } from '@/components/annotation-wrapper';
+import { SettingsDialog } from '@/components/settings-dialog';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
@@ -104,7 +103,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
           <div className="flex items-center gap-1 md:gap-2">
             <SearchDialog translationId={initialTranslationId} navigate={navigate} />
             <FontSizeAdjuster />
-            <QrCodeGenerator />
+            <SettingsDialog />
             <AuthManager />
           </div>
         </header>

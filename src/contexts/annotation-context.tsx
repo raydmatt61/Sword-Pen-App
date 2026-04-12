@@ -20,6 +20,7 @@ interface AnnotationContextType {
     activeAnnotation: Annotation | null;
     setActiveAnnotation: Dispatch<SetStateAction<Annotation | null>>;
     chapterAnnotations: AnnotationMap;
+    allUserAnnotations: Annotation[] | null;
     chapterData: BibleChapterResponse | null;
     fontSize: FontSize;
     setFontSize: Dispatch<SetStateAction<FontSize>>;
@@ -184,6 +185,7 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
         activeAnnotation,
         setActiveAnnotation,
         chapterAnnotations,
+        allUserAnnotations: allUserAnnotations || null,
         chapterData,
         fontSize,
         setFontSize,
