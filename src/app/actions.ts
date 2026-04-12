@@ -1,3 +1,4 @@
+
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
@@ -67,7 +68,6 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
 /**
  * Utility function to collapse verse content into logical segments.
  * Internal to this file to avoid Server Action overhead.
- * Specifically handles punctuation-to-word boundaries to fix issues like "The elder, To".
  */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
@@ -77,10 +77,6 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
 
     for (let i = 0; i < content.length; i++) {
         const item = content[i];
-        
-        // A current item is "collapsible" into the previous one ONLY if:
-        // 1. It is a text item (string or FormattedText)
-        // 2. It does NOT have a Strong's number
         const currentIsPlainText = typeof item === 'string' || (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item) && !('strongs' in item));
 
         if (!currentIsPlainText) {
@@ -106,12 +102,8 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
                 const isLastOpener = /[(\["'‘“]/.test(lastChar);
 
                 if (!isLastSpace && !isFirstSpace) {
-                    if (!isLastOpener && !isFirstPunct) {
-                        needsSpace = true;
-                    }
-                    if (isLastPunct && /[a-zA-Z0-9]/.test(firstChar)) {
-                        needsSpace = true;
-                    }
+                    if (!isLastOpener && !isFirstPunct) needsSpace = true;
+                    if (isLastPunct && /[a-zA-Z0-9]/.test(firstChar)) needsSpace = true;
                 }
             }
 
@@ -157,9 +149,10 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
         const isOT = OLD_TESTAMENT_BOOK_NAMES.includes(book);
         const prefix = isOT ? 'H' : 'G';
 
-        const chapterContent: ChapterContentItem[] = bollsVerses.map(v => {
+        const chapterContent: ChapterContentItem[] = [];
+        
+        bollsVerses.forEach((v, idx) => {
             const segments: VerseContent[] = [];
-            // Split by Strong's tags: <S>1234</S>
             const parts = v.text.split(/(<S>\d+<\/S>)/);
             
             parts.forEach(part => {
@@ -172,34 +165,35 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
                     if (segments.length > 0) {
                         const lastIndex = segments.length - 1;
                         const last = segments[lastIndex];
-                        
                         if (typeof last === 'string') {
                             const words = last.split(/(\s+)/);
-                            if (words.length > 0) {
-                                const lastWord = words.pop() || "";
-                                const preceding = words.join("");
-                                if (preceding) {
-                                    segments[lastIndex] = preceding;
-                                    segments.push({ text: lastWord, strongs: fullStrongs });
-                                } else {
-                                    segments[lastIndex] = { text: lastWord, strongs: fullStrongs };
-                                }
+                            const lastWord = words.pop() || "";
+                            const preceding = words.join("");
+                            if (preceding) {
+                                segments[lastIndex] = preceding;
+                                segments.push({ text: lastWord, strongs: fullStrongs });
+                            } else {
+                                segments[lastIndex] = { text: lastWord, strongs: fullStrongs };
                             }
                         } else if (typeof last === 'object' && 'text' in last && !('noteId' in last)) {
                             (last as FormattedText).strongs = fullStrongs;
                         }
                     }
                 } else {
-                    // Strip other HTML tags
                     segments.push(part.replace(/<[^>]+>/g, ''));
                 }
             });
 
-            return {
+            chapterContent.push({
                 type: 'verse',
                 number: v.verse,
                 content: collapseVerseContent(segments)
-            };
+            });
+
+            // Heuristic: insert a paragraph break every 5 verses to avoid walls of text
+            if ((idx + 1) % 5 === 0 && idx !== bollsVerses.length - 1) {
+                chapterContent.push({ type: 'line_break' });
+            }
         });
 
         const translationName = TRANSLATIONS.find(t => t.id === translationCode)?.name || translationCode;
@@ -255,21 +249,36 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
             if (item.type === 'tag') {
                 let flushVerse = false;
                 let startNewVerse: number | null = null;
+                
                 if (item.name === 'verse' && item.attrs?.number) {
                     flushVerse = true;
                     startNewVerse = parseInt(item.attrs.number, 10);
                 }
+                
                 if (item.name === 'para' && item.attrs?.style === 'h') flushVerse = true;
+                
+                // USFM paragraph tags often indicate a logical break
+                if (item.name === 'para' && !item.attrs?.style?.startsWith('h')) {
+                    if (currentVerseNumber !== null && currentVerseContent.length > 0) {
+                        chapterContent.push({ type: 'verse', number: currentVerseNumber, content: collapseVerseContent(currentVerseContent) });
+                        currentVerseContent = [];
+                    }
+                    chapterContent.push({ type: 'line_break' });
+                }
+
                 if (flushVerse && currentVerseNumber !== null && currentVerseContent.length > 0) {
                      chapterContent.push({ type: 'verse', number: currentVerseNumber, content: collapseVerseContent(currentVerseContent) });
                      currentVerseContent = [];
                      currentVerseNumber = null;
                 }
-                if(startNewVerse) currentVerseNumber = startNewVerse;
+                
+                if (startNewVerse) currentVerseNumber = startNewVerse;
+                
                 if (item.name === 'para' && item.attrs?.style === 'h') {
                     const headingText = item.items?.map((i: any) => i.text).join(' ').trim();
                     if(headingText) chapterContent.push({ type: 'heading', content: [headingText] });
                 }
+                
                 const isNewWoc = isWoc || (item.name === 'char' && item.attrs?.style === 'woc');
                 if (item.items) processItems(item.items, isNewWoc);
             } else if (item.type === 'text' && typeof item.text === 'string' && currentVerseNumber !== null) {

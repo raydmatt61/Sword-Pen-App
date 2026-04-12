@@ -181,12 +181,12 @@ function VerseComponent({
     };
 
     const textClasses = cn(
-        "font-body",
-        fontSize === 'sm' && 'text-[23px] md:text-sm leading-relaxed',
-        fontSize === 'md' && 'text-[26px] md:text-base leading-relaxed',
-        fontSize === 'lg' && 'text-[30px] md:text-lg leading-relaxed',
-        fontSize === 'xl' && 'text-[32px] md:text-xl leading-relaxed',
-        fontSize === '2xl' && 'text-[36px] md:text-2xl leading-relaxed',
+        "font-body tracking-tight",
+        fontSize === 'sm' && 'text-[23px] md:text-sm leading-[1.8]',
+        fontSize === 'md' && 'text-[26px] md:text-base leading-[1.8]',
+        fontSize === 'lg' && 'text-[30px] md:text-lg leading-[1.8]',
+        fontSize === 'xl' && 'text-[32px] md:text-xl leading-[1.8]',
+        fontSize === '2xl' && 'text-[36px] md:text-2xl leading-[1.8]',
     );
 
     return (
@@ -367,32 +367,38 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
 
     const renderContentItem = (item: ChapterContentItem, index: number) => {
         if (item.type === 'heading') {
-            return <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-4 mb-4 select-none block"><Balancer>{item.content.join(' ')}</Balancer></h4>;
+            return (
+                <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-12 pb-6 select-none block text-stone-800">
+                    <Balancer>{item.content.join(' ')}</Balancer>
+                </h4>
+            );
         }
         if (item.type === 'verse') {
-            return <VerseComponent 
-                        key={item.number} 
-                        verse={item} 
-                        annotations={chapterAnnotations[item.number] || []}
-                        crossReferences={crossRefMap[item.number] || []}
-                        onAnnotationClick={handleAnnotationClick}
-                        chapterData={chapterData}
-                        navigate={navigate}
-                    />;
+            return (
+                <VerseComponent 
+                    key={item.number} 
+                    verse={item} 
+                    annotations={chapterAnnotations[item.number] || []}
+                    crossReferences={crossRefMap[item.number] || []}
+                    onAnnotationClick={handleAnnotationClick}
+                    chapterData={chapterData}
+                    navigate={navigate}
+                />
+            );
         }
         if (item.type === 'line_break') {
-            return <div key={`p-br-${index}`} className="h-4 block" />;
+            return <div key={`p-br-${index}`} className="h-10 block w-full" />;
         }
         return null;
     };
     
     const textClasses = cn(
-        "font-body",
-        fontSize === 'sm' && 'text-[23px] md:text-sm leading-relaxed',
-        fontSize === 'md' && 'text-[26px] md:text-base leading-relaxed',
-        fontSize === 'lg' && 'text-[30px] md:text-lg leading-relaxed',
-        fontSize === 'xl' && 'text-[32px] md:text-xl leading-relaxed',
-        fontSize === '2xl' && 'text-[36px] md:text-2xl leading-relaxed',
+        "font-body tracking-tight",
+        fontSize === 'sm' && 'text-[23px] md:text-sm leading-[1.8]',
+        fontSize === 'md' && 'text-[26px] md:text-base leading-[1.8]',
+        fontSize === 'lg' && 'text-[30px] md:text-lg leading-[1.8]',
+        fontSize === 'xl' && 'text-[32px] md:text-xl leading-[1.8]',
+        fontSize === '2xl' && 'text-[36px] md:text-2xl leading-[1.8]',
     );
 
 
@@ -405,8 +411,8 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                             <CardHeader className="px-0 pt-0">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <CardTitle className="font-headline text-3xl">{fullReference}</CardTitle>
-                                        <p className="text-sm text-muted-foreground">{chapterData.translation.name}</p>
+                                        <CardTitle className="font-headline text-3xl font-bold">{fullReference}</CardTitle>
+                                        <p className="text-sm text-muted-foreground mt-1">{chapterData.translation.name}</p>
                                     </div>
                                     <div className="md:hidden flex gap-2">
                                         <Button
@@ -434,20 +440,20 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                             </CardHeader>
                             <CardContent className="p-0">
                                 <div ref={bibleContentRef} className={cn("select-text bible-content", textClasses)}>
-                                    <div className="block">
+                                    <div className="block pt-4">
                                         {chapterData.chapter.content.map(renderContentItem)}
                                     </div>
                                 </div>
 
-                                <div className="mt-12 flex items-center justify-between border-t pt-8">
+                                <div className="mt-20 flex items-center justify-between border-t border-stone-200 pt-12 pb-16">
                                     <Button
                                         variant="ghost"
-                                        className="flex flex-col items-start gap-1 h-auto py-4 px-6 group"
+                                        className="flex flex-col items-start gap-1 h-auto py-6 px-8 group rounded-xl hover:bg-stone-100 transition-all"
                                         onClick={() => onChapterNav('prev')}
                                         disabled={currentChapter <= 1}
                                     >
-                                        <span className="text-xs uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Previous Chapter</span>
-                                        <div className="flex items-center gap-2 font-headline font-bold text-lg">
+                                        <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground group-hover:text-primary transition-colors font-bold">Previous</span>
+                                        <div className="flex items-center gap-2 font-headline font-bold text-xl">
                                             <ChevronLeft className="h-5 w-5" />
                                             {chapterData.book.name} {currentChapter > 1 ? currentChapter - 1 : currentChapter}
                                         </div>
@@ -455,12 +461,12 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
 
                                     <Button
                                         variant="ghost"
-                                        className="flex flex-col items-end gap-1 h-auto py-4 px-6 group"
+                                        className="flex flex-col items-end gap-1 h-auto py-6 px-8 group rounded-xl hover:bg-stone-100 transition-all"
                                         onClick={() => onChapterNav('next')}
                                         disabled={currentChapter >= maxChapters}
                                     >
-                                        <span className="text-xs uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Next Chapter</span>
-                                        <div className="flex items-center gap-2 font-headline font-bold text-lg text-right">
+                                        <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground group-hover:text-primary transition-colors font-bold">Next</span>
+                                        <div className="flex items-center gap-2 font-headline font-bold text-xl text-right">
                                             {chapterData.book.name} {currentChapter < maxChapters ? currentChapter + 1 : currentChapter}
                                             <ChevronRight className="h-5 w-5" />
                                         </div>
