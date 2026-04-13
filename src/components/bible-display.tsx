@@ -182,11 +182,11 @@ function VerseComponent({
 
     const textClasses = cn(
         "font-body tracking-tight",
-        fontSize === 'sm' && 'text-[21px] md:text-sm leading-[1.8]',
-        fontSize === 'md' && 'text-[24px] md:text-base leading-[1.8]',
-        fontSize === 'lg' && 'text-[27px] md:text-lg leading-[1.8]',
-        fontSize === 'xl' && 'text-[29px] md:text-xl leading-[1.8]',
-        fontSize === '2xl' && 'text-[33px] md:text-2xl leading-[1.8]',
+        fontSize === 'sm' && 'text-[19px] md:text-sm leading-[1.8]',
+        fontSize === 'md' && 'text-[22px] md:text-base leading-[1.8]',
+        fontSize === 'lg' && 'text-[25px] md:text-lg leading-[1.8]',
+        fontSize === 'xl' && 'text-[27px] md:text-xl leading-[1.8]',
+        fontSize === '2xl' && 'text-[31px] md:text-2xl leading-[1.8]',
     );
 
     return (
@@ -394,11 +394,11 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     
     const textClasses = cn(
         "font-body tracking-tight",
-        fontSize === 'sm' && 'text-[21px] md:text-sm leading-[1.8]',
-        fontSize === 'md' && 'text-[24px] md:text-base leading-[1.8]',
-        fontSize === 'lg' && 'text-[27px] md:text-lg leading-[1.8]',
-        fontSize === 'xl' && 'text-[29px] md:text-xl leading-[1.8]',
-        fontSize === '2xl' && 'text-[33px] md:text-2xl leading-[1.8]',
+        fontSize === 'sm' && 'text-[19px] md:text-sm leading-[1.8]',
+        fontSize === 'md' && 'text-[22px] md:text-base leading-[1.8]',
+        fontSize === 'lg' && 'text-[25px] md:text-lg leading-[1.8]',
+        fontSize === 'xl' && 'text-[27px] md:text-xl leading-[1.8]',
+        fontSize === '2xl' && 'text-[31px] md:text-2xl leading-[1.8]',
     );
 
 

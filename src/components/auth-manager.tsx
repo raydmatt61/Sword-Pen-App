@@ -29,6 +29,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Logo } from './logo';
 
 export function AuthManager() {
   const { user, isUserLoading } = useUser();
@@ -188,10 +189,11 @@ export function AuthManager() {
       </Button>
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>The Sword and Pen</DialogTitle>
-            <DialogDescription>
-              Sign in or create an account to save your notes and highlights.
+          <DialogHeader className="flex flex-col items-center">
+            <Logo className="h-12 w-12 text-primary mb-2" />
+            <DialogTitle className="text-xl font-headline font-bold">The Sword and Pen</DialogTitle>
+            <DialogDescription className="text-center">
+              Sign in or create an account to save your personal notes and highlights.
             </DialogDescription>
           </DialogHeader>
 
@@ -228,7 +230,7 @@ export function AuthManager() {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleSignIn} disabled={isProcessing}>
+                <Button onClick={handleSignIn} disabled={isProcessing} className="w-full">
                   {isProcessing ? 'Signing In...' : 'Sign In'}
                 </Button>
               </DialogFooter>
@@ -261,7 +263,7 @@ export function AuthManager() {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleSignUp} disabled={isProcessing}>
+                    <Button onClick={handleSignUp} disabled={isProcessing} className="w-full">
                         {isProcessing ? 'Creating Account...' : 'Create Account'}
                     </Button>
                 </DialogFooter>
