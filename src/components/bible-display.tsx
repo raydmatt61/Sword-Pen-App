@@ -182,11 +182,11 @@ function VerseComponent({
 
     const textClasses = cn(
         "font-body tracking-tight",
-        fontSize === 'sm' && 'text-[23px] md:text-sm leading-[1.8]',
-        fontSize === 'md' && 'text-[26px] md:text-base leading-[1.8]',
-        fontSize === 'lg' && 'text-[30px] md:text-lg leading-[1.8]',
-        fontSize === 'xl' && 'text-[32px] md:text-xl leading-[1.8]',
-        fontSize === '2xl' && 'text-[36px] md:text-2xl leading-[1.8]',
+        fontSize === 'sm' && 'text-[21px] md:text-sm leading-[1.8]',
+        fontSize === 'md' && 'text-[24px] md:text-base leading-[1.8]',
+        fontSize === 'lg' && 'text-[27px] md:text-lg leading-[1.8]',
+        fontSize === 'xl' && 'text-[29px] md:text-xl leading-[1.8]',
+        fontSize === '2xl' && 'text-[33px] md:text-2xl leading-[1.8]',
     );
 
     return (
@@ -394,11 +394,11 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     
     const textClasses = cn(
         "font-body tracking-tight",
-        fontSize === 'sm' && 'text-[23px] md:text-sm leading-[1.8]',
-        fontSize === 'md' && 'text-[26px] md:text-base leading-[1.8]',
-        fontSize === 'lg' && 'text-[30px] md:text-lg leading-[1.8]',
-        fontSize === 'xl' && 'text-[32px] md:text-xl leading-[1.8]',
-        fontSize === '2xl' && 'text-[36px] md:text-2xl leading-[1.8]',
+        fontSize === 'sm' && 'text-[21px] md:text-sm leading-[1.8]',
+        fontSize === 'md' && 'text-[24px] md:text-base leading-[1.8]',
+        fontSize === 'lg' && 'text-[27px] md:text-lg leading-[1.8]',
+        fontSize === 'xl' && 'text-[29px] md:text-xl leading-[1.8]',
+        fontSize === '2xl' && 'text-[33px] md:text-2xl leading-[1.8]',
     );
 
 
@@ -463,7 +463,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                         variant="ghost"
                                         className="flex flex-col items-end gap-1 h-auto py-6 px-8 group rounded-xl hover:bg-stone-100 transition-all"
                                         onClick={() => onChapterNav('next')}
-                                        disabled={currentChapter >= maxChapters}
+                                        disabled={currentChapter < maxChapters ? false : true}
                                     >
                                         <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground group-hover:text-primary transition-colors font-bold">Next</span>
                                         <div className="flex items-center gap-2 font-headline font-bold text-xl text-right">
