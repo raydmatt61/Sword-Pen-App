@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
+import { AnnotationWrapper } from '@/components/annotation-wrapper';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
 import { SearchDialog } from '@/components/search-dialog';
