@@ -8,7 +8,6 @@ import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book, CrossRefChapterResponse } from '@/lib/bible';
 import { TRANSLATIONS } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { AuthManager } from '@/components/auth-manager';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
@@ -215,24 +214,14 @@ export default function Home() {
 
 function FullPageSkeleton() {
   return (
-    <main className="flex flex-col h-screen overflow-hidden">
-      <header className="flex items-center justify-between border-b px-2 py-1 md:px-4 md:py-2 shrink-0">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-6 w-6 md:h-8 md:w-8 rounded" />
-          <div>
-            <h1 className="text-lg md:text-2xl font-headline font-bold text-primary">The Sword and Pen</h1>
-            <div className="hidden md:block"><Skeleton className="h-3 w-48 mt-1" /></div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-8 w-8 rounded" /></div>
-      </header>
-      <div className="sticky top-0 z-20 flex flex-row items-center gap-2 bg-background/80 backdrop-blur-sm px-2 py-1.5 md:px-4 md:py-2 border-b shrink-0">
-        <div className="flex-[3]"><Skeleton className="h-9 w-full" /></div>
-        <div className="flex-[2]"><Skeleton className="h-9 w-full" /></div>
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background">
+      <div className="flex flex-col items-center animate-pulse">
+        <Logo className="h-24 w-24 md:h-32 md:w-32 text-primary mb-8" />
+        <h1 className="text-3xl md:text-4xl font-headline font-bold text-primary tracking-tight">The Sword and Pen</h1>
+        <p className="mt-2 text-muted-foreground uppercase tracking-[0.3em] text-[10px] md:text-xs font-headline">
+          Scripture • Study • Insights
+        </p>
       </div>
-      <div className="flex-grow overflow-y-auto p-2 md:p-4">
-         <Card><CardContent className="pt-6 space-y-4"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-full" /></CardContent></Card>
-      </div>
-    </main>
+    </div>
   );
 }
