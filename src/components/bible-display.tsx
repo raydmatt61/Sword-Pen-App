@@ -350,7 +350,12 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     } = useAnnotationContext();
     const { user } = useUser();
     const bibleContentRef = useRef<HTMLDivElement>(null);
-    const [emblaRef, emblaApi] = useEmblaCarousel({ axis: 'x', watchDrag: true });
+    
+    // Disable watchDrag to prevent horizontal shifting during text selection
+    const [emblaRef, emblaApi] = useEmblaCarousel({ 
+        axis: 'x', 
+        watchDrag: false 
+    });
 
     useEffect(() => {
         if (!emblaApi) return;

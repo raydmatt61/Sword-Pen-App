@@ -5,7 +5,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useUser } from '@/firebase';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Trash2, StickyNote, Highlighter, Underline, X } from 'lucide-react';
+import { Trash2, StickyNote, Highlighter, Underline, X, Copy } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useToast } from '@/hooks/use-toast';
@@ -67,6 +67,37 @@ export function AnnotationWrapper() {
         setNote(activeAnnotation?.note || '');
         setIsEditingNote(false);
     }
+
+    const handleCopySelection = () => {
+        if (!chapterData) return;
+
+        let textToCopy = "";
+        let reference = "";
+
+        if (activeAnnotation) {
+            textToCopy = activeAnnotation.text;
+            reference = `${chapterData.book.name} ${chapterData.chapter.number}:${activeAnnotation.verse}`;
+        } else if (selection) {
+            textToCopy = selection.range.toString();
+            const verseNumbers = selection.verseElements.map(el => parseInt(el.getAttribute('data-verse-number') || '0')).sort((a, b) => a - b);
+            
+            if (verseNumbers.length > 0) {
+                const startVerse = verseNumbers[0];
+                const endVerse = verseNumbers[verseNumbers.length - 1];
+                reference = `${chapterData.book.name} ${chapterData.chapter.number}:${startVerse}${startVerse === endVerse ? '' : `-${endVerse}`}`;
+            }
+        }
+
+        if (textToCopy && reference) {
+            const fullText = `"${textToCopy}" - ${reference} (${chapterData.translation.id})`;
+            navigator.clipboard.writeText(fullText).then(() => {
+                toast({
+                    title: "Selection Copied",
+                    description: "The selected text and reference have been copied to your clipboard.",
+                });
+            });
+        }
+    };
     
     useEffect(() => {
         if (activeAnnotation) {
@@ -92,7 +123,6 @@ export function AnnotationWrapper() {
         if (activeAnnotation) {
             setIsEditingNote(true);
         } else if (selection) {
-            // For selection, create an empty annotation first to "anchor" the note
             createOrUpdateAnnotation({ note: '' });
         }
     };
@@ -191,6 +221,16 @@ export function AnnotationWrapper() {
                                 annotation={activeAnnotation.note}
                             />
                         )}
+
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 md:h-8 md:w-8" 
+                            onClick={handleCopySelection} 
+                            title="Copy Selection"
+                        >
+                            <Copy className="h-4 w-4" />
+                        </Button>
 
                         <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 text-destructive" onClick={handleDelete} disabled={!activeAnnotation} title="Delete Annotation"><Trash2 className="h-4 w-4" /></Button>
                    </div>
