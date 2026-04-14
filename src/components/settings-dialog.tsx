@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -20,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 
-const APP_SHARE_URL = 'https://console.firebase.google.com/project/studio-8198471998-f4406';
+const APP_SHARE_URL = 'https://studio--studio-8198471998-f4406.us-central1.hosted.app/';
 
 export function SettingsDialog() {
   const [url, setUrl] = useState(APP_SHARE_URL);
