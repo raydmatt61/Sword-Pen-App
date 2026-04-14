@@ -11,14 +11,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isExistingOwner(userId) {
-      return isOwner(userId) && exists(path);
-    }
-    
-    function isCreatingOwner(userId) {
-      return isOwner(userId);
-    }
-
     function hasValidIdOnCreate(userId) {
       return request.resource.data.id == userId;
     }
@@ -48,21 +40,21 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
+      allow list: if false; 
       allow create: if isOwner(userId) && hasValidIdOnCreate(userId);
-      allow update: if isExistingOwner(userId) && isIdImmutable();
+      allow update: if isOwner(userId) && isIdImmutable();
       allow delete: if isOwner(userId);
 
       match /annotations/{annotationId} {
-        allow read: if isOwner(userId);
-        allow create: if isCreatingOwner(userId) && hasValidUserIdOnCreate(userId) && isValidAnnotation();
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId) && isValidAnnotation();
         allow update: if isOwner(userId) && isUserIdImmutable();
         allow delete: if isOwner(userId);
       }
 
       match /bookmarks/{bookmarkId} {
-        allow read: if isOwner(userId);
-        allow create: if isCreatingOwner(userId) && hasValidUserIdOnCreate(userId);
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId);
         allow update: if isOwner(userId) && isUserIdImmutable();
         allow delete: if isOwner(userId);
       }
