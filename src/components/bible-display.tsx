@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
@@ -325,7 +326,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     const { user } = useUser();
     const bibleContentRef = useRef<HTMLDivElement>(null);
     
-    // Disable watchDrag to prevent horizontal shifting during text selection
     const [emblaRef, emblaApi] = useEmblaCarousel({ 
         axis: 'x', 
         watchDrag: false 
@@ -421,7 +421,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     const renderContentItem = (item: ChapterContentItem, index: number) => {
         if (item.type === 'heading') {
             return (
-                <h4 key={`h-${index}`} className="text-xl font-headline font-bold pt-12 pb-6 select-none block text-stone-800">
+                <h4 key={`h-${index}`} className="text-lg md:text-xl font-headline font-bold pt-8 pb-3 select-none block text-stone-800">
                     <Balancer>{item.content.join(' ')}</Balancer>
                 </h4>
             );
@@ -440,7 +440,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
             );
         }
         if (item.type === 'line_break') {
-            return <div key={`p-br-${index}`} className="h-10 block w-full" />;
+            return <div key={`p-br-${index}`} className="h-6 block w-full" />;
         }
         return null;
     };

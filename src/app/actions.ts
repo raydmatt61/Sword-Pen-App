@@ -151,7 +151,7 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
 
         const chapterContent: ChapterContentItem[] = [];
         
-        bollsVerses.forEach((v, idx) => {
+        bollsVerses.forEach((v) => {
             const segments: VerseContent[] = [];
             const parts = v.text.split(/(<S>\d+<\/S>)/);
             
@@ -189,11 +189,6 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
                 number: v.verse,
                 content: collapseVerseContent(segments)
             });
-
-            // Heuristic: insert a paragraph break every 5 verses to avoid walls of text
-            if ((idx + 1) % 5 === 0 && idx !== bollsVerses.length - 1) {
-                chapterContent.push({ type: 'line_break' });
-            }
         });
 
         const translationName = TRANSLATIONS.find(t => t.id === translationCode)?.name || translationCode;
@@ -257,13 +252,15 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
                 
                 if (item.name === 'para' && item.attrs?.style === 'h') flushVerse = true;
                 
-                // USFM paragraph tags often indicate a logical break
                 if (item.name === 'para' && !item.attrs?.style?.startsWith('h')) {
                     if (currentVerseNumber !== null && currentVerseContent.length > 0) {
                         chapterContent.push({ type: 'verse', number: currentVerseNumber, content: collapseVerseContent(currentVerseContent) });
                         currentVerseContent = [];
                     }
-                    chapterContent.push({ type: 'line_break' });
+                    // Only add line break if we actually have preceding content
+                    if (chapterContent.length > 0 && chapterContent[chapterContent.length - 1].type !== 'line_break') {
+                        chapterContent.push({ type: 'line_break' });
+                    }
                 }
 
                 if (flushVerse && currentVerseNumber !== null && currentVerseContent.length > 0) {
