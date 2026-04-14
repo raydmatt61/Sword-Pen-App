@@ -151,7 +151,13 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
 
         const chapterContent: ChapterContentItem[] = [];
         
-        bollsVerses.forEach((v) => {
+        bollsVerses.forEach((v, index) => {
+            // Add a subtle line break every 8 verses for Bolls-fetched translations (BSB, KJV)
+            // to prevent the text from being one giant "bunch" without headers.
+            if (index > 0 && index % 8 === 0) {
+                chapterContent.push({ type: 'line_break' });
+            }
+
             const segments: VerseContent[] = [];
             const parts = v.text.split(/(<S>\d+<\/S>)/);
             

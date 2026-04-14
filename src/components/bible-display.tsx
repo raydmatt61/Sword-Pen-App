@@ -440,7 +440,8 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
             );
         }
         if (item.type === 'line_break') {
-            return <div key={`p-br-${index}`} className="h-6 block w-full" />;
+            // Reduced line break height for cleaner layout (h-4 instead of h-6)
+            return <div key={`p-br-${index}`} className="h-4 block w-full" />;
         }
         return null;
     };
