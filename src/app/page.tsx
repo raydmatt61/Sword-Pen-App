@@ -14,11 +14,13 @@ import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationWrapper } from '@/components/annotation-wrapper';
 import { AnnotationProvider } from '@/contexts/annotation-context';
 import { BookmarkProvider } from '@/contexts/bookmark-context';
+import { JournalProvider } from '@/contexts/journal-context';
 import { useToast } from '@/hooks/use-toast';
 import { SearchDialog } from '@/components/search-dialog';
 import { getPageData } from '@/app/actions';
 import { Logo } from '@/components/logo';
 import { BookmarksSheet } from '@/components/bookmarks-sheet';
+import { JournalSheet } from '@/components/journal-sheet';
 
 function PageContent({ books, chapterData, crossRefs, initialBook, initialChapter, initialTranslationId }: { 
     books: Book[], 
@@ -92,65 +94,68 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   return (
     <AnnotationProvider key={providerKey} chapterData={chapterData}>
       <BookmarkProvider>
-        <main className="flex flex-col h-screen overflow-hidden">
-          <header className="flex items-center justify-between border-b px-2 py-1 md:px-4 md:py-2 shrink-0">
-            <div className="flex items-center gap-2 md:gap-3">
-              <Logo className="h-6 w-6 md:h-8 md:w-8 text-primary shrink-0" />
-              <div>
-                <h1 className="text-lg md:text-2xl font-headline font-bold text-primary leading-none">
-                  The Sword and Pen
-                </h1>
-                <p className="hidden md:block text-[10px] text-muted-foreground mt-1 font-headline uppercase tracking-wider">
-                  Digital Scripture Study Tool
-                </p>
+        <JournalProvider>
+          <main className="flex flex-col h-screen overflow-hidden">
+            <header className="flex items-center justify-between border-b px-2 py-1 md:px-4 md:py-2 shrink-0">
+              <div className="flex items-center gap-2 md:gap-3">
+                <Logo className="h-6 w-6 md:h-8 md:w-8 text-primary shrink-0" />
+                <div>
+                  <h1 className="text-lg md:text-2xl font-headline font-bold text-primary leading-none">
+                    The Sword and Pen
+                  </h1>
+                  <p className="hidden md:block text-[10px] text-muted-foreground mt-1 font-headline uppercase tracking-wider">
+                    Digital Scripture Study Tool
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 md:gap-2">
+                <SearchDialog translationId={initialTranslationId} navigate={navigate} />
+                <BookmarksSheet navigate={navigate} />
+                <JournalSheet />
+                <FontSizeAdjuster />
+                <SettingsDialog />
+                <AuthManager />
+              </div>
+            </header>
+
+            <div className="sticky top-0 z-20 flex flex-row items-center gap-2 bg-background/80 backdrop-blur-sm px-2 py-1.5 md:px-4 md:py-2 border-b shrink-0">
+              <div className="flex-[3] min-w-0">
+                <VerseSelector
+                    defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslationId }}
+                    books={books}
+                    translations={TRANSLATIONS}
+                    onChapterNav={handleChapterNav}
+                    navigate={navigate}
+                    maxVerses={maxVerses}
+                />
+              </div>
+              <div className="flex-[2] min-w-0">
+                {chapterData && <AnnotationWrapper />}
               </div>
             </div>
-            <div className="flex items-center gap-1 md:gap-2">
-              <SearchDialog translationId={initialTranslationId} navigate={navigate} />
-              <BookmarksSheet navigate={navigate} />
-              <FontSizeAdjuster />
-              <SettingsDialog />
-              <AuthManager />
-            </div>
-          </header>
 
-          <div className="sticky top-0 z-20 flex flex-row items-center gap-2 bg-background/80 backdrop-blur-sm px-2 py-1.5 md:px-4 md:py-2 border-b shrink-0">
-            <div className="flex-[3] min-w-0">
-              <VerseSelector
-                  defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslationId }}
-                  books={books}
-                  translations={TRANSLATIONS}
+            <div ref={contentRef} className="flex-grow overflow-y-auto p-2 md:p-4">
+              {!chapterData ? (
+                <Card className="mt-6">
+                  <CardContent className="pt-6">
+                    <p className="text-center text-muted-foreground text-sm">
+                      Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span>.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <BibleDisplay
+                  chapterData={chapterData}
+                  crossRefs={crossRefs}
                   onChapterNav={handleChapterNav}
                   navigate={navigate}
-                  maxVerses={maxVerses}
-              />
+                  currentChapter={parseInt(initialChapter)}
+                  maxChapters={maxChapters}
+                />
+              )}
             </div>
-            <div className="flex-[2] min-w-0">
-              {chapterData && <AnnotationWrapper />}
-            </div>
-          </div>
-
-          <div ref={contentRef} className="flex-grow overflow-y-auto p-2 md:p-4">
-            {!chapterData ? (
-              <Card className="mt-6">
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground text-sm">
-                    Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span>.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <BibleDisplay
-                chapterData={chapterData}
-                crossRefs={crossRefs}
-                onChapterNav={handleChapterNav}
-                navigate={navigate}
-                currentChapter={parseInt(initialChapter)}
-                maxChapters={maxChapters}
-              />
-            )}
-          </div>
-        </main>
+          </main>
+        </JournalProvider>
       </BookmarkProvider>
     </AnnotationProvider>
   );

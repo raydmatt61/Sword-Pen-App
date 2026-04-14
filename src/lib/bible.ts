@@ -147,6 +147,17 @@ export type Bookmark = {
   createdAt?: any;
 };
 
+export type JournalEntry = {
+  id: string;
+  userId: string;
+  date: string;
+  reference?: string;
+  thoughts?: string;
+  prayer?: string;
+  createdAt?: any;
+  updatedAt?: any;
+};
+
 export type CrossRef = {
     book: string;
     chapter: number;

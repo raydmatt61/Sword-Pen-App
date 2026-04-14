@@ -145,6 +145,52 @@
         "verse",
         "reference"
       ]
+    },
+    "JournalEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "JournalEntry",
+      "type": "object",
+      "description": "Represents a user's prayer journal entry.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the journal entry."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "The date of the entry."
+        },
+        "reference": {
+          "type": "string",
+          "description": "Scripture reference associated with the entry."
+        },
+        "thoughts": {
+          "type": "string",
+          "description": "User's reflections and thoughts."
+        },
+        "prayer": {
+          "type": "string",
+          "description": "User's prayer requests and prayers."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "date"
+      ]
     }
   },
   "auth": {
@@ -210,8 +256,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/journal/{entryId}",
+        "definition": {
+          "entityName": "JournalEntry",
+          "schema": {
+            "$ref": "#/backend/entities/JournalEntry"
+          },
+          "description": "Stores user prayer journal entries.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "entryId",
+              "description": "The unique identifier for the journal entry."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "Data is isolated per user to ensure privacy and simple path-based security rules. Annotations and Bookmarks are stored as subcollections of the user document."
+    "reasoning": "Data is isolated per user to ensure privacy and simple path-based security rules. Annotations, Bookmarks, and Journal entries are stored as subcollections of the user document."
   }
 }
