@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode.react';
 import { Button } from './ui/button';
-import { Settings, QrCode as QrIcon, Link as LinkIcon, Download, Upload, Loader2, Share2, Database } from 'lucide-react';
+import { Settings, QrCode as QrIcon, Link as LinkIcon, Download, Upload, Loader2, Share2, Database, Copy } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from './ui/input';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
@@ -41,10 +42,10 @@ export function SettingsDialog() {
   }, [isOpen, isClient]);
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    navigator.clipboard.writeText(url);
     toast({
         title: "Link Copied",
-        description: "The current page URL has been copied to your clipboard.",
+        description: "The page URL has been copied to your clipboard.",
     });
   };
 
@@ -85,8 +86,6 @@ export function SettingsDialog() {
 
             let count = 0;
             for (const item of importedData) {
-                // Strip existing IDs and sensitive timestamps to let Firestore regenerate them if needed,
-                // or just merge them based on content logic.
                 const { id, ...rest } = item;
                 const newDocRef = doc(collection(firestore, `users/${user.uid}/annotations`));
                 setDocumentNonBlocking(newDocRef, {
@@ -145,17 +144,29 @@ export function SettingsDialog() {
                 </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="share" className="space-y-4 pt-4">
-                <div className="flex flex-col items-center justify-center gap-4">
+            <TabsContent value="share" className="space-y-6 pt-6">
+                <div className="flex flex-col items-center justify-center gap-6">
                     <div className="p-4 bg-white rounded-lg shadow-inner border">
-                        <QRCode value={url} size={200} />
+                        <QRCode value={url} size={180} />
                     </div>
+                    
+                    <div className="w-full space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest text-center">Share this location</p>
+                        <div className="flex gap-2">
+                            <Input 
+                                readOnly 
+                                value={url} 
+                                className="bg-muted/50 font-mono text-[10px] md:text-xs"
+                            />
+                            <Button size="icon" variant="outline" onClick={handleCopyLink} className="shrink-0">
+                                <Copy className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+
                     <p className="text-sm text-muted-foreground text-center">
-                        Scan with your phone to sync your current location.
+                        Scan the code or copy the link to share your current study location.
                     </p>
-                    <Button variant="outline" className="w-full" onClick={handleCopyLink}>
-                        <LinkIcon className="mr-2 h-4 w-4" /> Copy Current Link
-                    </Button>
                 </div>
             </TabsContent>
 
