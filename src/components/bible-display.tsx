@@ -11,7 +11,7 @@ import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useBookmarkContext } from '@/contexts/bookmark-context';
 import { useUser } from '@/firebase';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Bookmark as BookmarkIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Bookmark as BookmarkIcon, Copy } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
@@ -84,6 +84,24 @@ function VerseComponent({
         toast({
             title: bookmarked ? "Bookmark Removed" : "Verse Bookmarked",
             description: `${chapterData.book.name} ${chapterData.chapter.number}:${verse.number} ${bookmarked ? 'removed from' : 'added to'} your collection.`,
+        });
+    };
+
+    const handleCopyVerse = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const verseText = verse.content
+            .map(item => typeof item === 'string' ? item : (item as FormattedText).text)
+            .filter(t => typeof t === 'string')
+            .join(' ');
+        
+        const reference = `${chapterData.book.name} ${chapterData.chapter.number}:${verse.number}`;
+        const fullText = `"${verseText}" - ${reference} (${chapterData.translation.id})`;
+        
+        navigator.clipboard.writeText(fullText).then(() => {
+            toast({
+                title: "Verse Copied",
+                description: "The verse text and reference have been copied to your clipboard.",
+            });
         });
     };
 
@@ -244,13 +262,21 @@ function VerseComponent({
                         "p-0.5 rounded-full transition-colors",
                         bookmarked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-secondary"
                     )}
+                    title="Bookmark verse"
                 >
                     <BookmarkIcon className={cn("h-3.5 w-3.5", bookmarked && "fill-current")} />
+                </button>
+                <button 
+                    onClick={handleCopyVerse}
+                    className="p-0.5 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors"
+                    title="Copy verse and reference"
+                >
+                    <Copy className="h-3.5 w-3.5" />
                 </button>
                 {verseNotes.length > 0 && (
                     <Dialog>
                         <DialogTrigger asChild>
-                            <button className="p-0.5 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors">
+                            <button className="p-0.5 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors" title="View notes">
                                 <StickyNote className="h-3.5 w-3.5" />
                             </button>
                         </DialogTrigger>
@@ -269,7 +295,7 @@ function VerseComponent({
                 {crossReferences && crossReferences.length > 0 && (
                     <Dialog>
                         <DialogTrigger asChild>
-                            <button className="p-0.5 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors">
+                            <button className="p-0.5 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors" title="Cross-references">
                                 <LinkIcon className="h-3.5 w-3.5" />
                             </button>
                         </DialogTrigger>

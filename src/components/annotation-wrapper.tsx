@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -57,8 +58,8 @@ export function AnnotationWrapper() {
     
     const handleSaveNote = () => {
         if (!activeAnnotation || !noteDirty) return;
-        createOrUpdateAnnotation({ note });
-        toast({ title: "Note Saved", description: "Your annotation note has been saved." });
+        createOrUpdateAnnotation({ note: note.trim() });
+        toast({ title: "Note Saved", description: "Your annotation note has been updated." });
         setIsEditingNote(false);
     }
 
@@ -73,6 +74,7 @@ export function AnnotationWrapper() {
             setSelection(null);
         } else {
             setIsEditingNote(false);
+            setNote('');
         }
     }, [activeAnnotation, setSelection]);
 
@@ -87,8 +89,12 @@ export function AnnotationWrapper() {
     };
 
     const onNote = () => {
-        if (activeAnnotation) setIsEditingNote(true);
-        else if (selection) createOrUpdateAnnotation({ note: '' });
+        if (activeAnnotation) {
+            setIsEditingNote(true);
+        } else if (selection) {
+            // For selection, create an empty annotation first to "anchor" the note
+            createOrUpdateAnnotation({ note: '' });
+        }
     };
     
     const showToolbar = (selection || activeAnnotation) && user;
@@ -107,7 +113,7 @@ export function AnnotationWrapper() {
                    <div className="flex items-center justify-center gap-0.5 md:gap-1 p-0.5 bg-background border rounded-lg shadow-sm w-full overflow-x-auto">
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8"><Highlighter className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" title="Highlight"><Highlighter className="h-4 w-4" /></Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-2" align="start">
                                 <div className="flex flex-wrap gap-2 max-w-[160px]">
@@ -125,7 +131,7 @@ export function AnnotationWrapper() {
                         </Popover>
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8"><Underline className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" title="Underline"><Underline className="h-4 w-4" /></Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-2" align="start">
                                 <div className="flex flex-wrap gap-2 max-w-[160px]">
@@ -149,8 +155,8 @@ export function AnnotationWrapper() {
                             setIsEditingNote(open);
                         }}>
                             <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" onClick={onNote} disabled={!activeAnnotation && !selection}>
-                                        <StickyNote className="h-4 w-4" />
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" onClick={onNote} disabled={!activeAnnotation && !selection} title="Edit Note">
+                                        <StickyNote className={cn("h-4 w-4", activeAnnotation?.note && "text-primary")} />
                                     </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-80 shadow-xl border-stone-200">
@@ -172,7 +178,7 @@ export function AnnotationWrapper() {
                                         autoFocus
                                     />
                                     <div className="flex gap-2 justify-end">
-                                        <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}>Save</Button>
+                                        <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}>Save Changes</Button>
                                         <Button onClick={handleCancelEdit} size="sm" variant="ghost">Cancel</Button>
                                     </div>
                                 </div>
@@ -186,12 +192,12 @@ export function AnnotationWrapper() {
                             />
                         )}
 
-                        <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 text-destructive" onClick={handleDelete} disabled={!activeAnnotation}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 text-destructive" onClick={handleDelete} disabled={!activeAnnotation} title="Delete Annotation"><Trash2 className="h-4 w-4" /></Button>
                    </div>
                </div>
             )}
              {showToolbar && (
-                <Button variant="ghost" size="icon" onClick={resetAnnotationState} className="h-4 w-4 md:h-6 md:w-6 absolute -top-1 -right-1 md:top-0.5 md:right-0.5 bg-background border rounded-full shadow-sm">
+                <Button variant="ghost" size="icon" onClick={resetAnnotationState} className="h-4 w-4 md:h-6 md:w-6 absolute -top-1 -right-1 md:top-0.5 md:right-0.5 bg-background border rounded-full shadow-sm" title="Clear Selection">
                     <X className="h-3 w-3 md:h-4 md:w-4" />
                 </Button>
             )}
