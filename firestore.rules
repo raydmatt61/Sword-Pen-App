@@ -1,85 +1,42 @@
 
-/**
- * This ruleset enforces a strict user-ownership model for a Bible annotation application.
- *
- * Core Philosophy:
- * All user-generated content, such as personal notes and highlights, is considered private and
- * accessible only to the user who created it. This ensures user data privacy and isolation.
- *
- * Data Structure:
- * The data is organized hierarchically. All user-specific data, including annotations,
- * is stored in a subcollection under a main `/users/{userId}` document.
- * This structure makes ownership explicit in the document path, simplifying security logic.
- *
- * Key Security Decisions:
- * - User Enumeration is Disabled: The top-level `/users` collection cannot be listed,
- *   preventing malicious actors from discovering the entire user base.
- * - Strict Path-Based Ownership: A user can only read or write data within their own
- *   document tree (i.e., `/users/{their_own_uid}/...`).
- * - Self-Service Profile Creation: A newly authenticated user is permitted to create their
- *   own profile document in the `/users` collection, but no one else's.
- *
- * Denormalization for Authorization:
- * The data model is designed for efficient and secure rules. By nesting a user's content
- * within their own user document, we use the `{userId}` wildcard in the path as the primary
- * authorization check. This avoids the need for slow and costly `get()` calls to other
- * documents to verify ownership. For example, a rule on an annotation document at
- * `/users/abc/annotations/xyz` can instantly verify ownership by checking if the
- * authenticated user's ID is 'abc'.
- *
- * Structural Segregation:
- * The model segregates each user's private data into their own document tree. There are no
- * public or shared collections, which creates a clear and secure boundary between users.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for reusable logic
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Checks if the requesting user is the owner based on the document path.
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Checks if the requesting user is the owner of an existing document.
-    // CRITICAL: Used for some update operations to prevent writes to non-existent paths.
     function isExistingOwner(userId) {
       return isOwner(userId) && exists(path);
     }
     
-    // Checks if the user trying to create a document is the owner
     function isCreatingOwner(userId) {
       return isOwner(userId);
     }
 
-    // On create, validates that the document's internal `id` field matches the user's UID.
     function hasValidIdOnCreate(userId) {
       return request.resource.data.id == userId;
     }
 
-    // On update, ensures the document's internal `id` field cannot be changed.
     function isIdImmutable() {
       return request.resource.data.id == resource.data.id;
     }
 
-    // On create, validates that the document's internal `userId` field matches the user's UID.
     function hasValidUserIdOnCreate(userId) {
       return request.resource.data.userId == userId;
     }
 
-    // On update, ensures the document's internal `userId` field cannot be changed.
     function isUserIdImmutable() {
       return request.resource.data.userId == resource.data.userId;
     }
     
     function isValidAnnotation() {
         let data = request.resource.data;
-
-        // Common validations for all annotations
         return data.book.size() > 0 &&
                data.translation.size() > 0 &&
                data.chapter > 0 &&
@@ -89,14 +46,6 @@ service cloud.firestore {
                data.text.size() > 0;
     }
 
-    /**
-     * @description Manages user profile documents.
-     * @path /users/{userId}
-     * @allow (create) An authenticated user can create their own user document.
-     * @deny  (list) A user cannot list all other users in the system.
-     * @deny  (get) A user cannot read another user's profile.
-     * @principle Restricts access to a user's own data tree and prevents user enumeration.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
@@ -104,17 +53,16 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId) && isIdImmutable();
       allow delete: if isOwner(userId);
 
-      /**
-       * @description Manages a user's private annotations for specific Bible verses.
-       * @path /users/{userId}/annotations/{annotationId}
-       * @allow (create, update, delete) An authenticated user can manage annotations within their own profile.
-       * @allow (get, list) A user can read and list their own annotations.
-       * @deny  (create, read, write) A user cannot access another user's annotations.
-       * @principle Enforces document ownership for all operations on a user's private subcollection.
-       */
       match /annotations/{annotationId} {
         allow read: if isOwner(userId);
         allow create: if isCreatingOwner(userId) && hasValidUserIdOnCreate(userId) && isValidAnnotation();
+        allow update: if isOwner(userId) && isUserIdImmutable();
+        allow delete: if isOwner(userId);
+      }
+
+      match /bookmarks/{bookmarkId} {
+        allow read: if isOwner(userId);
+        allow create: if isCreatingOwner(userId) && hasValidUserIdOnCreate(userId);
         allow update: if isOwner(userId) && isUserIdImmutable();
         allow delete: if isOwner(userId);
       }

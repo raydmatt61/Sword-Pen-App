@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export type Translation = {
@@ -132,6 +133,18 @@ export type Annotation = {
   createdAt?: any;
   updatedAt?: any;
   groupId?: string;
+};
+
+export type Bookmark = {
+  id: string;
+  userId: string;
+  translation: string;
+  book: string;
+  chapter: number;
+  verse: number;
+  reference: string;
+  text?: string;
+  createdAt?: any;
 };
 
 export type CrossRef = {

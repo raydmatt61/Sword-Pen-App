@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -91,6 +92,59 @@
         "end",
         "text"
       ]
+    },
+    "Bookmark": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Bookmark",
+      "type": "object",
+      "description": "Represents a bookmarked Bible verse.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the bookmark."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User."
+        },
+        "translation": {
+          "type": "string",
+          "description": "The translation ID."
+        },
+        "book": {
+          "type": "string",
+          "description": "Book name."
+        },
+        "chapter": {
+          "type": "number",
+          "description": "Chapter number."
+        },
+        "verse": {
+          "type": "number",
+          "description": "Verse number."
+        },
+        "reference": {
+          "type": "string",
+          "description": "Formatted reference (e.g., 'John 3:16')."
+        },
+        "text": {
+          "type": "string",
+          "description": "A preview of the verse text."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "translation",
+        "book",
+        "chapter",
+        "verse",
+        "reference"
+      ]
     }
   },
   "auth": {
@@ -124,7 +178,7 @@
           "schema": {
             "$ref": "#/backend/entities/Annotation"
           },
-          "description": "Stores individual annotations for each user. The annotationId is a unique ID.",
+          "description": "Stores individual annotations for each user.",
           "params": [
             {
               "name": "userId",
@@ -136,8 +190,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/bookmarks/{bookmarkId}",
+        "definition": {
+          "entityName": "Bookmark",
+          "schema": {
+            "$ref": "#/backend/entities/Bookmark"
+          },
+          "description": "Stores personal bookmarks for verses.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "bookmarkId",
+              "description": "The unique identifier for the bookmark."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure data isolation and efficient querying. Annotations are stored as a subcollection under each user's document, enabling path-based ownership and simplified security rules. This approach allows for multiple granular annotations per verse and supports efficient querying for all annotations within a specific chapter for a user."
+    "reasoning": "Data is isolated per user to ensure privacy and simple path-based security rules. Annotations and Bookmarks are stored as subcollections of the user document."
   }
 }

@@ -8,13 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { cn } from '@/lib/utils';
 import Balancer from 'react-wrap-balancer';
 import { useAnnotationContext } from '@/contexts/annotation-context';
+import { useBookmarkContext } from '@/contexts/bookmark-context';
 import { useUser } from '@/firebase';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Bookmark as BookmarkIcon } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
+import { useToast } from '@/hooks/use-toast';
 
 function VerseComponent({
     verse,
@@ -32,6 +34,9 @@ function VerseComponent({
     navigate: (newValues: Partial<{ book: string; chapter: string; translation: string; verse: string; }>) => void;
 }) {
     const { fontSize } = useAnnotationContext();
+    const { isBookmarked, toggleBookmark } = useBookmarkContext();
+    const { user } = useUser();
+    const { toast } = useToast();
 
     const footnotesMap = useMemo(() => {
         if (!chapterData.chapter.footnotes) return new Map<string, string>();
@@ -47,6 +52,40 @@ function VerseComponent({
         });
         return Array.from(notes);
     }, [annotations]);
+
+    const bookmarked = isBookmarked(chapterData.book.id, chapterData.chapter.number, verse.number, chapterData.translation.id);
+
+    const handleBookmarkToggle = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!user) {
+            toast({
+                title: "Sign in required",
+                description: "You must be signed in to bookmark verses.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        const verseText = verse.content
+            .map(item => typeof item === 'string' ? item : (item as FormattedText).text)
+            .filter(t => typeof t === 'string')
+            .join(' ')
+            .substring(0, 150) + '...';
+
+        toggleBookmark({
+            book: chapterData.book.id,
+            chapter: chapterData.chapter.number,
+            verse: verse.number,
+            translation: chapterData.translation.id,
+            reference: `${chapterData.book.name} ${chapterData.chapter.number}:${verse.number}`,
+            text: verseText
+        });
+
+        toast({
+            title: bookmarked ? "Bookmark Removed" : "Verse Bookmarked",
+            description: `${chapterData.book.name} ${chapterData.chapter.number}:${verse.number} ${bookmarked ? 'removed from' : 'added to'} your collection.`,
+        });
+    };
 
     const renderedContent = useMemo(() => {
         let charOffset = 0;
@@ -182,11 +221,11 @@ function VerseComponent({
 
     const textClasses = cn(
         "font-body tracking-tight",
-        fontSize === 'sm' && 'text-[19px] md:text-sm leading-[1.8]',
-        fontSize === 'md' && 'text-[22px] md:text-base leading-[1.8]',
-        fontSize === 'lg' && 'text-[25px] md:text-lg leading-[1.8]',
-        fontSize === 'xl' && 'text-[27px] md:text-xl leading-[1.8]',
-        fontSize === '2xl' && 'text-[31px] md:text-2xl leading-[1.8]',
+        fontSize === 'sm' && 'text-[17px] md:text-sm leading-[1.8]',
+        fontSize === 'md' && 'text-[20px] md:text-base leading-[1.8]',
+        fontSize === 'lg' && 'text-[23px] md:text-lg leading-[1.8]',
+        fontSize === 'xl' && 'text-[25px] md:text-xl leading-[1.8]',
+        fontSize === '2xl' && 'text-[29px] md:text-2xl leading-[1.8]',
     );
 
     return (
@@ -199,6 +238,15 @@ function VerseComponent({
             </sup>
             
             <span className="inline-flex items-center gap-0.5 mr-2 align-baseline">
+                <button 
+                    onClick={handleBookmarkToggle}
+                    className={cn(
+                        "p-0.5 rounded-full transition-colors",
+                        bookmarked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-secondary"
+                    )}
+                >
+                    <BookmarkIcon className={cn("h-3.5 w-3.5", bookmarked && "fill-current")} />
+                </button>
                 {verseNotes.length > 0 && (
                     <Dialog>
                         <DialogTrigger asChild>
@@ -394,11 +442,11 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     
     const textClasses = cn(
         "font-body tracking-tight",
-        fontSize === 'sm' && 'text-[19px] md:text-sm leading-[1.8]',
-        fontSize === 'md' && 'text-[22px] md:text-base leading-[1.8]',
-        fontSize === 'lg' && 'text-[25px] md:text-lg leading-[1.8]',
-        fontSize === 'xl' && 'text-[27px] md:text-xl leading-[1.8]',
-        fontSize === '2xl' && 'text-[31px] md:text-2xl leading-[1.8]',
+        fontSize === 'sm' && 'text-[17px] md:text-sm leading-[1.8]',
+        fontSize === 'md' && 'text-[20px] md:text-base leading-[1.8]',
+        fontSize === 'lg' && 'text-[23px] md:text-lg leading-[1.8]',
+        fontSize === 'xl' && 'text-[25px] md:text-xl leading-[1.8]',
+        fontSize === '2xl' && 'text-[29px] md:text-2xl leading-[1.8]',
     );
 
 
