@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode.react';
 import { Button } from './ui/button';
-import { Settings, QrCode as QrIcon, Link as LinkIcon, Download, Upload, Loader2, Share2, Database, Copy } from 'lucide-react';
+import { Settings, Download, Upload, Loader2, Share2, Database, Copy } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,8 +20,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 
+const APP_SHARE_URL = 'https://console.firebase.google.com/project/studio-8198471998-f4406';
+
 export function SettingsDialog() {
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(APP_SHARE_URL);
   const [isOpen, setIsOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -35,17 +37,11 @@ export function SettingsDialog() {
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    if (isOpen && isClient) {
-      setUrl(window.location.href);
-    }
-  }, [isOpen, isClient]);
-
   const handleCopyLink = () => {
     navigator.clipboard.writeText(url);
     toast({
         title: "Link Copied",
-        description: "The page URL has been copied to your clipboard.",
+        description: "The application link has been copied to your clipboard.",
     });
   };
 
@@ -151,7 +147,7 @@ export function SettingsDialog() {
                     </div>
                     
                     <div className="w-full space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest text-center">Share this location</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest text-center">Application Link</p>
                         <div className="flex gap-2">
                             <Input 
                                 readOnly 
@@ -165,7 +161,7 @@ export function SettingsDialog() {
                     </div>
 
                     <p className="text-sm text-muted-foreground text-center">
-                        Scan the code or copy the link to share your current study location.
+                        Scan the code or copy the link to share the application.
                     </p>
                 </div>
             </TabsContent>
