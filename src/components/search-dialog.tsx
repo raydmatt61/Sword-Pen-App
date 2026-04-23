@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -57,34 +58,35 @@ export function SearchDialog({ translationId, navigate }: { translationId: strin
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" className="h-8 w-8">
-          <Search className="h-4 w-4" />
+        <Button variant="outline" size="icon" className="h-10 w-10 md:h-9 md:w-9">
+          <Search className="h-5 w-5 md:h-4 md:w-4" />
           <span className="sr-only">Search</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-w-[95vw] rounded-2xl">
         <DialogHeader>
-          <DialogTitle>Search Bible</DialogTitle>
-          <DialogDescription>
-            Search for a word or phrase in the selected translation ({translationId}).
+          <DialogTitle className="text-2xl font-headline">Search Bible</DialogTitle>
+          <DialogDescription className="text-base">
+            Search for a word or phrase in {translationId.toUpperCase()}.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSearch} className="flex gap-2">
+        <form onSubmit={handleSearch} className="flex gap-2 mt-4">
           <Input 
             placeholder="e.g., God is love"
+            className="h-12 text-lg"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? <Loader2 className="animate-spin" /> : <Search />}
+          <Button type="submit" size="lg" disabled={isLoading} className="h-12 px-6">
+            {isLoading ? <Loader2 className="animate-spin h-6 w-6" /> : <Search className="h-6 w-6" />}
           </Button>
         </form>
-        <ScrollArea className="max-h-[60vh] mt-4">
-          <div className="pr-4 space-y-4">
+        <ScrollArea className="max-h-[60vh] mt-6">
+          <div className="pr-4 space-y-4 pb-4">
             {results.map((verse) => (
-              <div key={verse.id} className="p-4 border rounded-lg cursor-pointer hover:bg-accent" onClick={() => handleResultClick(verse)}>
-                <p className="font-bold text-primary">{verse.reference}</p>
-                <p className="text-sm" dangerouslySetInnerHTML={{ __html: verse.text.replace(/<mark>/g, '<mark class="bg-primary/20">') }}></p>
+              <div key={verse.id} className="p-5 border-2 rounded-xl cursor-pointer hover:border-primary/50 transition-colors bg-card" onClick={() => handleResultClick(verse)}>
+                <p className="font-bold text-primary text-lg mb-1">{verse.reference}</p>
+                <p className="text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: verse.text.replace(/<mark>/g, '<mark class="bg-primary/20 font-bold">') }}></p>
               </div>
             ))}
           </div>

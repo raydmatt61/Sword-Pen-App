@@ -20,7 +20,6 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
     if (!bibleId) {
         throw new Error(`Search is not supported for the "${translationId}" translation.`);
     }
-    // Updated API Key from user
     const apiKey = "n-eVwCRekVC0-oL2B6_s3";
 
     try {
@@ -227,12 +226,19 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
   const apiKey = "n-eVwCRekVC0-oL2B6_s3"; 
   
   try {
-    const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/passages/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=false`, { headers: { 'api-key': apiKey } });
+    const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/passages/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=false`, { 
+        headers: { 'api-key': apiKey } 
+    });
     if (!response.ok) return null;
 
     const json = await response.json();
     const data = json.data;
-    let content_data = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
+    
+    // The Bible API returns a nested JSON structure. We need to traverse it to extract text and verse markers.
+    let contentData = data.content;
+    if (typeof contentData === 'string') {
+        try { contentData = JSON.parse(contentData); } catch { return null; }
+    }
     
     const chapterContent: ChapterContentItem[] = [];
     let currentVerseNumber: number | null = null;
@@ -257,14 +263,15 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
                     flushVerse();
                     currentVerseNumber = parseInt(item.attrs.number, 10);
                 } else if (item.name === 'para') {
-                    flushVerse();
+                    // Start of a paragraph usually flushes the previous verse if we're at a verse boundary
                     if (item.attrs?.style === 'h') {
-                        const headingText = (item.items || []).map((i: any) => i.text).join('').trim();
+                        flushVerse();
+                        const headingText = (item.items || []).map((i: any) => i.text || '').join('').trim();
                         if (headingText) chapterContent.push({ type: 'heading', content: [headingText] });
-                    } else if (item.attrs?.style === 'p') {
+                    } else {
                         chapterContent.push({ type: 'line_break' });
+                        processItems(item.items, isWoc);
                     }
-                    processItems(item.items, isWoc);
                 } else if (item.name === 'char') {
                     const isNewWoc = isWoc || (item.attrs?.style === 'woc');
                     processItems(item.items, isNewWoc);
@@ -273,9 +280,9 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
                 }
             } else if (item.type === 'text' && typeof item.text === 'string' && currentVerseNumber !== null) {
                 let text = item.text;
-                // Strip residual verse numbers if they appear at the very start of a text node
+                // Filter out verse numbers that might be baked into the text node
                 if (currentVerseContent.length === 0) {
-                    text = text.replace(/^\d+\s*/, '');
+                    text = text.replace(/^\s*\d+\s*/, '');
                 }
                 if (text) {
                     currentVerseContent.push({ text, wordsOfJesus: isWoc });
@@ -284,7 +291,7 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
         });
     };
     
-    if (content_data) processItems(content_data);
+    if (contentData) processItems(contentData);
     flushVerse();
 
     return {
@@ -293,12 +300,16 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
       translation: { name: TRANSLATIONS.find(t => t.id === translationId)?.name || translationId, id: translationId },
       copyright: data.copyright,
     };
-  } catch (error) { return null; }
+  } catch (error) { 
+    console.error("API Error:", error);
+    return null; 
+  }
 }
 
 async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
+  // Use Bolls for BSB and KJV to get Strongs
   if (translationId === 'BSB' || translationId === 'KJV') {
     chapterData = await getChapterFromBolls(translationId, book, chapter);
   } 

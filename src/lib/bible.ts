@@ -199,6 +199,7 @@ export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
     NASB: 'b8ee27bcd1cae43a-01',
     KJV: 'de4e12af7f28f599-01',
     WEB: '72f4e6dc683324df-01',
+    engnet: '72f4e6dc683324df-01',
 };
 
 export const GenerateVerseInsightsInputSchema = z.object({

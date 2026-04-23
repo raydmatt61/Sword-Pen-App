@@ -222,38 +222,38 @@ export function VerseSelector({
   const renderMobileControls = () => (
     <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
         <SheetTrigger asChild>
-            <Button variant="outline" className="w-full h-11 text-sm px-4 justify-between font-bold border-2 border-primary/20 shadow-sm">
+            <Button variant="outline" className="w-full h-12 text-base px-4 justify-between font-bold border-2 border-primary/20 shadow-md">
                 <span className="truncate">
                     {defaultValues.book} {defaultValues.chapter} ({defaultValues.translation.toUpperCase()})
                 </span>
-                <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
+                <ChevronsUpDown className="h-5 w-5 opacity-50 shrink-0" />
             </Button>
         </SheetTrigger>
-        <SheetContent side="bottom" className="rounded-t-2xl px-6 pb-12" onOpenAutoFocus={(e) => e.preventDefault()}>
-            <SheetHeader className="mb-6">
-                <SheetTitle className="text-xl font-headline">Study Navigation</SheetTitle>
+        <SheetContent side="bottom" className="rounded-t-3xl px-6 pb-12 h-[80vh]" onOpenAutoFocus={(e) => e.preventDefault()}>
+            <SheetHeader className="mb-6 pt-2">
+                <SheetTitle className="text-2xl font-headline text-center">Study Navigation</SheetTitle>
             </SheetHeader>
             <div className="space-y-6">
                  <Dialog open={isBookSelectorOpen} onOpenChange={setIsBookSelectorOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="outline" className="w-full h-12 justify-between text-base font-medium">
+                        <Button variant="outline" className="w-full h-14 justify-between text-lg font-medium border-stone-200">
                             Select Book & Chapter
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-[90vw] rounded-xl">
+                    <DialogContent className="max-w-[95vw] rounded-2xl p-0 overflow-hidden">
                         {selectionStep === 'book' ? (
                             <>
-                                <DialogHeader>
+                                <DialogHeader className="p-4 border-b">
                                     <DialogTitle>Select a Book</DialogTitle>
                                 </DialogHeader>
                                 <BookSelectorGrid books={books} currentBook={defaultValues.book} onSelect={handleBookSelect} />
                             </>
                         ) : (
                             <>
-                                <DialogHeader>
+                                <DialogHeader className="p-4 border-b">
                                     <DialogTitle className="flex items-center gap-2">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectionStep('book')}><ChevronLeft /></Button>
+                                        <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setSelectionStep('book')}><ChevronLeft /></Button>
                                         <span>{tempBook}</span>
                                     </DialogTitle>
                                 </DialogHeader>
@@ -268,13 +268,13 @@ export function VerseSelector({
 
                 <Dialog open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="outline" className="w-full h-12 justify-between text-base font-medium" disabled={maxVerses === 0}>
-                            Go to Verse
-                            <Hash className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        <Button variant="outline" className="w-full h-14 justify-between text-lg font-medium border-stone-200" disabled={maxVerses === 0}>
+                            Jump to Verse
+                            <Hash className="ml-2 h-5 w-5 shrink-0 opacity-50" />
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-[90vw] rounded-xl">
-                        <DialogHeader>
+                    <DialogContent className="max-w-[95vw] rounded-2xl p-0 overflow-hidden">
+                        <DialogHeader className="p-4 border-b">
                             <DialogTitle>Select a Verse</DialogTitle>
                         </DialogHeader>
                         <VerseSelectorGrid 
@@ -282,24 +282,25 @@ export function VerseSelector({
                             onSelect={(v) => {
                                 handleVerseSelect(v);
                                 setIsMobileSheetOpen(false);
+                                setIsVerseSelectorOpen(false);
                             }} 
                         />
                     </DialogContent>
                 </Dialog>
 
                 <div className="space-y-2">
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Translation</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Current Translation</p>
                     <Select value={defaultValues.translation} onValueChange={(t) => { navigate({ translation: t }); setIsMobileSheetOpen(false); }}>
-                        <SelectTrigger className="h-12 text-base"><SelectValue placeholder="Translation" /></SelectTrigger>
-                        <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id.toUpperCase()}</SelectItem>)}</SelectContent>
+                        <SelectTrigger className="h-14 text-lg border-stone-200"><SelectValue placeholder="Translation" /></SelectTrigger>
+                        <SelectContent className="max-h-[300px]">{translations.map(t => <SelectItem key={t.id} value={t.id} className="text-lg py-3">{t.id.toUpperCase()} - {t.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 
-                 <div className="flex gap-2 w-full pt-4">
-                    <Button variant="outline" size="icon" className="flex-1 h-14" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1}><ChevronLeft className="h-6 w-6" /></Button>
-                    <Button variant="outline" size="icon" className="flex-1 h-14" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook}><ChevronRight className="h-6 w-6" /></Button>
-                    <Button variant="outline" size="icon" className="flex-1 h-14" onClick={handleGoBack}>
-                        <History className="h-6 w-6" />
+                 <div className="flex gap-3 w-full pt-6">
+                    <Button variant="outline" size="icon" className="flex-1 h-16 border-2" onClick={() => { onChapterNav('prev'); setIsMobileSheetOpen(false); }} disabled={parseInt(defaultValues.chapter) <= 1}><ChevronLeft className="h-8 w-8" /></Button>
+                    <Button variant="outline" size="icon" className="flex-1 h-16 border-2" onClick={() => { onChapterNav('next'); setIsMobileSheetOpen(false); }} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook}><ChevronRight className="h-8 w-8" /></Button>
+                    <Button variant="outline" size="icon" className="flex-1 h-16 border-2" onClick={() => { handleGoBack(); setIsMobileSheetOpen(false); }}>
+                        <History className="h-8 w-8" />
                     </Button>
                 </div>
             </div>
