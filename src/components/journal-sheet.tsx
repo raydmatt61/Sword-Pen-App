@@ -65,34 +65,36 @@ export function JournalSheet() {
         <>
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8" title="Prayer Journal">
-                        <BookOpen className="h-4 w-4" />
+                    <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" title="Prayer Journal">
+                        <BookOpen className="h-4 w-4 md:h-5 md:w-5" />
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
-                    <SheetHeader className="p-6 border-b">
-                        <div className="flex items-center justify-between">
+                    <div className="flex flex-col p-6 border-b gap-4">
+                        <div className="flex items-center justify-between pr-10">
                             <SheetTitle className="font-headline text-2xl flex items-center gap-2">
                                 <BookOpen className="h-6 w-6 text-primary" />
                                 My Journal
                             </SheetTitle>
-                            <Button size="sm" onClick={handleNewEntry} className="gap-1">
-                                <Plus className="h-4 w-4" /> New
-                            </Button>
                         </div>
                         <SheetDescription>
                             Reflect on Scripture and record your prayers.
                         </SheetDescription>
-                        <div className="relative mt-4">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                                placeholder="Search thoughts, prayers, or verses..." 
-                                className="pl-9"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Search entries..." 
+                                    className="pl-9 h-10"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <Button size="sm" onClick={handleNewEntry} className="gap-1 h-10 px-4 shrink-0">
+                                <Plus className="h-4 w-4" /> New
+                            </Button>
                         </div>
-                    </SheetHeader>
+                    </div>
                     
                     <ScrollArea className="flex-1">
                         <div className="p-4 space-y-4">

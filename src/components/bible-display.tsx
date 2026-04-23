@@ -237,22 +237,22 @@ function VerseComponent({
                 {verse.number}
             </sup>
             
-            <span className="inline-flex items-center gap-0.5 mr-2 align-baseline">
+            <span className="inline-flex items-center gap-1 mr-2 align-baseline">
                 <button 
                     onClick={handleBookmarkToggle}
                     className={cn(
-                        "p-0.5 rounded-full transition-colors",
+                        "p-1 rounded-full transition-colors",
                         bookmarked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-secondary"
                     )}
                     title="Bookmark verse"
                 >
-                    <BookmarkIcon className={cn("h-3.5 w-3.5", bookmarked && "fill-current")} />
+                    <BookmarkIcon className={cn("h-4 w-4 md:h-3.5 md:w-3.5", bookmarked && "fill-current")} />
                 </button>
                 {verseNotes.length > 0 && (
                     <Dialog>
                         <DialogTrigger asChild>
-                            <button className="p-0.5 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors" title="View notes">
-                                <StickyNote className="h-3.5 w-3.5" />
+                            <button className="p-1 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors" title="View notes">
+                                <StickyNote className="h-4 w-4 md:h-3.5 md:w-3.5" />
                             </button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
@@ -270,8 +270,8 @@ function VerseComponent({
                 {crossReferences && crossReferences.length > 0 && (
                     <Dialog>
                         <DialogTrigger asChild>
-                            <button className="p-0.5 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors" title="Cross-references">
-                                <LinkIcon className="h-3.5 w-3.5" />
+                            <button className="p-1 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors" title="Cross-references">
+                                <LinkIcon className="h-4 w-4 md:h-3.5 md:w-3.5" />
                             </button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-lg">
@@ -440,7 +440,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
             );
         }
         if (item.type === 'line_break') {
-            // Reduced line break height for cleaner layout (h-4 instead of h-6)
             return <div key={`p-br-${index}`} className="h-4 block w-full" />;
         }
         return null;
@@ -475,9 +474,10 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                             type="button"
                                             onClick={() => onChapterNav('prev')}
                                             disabled={currentChapter <= 1}
+                                            className="h-10 w-10"
                                             aria-label="Previous Chapter"
                                         >
-                                            <ChevronLeft className="h-4 w-4" />
+                                            <ChevronLeft className="h-5 w-5" />
                                         </Button>
                                         <Button
                                             variant="outline"
@@ -485,9 +485,10 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                             type="button"
                                             onClick={() => onChapterNav('next')}
                                             disabled={currentChapter >= maxChapters}
+                                            className="h-10 w-10"
                                             aria-label="Next Chapter"
                                         >
-                                            <ChevronRight className="h-4 w-4" />
+                                            <ChevronRight className="h-5 w-5" />
                                         </Button>
                                     </div>
                                 </div>
@@ -527,7 +528,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                     </Button>
                                 </div>
                             </CardContent>
-                            <CardFooter className="px-0 pt-6 flex flex-col items-start gap-4">
+                            <CardFooter className="px-0 pt-6 flex flex-col items-start gap-4 pb-20">
                                 {chapterData.translation.id === 'engnet' ? (
                                     <p className="text-xs text-muted-foreground">
                                         NET Bible® Copyright | For full NET Bible notes, please see{' '}

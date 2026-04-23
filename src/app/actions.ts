@@ -20,10 +20,8 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
     if (!bibleId) {
         throw new Error(`Search is not supported for the "${translationId}" translation.`);
     }
-    const apiKey = process.env.NEXT_PUBLIC_API_BIBLE_KEY;
-    if (!apiKey) {
-        throw new Error("API key for Bible API is not configured.");
-    }
+    // Updated API Key from user
+    const apiKey = "n-eVwCRekVC0-oL2B6_s3";
 
     try {
         const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/search?query=${encodeURIComponent(query)}&sort=relevance`, {
@@ -67,7 +65,6 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
 
 /**
  * Utility function to collapse verse content into logical segments.
- * Internal to this file to avoid Server Action overhead.
  */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
@@ -152,8 +149,6 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
         const chapterContent: ChapterContentItem[] = [];
         
         bollsVerses.forEach((v, index) => {
-            // Add a subtle line break every 8 verses for Bolls-fetched translations (BSB, KJV)
-            // to prevent the text from being one giant "bunch" without headers.
             if (index > 0 && index % 8 === 0) {
                 chapterContent.push({ type: 'line_break' });
             }
@@ -229,11 +224,10 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
   if (!bookAbbr) return null;
 
   const chapterId = `${bookAbbr}.${chapter}`;
-  const apiKey = process.env.NEXT_PUBLIC_API_BIBLE_KEY;
-  if (!apiKey) return null;
+  const apiKey = "n-eVwCRekVC0-oL2B6_s3"; 
   
   try {
-    const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/passages/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`, { headers: { 'api-key': apiKey } });
+    const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/passages/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=false`, { headers: { 'api-key': apiKey } });
     if (!response.ok) return null;
 
     const json = await response.json();
@@ -244,62 +238,54 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
     let currentVerseNumber: number | null = null;
     let currentVerseContent: VerseContent[] = [];
 
+    const flushVerse = () => {
+        if (currentVerseNumber !== null && currentVerseContent.length > 0) {
+            chapterContent.push({ 
+                type: 'verse', 
+                number: currentVerseNumber, 
+                content: collapseVerseContent(currentVerseContent) 
+            });
+            currentVerseContent = [];
+        }
+    };
+
     const processItems = (items: any[], isWoc = false) => {
         if (!items || !Array.isArray(items)) return;
         items.forEach(item => {
             if (item.type === 'tag') {
-                let flushVerse = false;
-                let startNewVerse: number | null = null;
-                
                 if (item.name === 'verse' && item.attrs?.number) {
-                    flushVerse = true;
-                    startNewVerse = parseInt(item.attrs.number, 10);
-                }
-                
-                if (item.name === 'para' && item.attrs?.style === 'h') flushVerse = true;
-                
-                if (item.name === 'para' && !item.attrs?.style?.startsWith('h')) {
-                    if (currentVerseNumber !== null && currentVerseContent.length > 0) {
-                        chapterContent.push({ type: 'verse', number: currentVerseNumber, content: collapseVerseContent(currentVerseContent) });
-                        currentVerseContent = [];
-                    }
-                    // Only add line break if we actually have preceding content
-                    if (chapterContent.length > 0 && chapterContent[chapterContent.length - 1].type !== 'line_break') {
+                    flushVerse();
+                    currentVerseNumber = parseInt(item.attrs.number, 10);
+                } else if (item.name === 'para') {
+                    flushVerse();
+                    if (item.attrs?.style === 'h') {
+                        const headingText = (item.items || []).map((i: any) => i.text).join('').trim();
+                        if (headingText) chapterContent.push({ type: 'heading', content: [headingText] });
+                    } else if (item.attrs?.style === 'p') {
                         chapterContent.push({ type: 'line_break' });
                     }
+                    processItems(item.items, isWoc);
+                } else if (item.name === 'char') {
+                    const isNewWoc = isWoc || (item.attrs?.style === 'woc');
+                    processItems(item.items, isNewWoc);
+                } else {
+                    processItems(item.items, isWoc);
                 }
-
-                if (flushVerse && currentVerseNumber !== null && currentVerseContent.length > 0) {
-                     chapterContent.push({ type: 'verse', number: currentVerseNumber, content: collapseVerseContent(currentVerseContent) });
-                     currentVerseContent = [];
-                     currentVerseNumber = null;
-                }
-                
-                if (startNewVerse) currentVerseNumber = startNewVerse;
-                
-                if (item.name === 'para' && item.attrs?.style === 'h') {
-                    const headingText = item.items?.map((i: any) => i.text).join(' ').trim();
-                    if(headingText) chapterContent.push({ type: 'heading', content: [headingText] });
-                }
-                
-                const isNewWoc = isWoc || (item.name === 'char' && item.attrs?.style === 'woc');
-                if (item.items) processItems(item.items, isNewWoc);
             } else if (item.type === 'text' && typeof item.text === 'string' && currentVerseNumber !== null) {
-                currentVerseContent.push({ text: item.text, wordsOfJesus: isWoc });
-            } else if (item.type === 'verse' && item.attrs?.number) {
-                if (currentVerseNumber !== null && currentVerseContent.length > 0) {
-                    chapterContent.push({ type: 'verse', number: currentVerseNumber, content: collapseVerseContent(currentVerseContent) });
-                    currentVerseContent = [];
+                let text = item.text;
+                // Strip residual verse numbers if they appear at the very start of a text node
+                if (currentVerseContent.length === 0) {
+                    text = text.replace(/^\d+\s*/, '');
                 }
-                currentVerseNumber = parseInt(item.attrs.number, 10);
+                if (text) {
+                    currentVerseContent.push({ text, wordsOfJesus: isWoc });
+                }
             }
         });
     };
     
     if (content_data) processItems(content_data);
-    if (currentVerseNumber !== null && currentVerseContent.length > 0) {
-        chapterContent.push({ type: 'verse', number: currentVerseNumber, content: collapseVerseContent(currentVerseContent) });
-    }
+    flushVerse();
 
     return {
       book: { name: book, id: bookAbbr },
@@ -344,8 +330,7 @@ async function getChapter(book: string, chapter: string, translationId: string, 
 
 async function getBooks(translationId: string): Promise<Book[]> {
     const bibleId = API_BIBLE_IDS[translationId as keyof typeof API_BIBLE_IDS] || 'a556c5305ee15c3f-01'; 
-    const apiKey = process.env.NEXT_PUBLIC_API_BIBLE_KEY;
-    if (!apiKey) return [];
+    const apiKey = "n-eVwCRekVC0-oL2B6_s3";
     
     try {
         const res = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/books?include-chapters=true`, { headers: { 'api-key': apiKey } });

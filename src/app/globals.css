@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,25 +11,20 @@
     --card-foreground: 224 10% 12%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 10% 12%;
-    --primary: 37 15% 59%; /* Earthy Sand */
+    --primary: 37 15% 45%; /* Darker Sand for contrast */
     --primary-foreground: 224 10% 12%;
-    --secondary: 210 40% 96%;
+    --secondary: 37 10% 88%;
     --secondary-foreground: 215 30% 18%;
     --muted: 220 9% 46%;
     --muted-foreground: 215 19% 47%;
-    --accent: 92 11% 45%; /* Muted Olive */
+    --accent: 92 11% 40%; /* Stronger Olive */
     --accent-foreground: 50 27% 94%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 37 15% 59%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --border: 37 10% 82%;
+    --input: 37 10% 82%;
+    --ring: 37 15% 45%;
+    --radius: 0.75rem;
   }
 
   .dark {
@@ -51,11 +47,6 @@
     --border: 215 28% 27%;
     --input: 215 28% 27%;
     --ring: 37 15% 70%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
   }
 }
 
@@ -66,6 +57,15 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Enhanced mobile font sizes */
+@media (max-width: 768px) {
+  .bible-content .text-\[15px\] { font-size: 17px !important; }
+  .bible-content .text-\[18px\] { font-size: 20px !important; }
+  .bible-content .text-\[21px\] { font-size: 23px !important; }
+  .bible-content .text-\[24px\] { font-size: 26px !important; }
+  .bible-content .text-\[28px\] { font-size: 30px !important; }
 }
 
 /* Highlights */
@@ -91,34 +91,6 @@
 
 .dark .words-of-jesus {
   color: #ff5555;
-}
-
-.citation-box {
-    background: #fff;
-    border: 1px solid #E4E4E7;
-    border-radius: 20px;
-    padding: 20px 16px;
-    max-width: 700px;
-    line-height: 1.5;
-    color: #222;
-}
-
-.citation-box p.citation-text {
-    font-style: italic;
-}
-
-.citation-box .divider {
-    border-top: 1px solid #e0e0e0;
-    margin: 20px 0;
-}
-
-.citation-box a {
-    color: #0155CC;
-    text-decoration: none;
-}
-
-.citation-box a:hover {
-    text-decoration: underline;
 }
 
 .verse-highlight {
