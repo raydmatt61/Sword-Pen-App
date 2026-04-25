@@ -2,7 +2,7 @@
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
-import { API_BIBLE_IDS_SEARCH, BIBLE_BOOKS_ABBR, BIBLE_BOOK_NUMBERS, TRANSLATIONS, BOOK_TESTAMENTS, STATIC_BOOKS, BIBLE_ABBR_BOOKS } from "@/lib/bible";
+import { API_BIBLE_IDS_SEARCH, BIBLE_BOOKS_ABBR, TRANSLATIONS, STATIC_BOOKS, BIBLE_ABBR_BOOKS } from "@/lib/bible";
 import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, StrongsDetail } from "@/lib/bible";
 
 const API_KEY = "n-eVwCRekVC0-oL2B6_s3";
@@ -24,6 +24,67 @@ function cleanApiText(text: string): string {
         .replace(/([^\s])([(\["'‘“])/g, '$1 $2')   // Space before opening brackets/quotes
         .replace(/([)\]"'’ ”])([^\s,. ;:!?])/g, '$1 $2') // Space after closing brackets/quotes
         .trim();
+}
+
+/**
+ * Collapses and cleans verse content segments to ensure proper spacing.
+ */
+function collapseVerseContent(content: VerseContent[]): VerseContent[] {
+    if (!content || content.length === 0) return [];
+
+    const result: VerseContent[] = [];
+    let lastTextItem: FormattedText | null = null;
+
+    for (let i = 0; i < content.length; i++) {
+        const item = content[i];
+        
+        const isMergeableText = typeof item === 'string' || (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item));
+
+        if (!isMergeableText) {
+            result.push(item);
+            lastTextItem = null;
+            continue;
+        }
+
+        const currentObj: FormattedText = typeof item === 'string' ? { text: item } : { ...item } as FormattedText;
+        if (!currentObj.text) continue;
+
+        // Clean the text segment
+        currentObj.text = currentObj.text.replace(/\s+/g, ' ');
+
+        if (lastTextItem) {
+            const lastText = lastTextItem.text;
+            const currentText = currentObj.text;
+            
+            const lastChar = lastText.slice(-1);
+            const firstChar = currentText.charAt(0);
+
+            let needsSpace = false;
+            if (lastChar && firstChar && !/\s/.test(lastChar) && !/\s/.test(firstChar)) {
+                const isFirstPunct = /[.,!?:;’”)}\]'’]/.test(firstChar);
+                const isLastOpener = /[(\["'‘“]/.test(lastChar);
+                if (!isFirstPunct && !isLastOpener) {
+                    needsSpace = true;
+                }
+            }
+
+            const isJesusEqual = !!lastTextItem.wordsOfJesus === !!currentObj.wordsOfJesus;
+            const isStrongsEqual = lastTextItem.strongs === currentObj.strongs;
+
+            if (isJesusEqual && isStrongsEqual) {
+                lastTextItem.text += (needsSpace ? ' ' : '') + currentText;
+            } else {
+                if (needsSpace) lastTextItem.text += ' ';
+                result.push(currentObj);
+                lastTextItem = currentObj;
+            }
+        } else {
+            result.push(currentObj);
+            lastTextItem = currentObj;
+        }
+    }
+
+    return result;
 }
 
 export async function searchBible(input: { query: string; translationId: string }): Promise<{ verses: SearchResultVerse[] } | null> {
@@ -74,68 +135,9 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
   }
 }
 
-function collapseVerseContent(content: VerseContent[]): VerseContent[] {
-    if (!content || content.length === 0) return [];
-
-    const result: VerseContent[] = [];
-    let lastTextItem: FormattedText | null = null;
-
-    for (let i = 0; i < content.length; i++) {
-        const item = content[i];
-        
-        const isMergeableText = typeof item === 'string' || (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item));
-
-        if (!isMergeableText) {
-            result.push(item);
-            lastTextItem = null;
-            continue;
-        }
-
-        const currentObj: FormattedText = typeof item === 'string' ? { text: item } : { ...item } as FormattedText;
-        if (!currentObj.text) continue;
-
-        // Ensure natural spacing within the text itself
-        currentObj.text = currentObj.text.replace(/\s+/g, ' ');
-
-        if (lastTextItem) {
-            const lastText = lastTextItem.text;
-            const currentText = currentObj.text;
-            
-            const lastChar = lastText.slice(-1);
-            const firstChar = currentText.charAt(0);
-
-            let needsSpace = false;
-            if (lastChar && firstChar && !/\s/.test(lastChar) && !/\s/.test(firstChar)) {
-                const isFirstPunct = /[.,!?:;’”)}\]'’]/.test(firstChar);
-                const isLastOpener = /[(\["'‘“]/.test(lastChar);
-                if (!isFirstPunct && !isLastOpener) {
-                    needsSpace = true;
-                }
-            }
-
-            const isJesusEqual = !!lastTextItem.wordsOfJesus === !!currentObj.wordsOfJesus;
-            const isStrongsEqual = lastTextItem.strongs === currentObj.strongs;
-
-            if (isJesusEqual && isStrongsEqual) {
-                lastTextItem.text += (needsSpace ? ' ' : '') + currentText;
-            } else {
-                if (needsSpace) lastTextItem.text += ' ';
-                result.push(currentObj);
-                lastTextItem = currentObj;
-            }
-        } else {
-            result.push(currentObj);
-            lastTextItem = currentObj;
-        }
-    }
-
-    return result;
-}
-
 async function getChapterFromBolls(translationCode: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
     const bookAbbr = BIBLE_BOOKS_ABBR[book] || book;
-    const bookNumber = BIBLE_BOOK_NUMBERS[bookAbbr];
-    if (!bookNumber) return null;
+    const bookNumber = (STATIC_BOOKS.find(b => b.id === bookAbbr || b.commonName === book)?.id && (STATIC_BOOKS.indexOf(STATIC_BOOKS.find(b => b.id === bookAbbr || b.commonName === book)!) + 1)) || 1;
 
     try {
         const url = `https://bolls.life/get-chapter/${translationCode}/${bookNumber}/${chapter}/`;
@@ -144,47 +146,11 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
         const bollsVerses: any[] = await response.json();
         if (!bollsVerses || bollsVerses.length === 0) return null;
         
-        const prefix = BOOK_TESTAMENTS[bookAbbr] === 'OT' ? 'H' : 'G';
-        const chapterContent: ChapterContentItem[] = [];
-        
-        bollsVerses.forEach((v, index) => {
-            const segments: VerseContent[] = [];
-            const parts = v.text.split(/(<S>\d+<\/S>)/);
-            
-            parts.forEach(part => {
-                if (!part) return;
-                const strongsMatch = part.match(/<S>(\d+)<\/S>/);
-                if (strongsMatch) {
-                    const number = strongsMatch[1];
-                    const fullStrongs = prefix + number;
-                    if (segments.length > 0) {
-                        const lastIndex = segments.length - 1;
-                        const last = segments[lastIndex];
-                        if (typeof last === 'string') {
-                            const words = last.split(/(\s+)/);
-                            const lastWord = words.pop() || "";
-                            const preceding = words.join("");
-                            if (preceding) {
-                                segments[lastIndex] = preceding;
-                                segments.push({ text: lastWord, strongs: fullStrongs });
-                            } else {
-                                segments[lastIndex] = { text: lastWord, strongs: fullStrongs };
-                            }
-                        } else if (typeof last === 'object' && 'text' in last && !('noteId' in last)) {
-                            (last as FormattedText).strongs = fullStrongs;
-                        }
-                    }
-                } else {
-                    segments.push(part.replace(/<[^>]+>/g, ' '));
-                }
-            });
-
-            chapterContent.push({
-                type: 'verse',
-                number: v.verse,
-                content: collapseVerseContent(segments)
-            });
-        });
+        const chapterContent: ChapterContentItem[] = bollsVerses.map(v => ({
+            type: 'verse',
+            number: v.verse,
+            content: collapseVerseContent([{ text: cleanApiText(v.text) }])
+        }));
 
         const translationName = TRANSLATIONS.find(t => t.id === translationCode)?.name || translationCode;
 
@@ -208,9 +174,9 @@ async function getChapterFromLabsBible(book: string, chapter: string): Promise<B
         const chapterContent: ChapterContentItem[] = labsVerses.map(v => ({
             type: 'verse',
             number: parseInt(v.verse, 10),
-            content: [{ 
+            content: collapseVerseContent([{ 
                 text: cleanApiText(v.text).replace(/^\d+\s*/, '')
-            }]
+            }])
         }));
 
         const bookAbbr = BIBLE_BOOKS_ABBR[book] || book;
@@ -227,10 +193,24 @@ async function getChapterFromLabsBible(book: string, chapter: string): Promise<B
 async function getChapterFromWeb(book: string, chapter: string): Promise<BibleChapterResponse | null> {
     const bookAbbr = BIBLE_BOOKS_ABBR[book] || book;
     try {
-        const url = `https://raw.githubusercontent.com/HelloAOLab/bible-api/main/bible/engwebp/${bookAbbr}/${chapter}.json`;
+        // Use the official HelloAO API which is more stable than raw GitHub files
+        const url = `https://bible.helloao.org/api/t/engwebp/${bookAbbr}/${chapter}.json`;
         const response = await fetch(url, { next: { revalidate: 86400 } });
         if (!response.ok) return null;
         const data = await response.json();
+        
+        // Clean up the text in all content items
+        if (data.chapter && data.chapter.content) {
+            data.chapter.content = data.chapter.content.map((item: any) => {
+                if (item.type === 'verse') {
+                    return { ...item, content: collapseVerseContent(item.content.map((c: any) => 
+                        typeof c === 'string' ? cleanApiText(c) : (typeof c === 'object' && c.text ? { ...c, text: cleanApiText(c.text) } : c)
+                    )) };
+                }
+                return item;
+            });
+        }
+
         return {
             ...data,
             translation: { name: "World English Bible", id: "WEB" }
@@ -255,18 +235,20 @@ async function getCrossReferences(book: string, chapter: string): Promise<CrossR
 export async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
-  if (translationId === 'BSB' || translationId === 'KJV') {
-    chapterData = await getChapterFromBolls(translationId, book, chapter);
-  } else if (translationId === 'NET') {
+  const normalizedId = translationId.toUpperCase();
+
+  if (normalizedId === 'BSB' || normalizedId === 'KJV') {
+    chapterData = await getChapterFromBolls(normalizedId, book, chapter);
+  } else if (normalizedId === 'NET') {
       chapterData = await getChapterFromLabsBible(book, chapter);
-  } else if (translationId === 'WEB') {
+  } else if (normalizedId === 'WEB') {
       chapterData = await getChapterFromWeb(book, chapter);
   }
   
   if (chapterData) return chapterData;
   
   // Fallback to BSB if the requested translation fails
-  if (!isFallbackAttempt && translationId !== 'BSB') {
+  if (!isFallbackAttempt && normalizedId !== 'BSB') {
     return await getChapter(book, chapter, 'BSB', true);
   }
   return null;
