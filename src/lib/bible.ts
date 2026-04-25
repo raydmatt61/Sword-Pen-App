@@ -10,6 +10,7 @@ export const TRANSLATIONS: Translation[] = [
     { id: 'BSB', name: 'Berean Standard Bible' },
     { id: 'KJV', name: 'King James Version' },
     { id: 'NET', name: 'New English Translation' },
+    { id: 'WEB', name: 'World English Bible' },
 ];
 
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
@@ -187,6 +188,44 @@ export type Book = {
     testament: 'OT' | 'NT';
 };
 
+export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
+    Object.entries(BIBLE_BOOKS_ABBR).map(([name, abbr]) => [abbr, name])
+);
+
+export type SearchResultVerse = {
+    id: string;
+    reference: string;
+    text: string;
+    bookId: string;
+};
+
+export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
+    KJV: 'de4e12af7f28f599-01',
+    NET: '98de202246a0665f-01',
+    WEB: '98de202246a0665f-02',
+};
+
+export const GenerateVerseInsightsInputSchema = z.object({
+    verse: z.string().describe('The Bible verse to analyze.'),
+    annotations: z.string().describe('User annotations for the verse.'),
+});
+
+export const GenerateVerseInsightsOutputSchema = z.object({
+    insights: z.string().describe('AI-generated insights for the verse based on user annotations.'),
+});
+
+export type GenerateVerseInsightsInput = z.infer<typeof GenerateVerseInsightsInputSchema>;
+export type GenerateVerseInsightsOutput = z.infer<typeof GenerateVerseInsightsOutputSchema>;
+
+export type StrongsDetail = {
+    strongsNumber: string;
+    lemma: string;
+    transliteration: string;
+    pronunciation?: string;
+    shortDefinition: string;
+    kjvDefinition: string;
+    strongsDerivation?: string;
+};
 export type Annotation = {
   id: string;
   userId: string;
@@ -250,42 +289,4 @@ export type CrossRefChapterResponse = {
         number: number;
         content: CrossRefVerse[];
     };
-};
-
-export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
-    Object.entries(BIBLE_BOOKS_ABBR).map(([name, abbr]) => [abbr, name])
-);
-
-export type SearchResultVerse = {
-    id: string;
-    reference: string;
-    text: string;
-    bookId: string;
-};
-
-export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
-    KJV: 'de4e12af7f28f599-01',
-    NET: '98de202246a0665f-01',
-};
-
-export const GenerateVerseInsightsInputSchema = z.object({
-    verse: z.string().describe('The Bible verse to analyze.'),
-    annotations: z.string().describe('User annotations for the verse.'),
-});
-
-export const GenerateVerseInsightsOutputSchema = z.object({
-    insights: z.string().describe('AI-generated insights for the verse based on user annotations.'),
-});
-
-export type GenerateVerseInsightsInput = z.infer<typeof GenerateVerseInsightsInputSchema>;
-export type GenerateVerseInsightsOutput = z.infer<typeof GenerateVerseInsightsOutputSchema>;
-
-export type StrongsDetail = {
-    strongsNumber: string;
-    lemma: string;
-    transliteration: string;
-    pronunciation?: string;
-    shortDefinition: string;
-    kjvDefinition: string;
-    strongsDerivation?: string;
 };

@@ -224,6 +224,22 @@ async function getChapterFromLabsBible(book: string, chapter: string): Promise<B
     }
 }
 
+async function getChapterFromWeb(book: string, chapter: string): Promise<BibleChapterResponse | null> {
+    const bookAbbr = BIBLE_BOOKS_ABBR[book] || book;
+    try {
+        const url = `https://raw.githubusercontent.com/HelloAOLab/bible-api/main/bible/engwebp/${bookAbbr}/${chapter}.json`;
+        const response = await fetch(url, { next: { revalidate: 86400 } });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return {
+            ...data,
+            translation: { name: "World English Bible", id: "WEB" }
+        };
+    } catch (error) {
+        return null;
+    }
+}
+
 async function getCrossReferences(book: string, chapter: string): Promise<CrossRefChapterResponse | null> {
   const CanonicalBook = BIBLE_BOOKS_ABBR[book] || book;
   try {
@@ -243,6 +259,8 @@ export async function getChapter(book: string, chapter: string, translationId: s
     chapterData = await getChapterFromBolls(translationId, book, chapter);
   } else if (translationId === 'NET') {
       chapterData = await getChapterFromLabsBible(book, chapter);
+  } else if (translationId === 'WEB') {
+      chapterData = await getChapterFromWeb(book, chapter);
   }
   
   if (chapterData) return chapterData;
