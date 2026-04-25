@@ -8,12 +8,9 @@ export type Translation = {
 
 export const TRANSLATIONS: Translation[] = [
     { id: 'BSB', name: 'Berean Standard Bible' },
+    { id: 'KJV', name: 'King James Version' },
     { id: 'engnet', name: 'New English Translation' },
     { id: 'WEB', name: 'World English Bible' },
-    { id: 'CSB', name: 'Christian Standard Bible' },
-    { id: 'NIV', name: 'New International Version' },
-    { id: 'NASB', name: 'New American Standard Bible' },
-    { id: 'KJV', name: 'King James Version' },
 ];
 
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
@@ -194,9 +191,6 @@ export type SearchResultVerse = {
 };
 
 export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
-    CSB: 'a556c5305ee15c3f-01',
-    NIV: '78a9f6124f344018-01',
-    NASB: 'b8ee27bcd1cae43a-01',
     KJV: 'de4e12af7f28f599-01',
     WEB: '72f4e6dc683324df-01',
     engnet: '72f4e6dc683324df-01',

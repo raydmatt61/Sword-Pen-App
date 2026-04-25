@@ -122,9 +122,6 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
 }
 
 const API_BIBLE_IDS = {
-    CSB: 'a556c5305ee15c3f-01',
-    NIV: '78a9f6124f344018-01',
-    NASB: 'b8ee27bcd1cae43a-01',
     KJV: 'de4e12af7f28f599-01',
     WEB: '72f4e6dc683324df-01',
     'engnet': '72f4e6dc683324df-01',
@@ -234,7 +231,6 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
     const json = await response.json();
     const data = json.data;
     
-    // The Bible API returns a nested JSON structure. We need to traverse it to extract text and verse markers.
     let contentData = data.content;
     if (typeof contentData === 'string') {
         try { contentData = JSON.parse(contentData); } catch { return null; }
@@ -263,7 +259,6 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
                     flushVerse();
                     currentVerseNumber = parseInt(item.attrs.number, 10);
                 } else if (item.name === 'para') {
-                    // Start of a paragraph usually flushes the previous verse if we're at a verse boundary
                     if (item.attrs?.style === 'h') {
                         flushVerse();
                         const headingText = (item.items || []).map((i: any) => i.text || '').join('').trim();
@@ -280,7 +275,6 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
                 }
             } else if (item.type === 'text' && typeof item.text === 'string' && currentVerseNumber !== null) {
                 let text = item.text;
-                // Filter out verse numbers that might be baked into the text node
                 if (currentVerseContent.length === 0) {
                     text = text.replace(/^\s*\d+\s*/, '');
                 }
@@ -309,7 +303,6 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
 async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
-  // Use Bolls for BSB and KJV to get Strongs
   if (translationId === 'BSB' || translationId === 'KJV') {
     chapterData = await getChapterFromBolls(translationId, book, chapter);
   } 
@@ -340,7 +333,7 @@ async function getChapter(book: string, chapter: string, translationId: string, 
 }
 
 async function getBooks(translationId: string): Promise<Book[]> {
-    const bibleId = API_BIBLE_IDS[translationId as keyof typeof API_BIBLE_IDS] || 'a556c5305ee15c3f-01'; 
+    const bibleId = API_BIBLE_IDS[translationId as keyof typeof API_BIBLE_IDS] || 'de4e12af7f28f599-01'; 
     const apiKey = "n-eVwCRekVC0-oL2B6_s3";
     
     try {
