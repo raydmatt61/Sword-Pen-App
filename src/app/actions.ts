@@ -5,21 +5,6 @@ import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/g
 import { API_BIBLE_IDS_SEARCH, BIBLE_BOOKS_ABBR, BIBLE_BOOK_NUMBERS, TRANSLATIONS, BOOK_TESTAMENTS, STATIC_BOOKS } from "@/lib/bible";
 import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, StrongsDetail } from "@/lib/bible";
 
-interface SearchBibleInput {
-    query: string;
-    translationId: string;
-}
-
-interface SearchBibleOutput {
-    verses: SearchResultVerse[];
-}
-
-const API_BIBLE_IDS = {
-    KJV: 'de4e12af7f28f599-01',
-    WEB: '72f4e6dc683324df-01',
-    NET: '98de202246a0665f-01',
-};
-
 const API_KEY = "n-eVwCRekVC0-oL2B6_s3";
 
 /**
@@ -33,11 +18,11 @@ function cleanApiText(text: string): string {
         .replace(/<[^>]+>/g, ' ')      // Replace ALL other HTML tags with space to prevent word sticking
         .replace(/&nbsp;/g, ' ')      // Replace non-breaking spaces
         .replace(/\s+/g, ' ')         // Collapse multiple spaces
-        .replace(/([,.;:!?])([^\s\d])/g, '$1 $2') // Ensure space after punctuation (but not before numbers like 3:16)
+        .replace(/([,.;:!?])([^\s\d])/g, '$1 $2') // Ensure space after punctuation
         .trim();
 }
 
-export async function searchBible(input: SearchBibleInput): Promise<SearchBibleOutput | null> {
+export async function searchBible(input: { query: string; translationId: string }): Promise<{ verses: SearchResultVerse[] } | null> {
     const { query, translationId } = input;
     const bibleId = API_BIBLE_IDS_SEARCH[translationId as keyof typeof API_BIBLE_IDS_SEARCH];
     if (!bibleId) {
@@ -104,7 +89,7 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
         const currentObj: FormattedText = typeof item === 'string' ? { text: item } : { ...item } as FormattedText;
         if (!currentObj.text) continue;
 
-        // Ensure natural spacing at the start and end of the segment if it's coming from a merge
+        // Ensure natural spacing
         currentObj.text = currentObj.text.replace(/\s+/g, ' ');
 
         if (lastTextItem) {
@@ -211,7 +196,6 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
 
 async function getChapterFromLabsBible(book: string, chapter: string): Promise<BibleChapterResponse | null> {
     try {
-        // labs.bible.org is more reliable for NET than api.bible sometimes
         const url = `https://labs.bible.org/api/?passage=${encodeURIComponent(book)}+${chapter}&type=json`;
         const response = await fetch(url);
         if (!response.ok) return null;
@@ -236,26 +220,30 @@ async function getChapterFromLabsBible(book: string, chapter: string): Promise<B
     }
 }
 
-async function getChapterFromHelloAo(book: string, chapter: string, variant: 'engweb' | 'engwebp' = 'engweb'): Promise<BibleChapterResponse | null> {
+async function getChapterFromHelloAo(book: string, chapter: string): Promise<BibleChapterResponse | null> {
     const bookAbbr = BIBLE_BOOKS_ABBR[book];
     if (!bookAbbr) return null;
 
     try {
-        const url = `https://raw.githubusercontent.com/HelloAOLab/bible-api/main/bible/${variant}/${bookAbbr}/${chapter}.json`;
+        // Use official HelloAO API endpoint as recommended
+        const url = `https://bible.helloao.org/api/t/engwebp/${bookAbbr}/${chapter}.json`;
         const response = await fetch(url);
-        if (!response.ok) {
-            // If main variant fails, try the other one once
-            if (variant === 'engweb') return getChapterFromHelloAo(book, chapter, 'engwebp');
-            return null;
-        }
+        if (!response.ok) return null;
         const data = await response.json();
         
-        if (data.verses) {
-            const chapterContent: ChapterContentItem[] = data.verses.map((v: any) => ({
-                type: 'verse',
-                number: v.verse,
-                content: [{ text: cleanApiText(v.text) }]
-            }));
+        if (data.chapter && data.chapter.content) {
+            const chapterContent: ChapterContentItem[] = data.chapter.content
+                .filter((item: any) => item.type === 'verse')
+                .map((v: any) => ({
+                    type: 'verse',
+                    number: v.number,
+                    content: v.content.map((c: any) => {
+                        if (typeof c === 'string') return cleanApiText(c);
+                        if (c.text) return { text: cleanApiText(c.text), wordsOfJesus: c.wordsOfJesus };
+                        return "";
+                    })
+                }));
+
             return {
                 book: { name: book, id: bookAbbr },
                 chapter: { number: parseInt(chapter, 10), content: chapterContent },
@@ -293,7 +281,7 @@ export async function getChapter(book: string, chapter: string, translationId: s
   
   if (chapterData) return chapterData;
   
-  // Robust fallback to BSB if the requested translation fails
+  // Fallback to BSB if the requested translation fails
   if (!isFallbackAttempt && translationId !== 'BSB') {
     return await getChapter(book, chapter, 'BSB', true);
   }
@@ -301,7 +289,6 @@ export async function getChapter(book: string, chapter: string, translationId: s
 }
 
 export async function getBooks(translationId: string): Promise<Book[]> {
-    // Return static books instantly to keep navigation snappy and avoid API failures
     return STATIC_BOOKS;
 }
 
