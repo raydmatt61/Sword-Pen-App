@@ -23,23 +23,23 @@ export const BIBLE_BOOKS_ABBR: Record<string, string> = {
     "Hebrews": "HEB", "James": "JAS", "1 Peter": "1PE", "2 Peter": "2PE", "1 John": "1JN", "2 John": "2JN", "3 John": "3JN", "Jude": "JUD", "Revelation": "REV"
 };
 
-export const OLD_TESTAMENT_BOOK_NAMES = [
-    "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
-    "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
-    "Ecclesiastes", "Song of Solomon", "Song of Songs", "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel",
-    "Amos", "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi"
-];
+export const BOOK_TESTAMENTS: Record<string, 'OT' | 'NT'> = {
+    GEN: 'OT', EXO: 'OT', LEV: 'OT', NUM: 'OT', DEU: 'OT', JOS: 'OT', JDG: 'OT', RUT: 'OT', '1SA': 'OT', '2SA': 'OT',
+    '1KI': 'OT', '2KI': 'OT', '1CH': 'OT', '2CH': 'OT', EZR: 'OT', NEH: 'OT', EST: 'OT', JOB: 'OT', PSA: 'OT', PRO: 'OT',
+    ECC: 'OT', SNG: 'OT', ISA: 'OT', JER: 'OT', LAM: 'OT', EZK: 'OT', DAN: 'OT', HOS: 'OT', JOL: 'OT', AMO: 'OT',
+    OBA: 'OT', JON: 'OT', MIC: 'OT', NAM: 'OT', HAB: 'OT', ZEP: 'OT', HAG: 'OT', ZEC: 'OT', MAL: 'OT',
+    MAT: 'NT', MRK: 'NT', LUK: 'NT', JHN: 'NT', ACT: 'NT', ROM: 'NT', '1CO': 'NT', '2CO': 'NT', GAL: 'NT', EPH: 'NT',
+    PHP: 'NT', COL: 'NT', '1TH': 'NT', '2TH': 'NT', '1TI': 'NT', '2TI': 'NT', TIT: 'NT', PHM: 'NT', HEB: 'NT',
+    JAS: 'NT', '1PE': 'NT', '2PE': 'NT', '1JN': 'NT', '2JN': 'NT', '3JN': 'NT', JUD: 'NT', REV: 'NT'
+};
 
-export const NEW_TESTAMENT_BOOK_NAMES = [
-    "Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians",
-    "Philippians", "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon",
-    "Hebrews", "James", "1 Peter", "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"
-];
+export const OLD_TESTAMENT_BOOK_NAMES = Object.keys(BIBLE_BOOKS_ABBR).filter(name => BOOK_TESTAMENTS[BIBLE_BOOKS_ABBR[name]] === 'OT');
+export const NEW_TESTAMENT_BOOK_NAMES = Object.keys(BIBLE_BOOKS_ABBR).filter(name => BOOK_TESTAMENTS[BIBLE_BOOKS_ABBR[name]] === 'NT');
 
 export const BIBLE_BOOK_NUMBERS: Record<string, number> = {
     "Genesis": 1, "Exodus": 2, "Leviticus": 3, "Numbers": 4, "Deuteronomy": 5, "Joshua": 6, "Judges": 7, "Ruth": 8, "1 Samuel": 9, "2 Samuel": 10,
     "1 Kings": 11, "2 Kings": 12, "1 Chronicles": 13, "2 Chronicles": 14, "Ezra": 15, "Nehemiah": 16, "Esther": 17, "Job": 18, "Psalms": 19, "Proverbs": 20,
-    "Ecclesiastes": 21, "Song of Solomon": 22, "Song of Songs": 22, "Isaiah": 23, "Jeremiah": 24, "Lamentations": 25, "Ezekiel": 26, "Daniel": 27, "Hosea": 28, "Joel": 29,
+    "Ecclesiastes": 21, "Song of Solomon": 22, "Isaiah": 23, "Jeremiah": 24, "Lamentations": 25, "Ezekiel": 26, "Daniel": 27, "Hosea": 28, "Joel": 29,
     "Amos": 30, "Obadiah": 31, "Jonah": 32, "Micah": 33, "Nahum": 34, "Habakkuk": 35, "Zephaniah": 36, "Haggai": 37, "Zechariah": 38, "Malachi": 39,
     "Matthew": 40, "Mark": 41, "Luke": 42, "John": 43, "Acts": 44, "Romans": 45, "1 Corinthians": 46, "2 Corinthians": 47, "Galatians": 48, "Ephesians": 49,
     "Philippians": 50, "Colossians": 51, "1 Thessalonians": 52, "2 Thessalonians": 53, "1 Timothy": 54, "2 Timothy": 55, "Titus": 56, "Philemon": 57,
