@@ -2,8 +2,8 @@
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
-import { API_BIBLE_IDS_SEARCH, BIBLE_BOOKS_ABBR, BIBLE_BOOK_NUMBERS, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from "@/lib/bible";
-import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, VerseFootnoteReference } from "@/lib/bible";
+import { API_BIBLE_IDS_SEARCH, BIBLE_BOOKS_ABBR, BIBLE_BOOK_NUMBERS, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES, STATIC_BOOKS } from "@/lib/bible";
+import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, VerseFootnoteReference, StrongsDetail } from "@/lib/bible";
 
 interface SearchBibleInput {
     query: string;
@@ -214,7 +214,14 @@ async function getChapterFromLabsBible(book: string, chapter: string): Promise<B
         const chapterContent: ChapterContentItem[] = labsVerses.map(v => ({
             type: 'verse',
             number: parseInt(v.verse, 10),
-            content: [{ text: v.text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() }]
+            content: [{ 
+                text: v.text
+                    .replace(/<br\s*\/?>/gi, ' ') 
+                    .replace(/<\/?[^>]+(>|$)/g, " ") // Replace tags with space to prevent joined words
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim() 
+            }]
         }));
 
         return {
@@ -277,7 +284,7 @@ async function getChapter(book: string, chapter: string, translationId: string, 
   } else if (translationId === 'engnet') {
       chapterData = await getChapterFromLabsBible(book, chapter);
   } else if (translationId === 'WEB') {
-      chapterData = await getChapterFromHelloAo('WEB', book, chapter);
+      chapterData = await getChapterFromHelloAo('engwebp', book, chapter);
   }
   
   if (!chapterData) {
@@ -297,7 +304,7 @@ async function getBooks(translationId: string): Promise<Book[]> {
         const res = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/books?include-chapters=true`, { headers: { 'api-key': API_KEY } });
         if (!res.ok) {
             const fallbackRes = await fetch(`https://rest.api.bible/v1/bibles/de4e12af7f28f599-01/books?include-chapters=true`, { headers: { 'api-key': API_KEY } });
-            if (!fallbackRes.ok) return [];
+            if (!fallbackRes.ok) return STATIC_BOOKS;
             const json = await fallbackRes.json();
             return (json.data || []).map((book: any) => {
                 const testament = OLD_TESTAMENT_BOOK_NAMES.includes(book.name) ? 'OT' : 'NT';
@@ -309,7 +316,9 @@ async function getBooks(translationId: string): Promise<Book[]> {
             const testament = OLD_TESTAMENT_BOOK_NAMES.includes(book.name) ? 'OT' : 'NT';
             return { id: book.id, commonName: book.name, numberOfChapters: book.chapters.length, testament };
         }).filter((b: any) => b.testament);
-    } catch (error) { return []; }
+    } catch (error) { 
+        return STATIC_BOOKS; 
+    }
 }
 
 export async function getPageData(book: string, chapter: string, translationId: string) {

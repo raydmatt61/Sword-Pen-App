@@ -48,6 +48,75 @@ export const BIBLE_BOOK_NUMBERS: Record<string, number> = {
 
 export const BIBLE_BOOKS = Object.keys(BIBLE_BOOKS_ABBR);
 
+export const STATIC_BOOKS: Book[] = [
+  { id: "GEN", commonName: "Genesis", numberOfChapters: 50, testament: "OT" },
+  { id: "EXO", commonName: "Exodus", numberOfChapters: 40, testament: "OT" },
+  { id: "LEV", commonName: "Leviticus", numberOfChapters: 27, testament: "OT" },
+  { id: "NUM", commonName: "Numbers", numberOfChapters: 36, testament: "OT" },
+  { id: "DEU", commonName: "Deuteronomy", numberOfChapters: 34, testament: "OT" },
+  { id: "JOS", commonName: "Joshua", numberOfChapters: 24, testament: "OT" },
+  { id: "JDG", commonName: "Judges", numberOfChapters: 21, testament: "OT" },
+  { id: "RUT", commonName: "Ruth", numberOfChapters: 4, testament: "OT" },
+  { id: "1SA", commonName: "1 Samuel", numberOfChapters: 31, testament: "OT" },
+  { id: "2SA", commonName: "2 Samuel", numberOfChapters: 24, testament: "OT" },
+  { id: "1KI", commonName: "1 Kings", numberOfChapters: 22, testament: "OT" },
+  { id: "2KI", commonName: "2 Kings", numberOfChapters: 25, testament: "OT" },
+  { id: "1CH", commonName: "1 Chronicles", numberOfChapters: 29, testament: "OT" },
+  { id: "2CH", commonName: "2 Chronicles", numberOfChapters: 36, testament: "OT" },
+  { id: "EZR", commonName: "Ezra", numberOfChapters: 10, testament: "OT" },
+  { id: "NEH", commonName: "Nehemiah", numberOfChapters: 13, testament: "OT" },
+  { id: "EST", commonName: "Esther", numberOfChapters: 10, testament: "OT" },
+  { id: "JOB", commonName: "Job", numberOfChapters: 42, testament: "OT" },
+  { id: "PSA", commonName: "Psalms", numberOfChapters: 150, testament: "OT" },
+  { id: "PRO", commonName: "Proverbs", numberOfChapters: 31, testament: "OT" },
+  { id: "ECC", commonName: "Ecclesiastes", numberOfChapters: 12, testament: "OT" },
+  { id: "SNG", commonName: "Song of Solomon", numberOfChapters: 8, testament: "OT" },
+  { id: "ISA", commonName: "Isaiah", numberOfChapters: 66, testament: "OT" },
+  { id: "JER", commonName: "Jeremiah", numberOfChapters: 52, testament: "OT" },
+  { id: "LAM", commonName: "Lamentations", numberOfChapters: 5, testament: "OT" },
+  { id: "EZK", commonName: "Ezekiel", numberOfChapters: 48, testament: "OT" },
+  { id: "DAN", commonName: "Daniel", numberOfChapters: 12, testament: "OT" },
+  { id: "HOS", commonName: "Hosea", numberOfChapters: 14, testament: "OT" },
+  { id: "JOL", commonName: "Joel", numberOfChapters: 3, testament: "OT" },
+  { id: "AMO", commonName: "Amos", numberOfChapters: 9, testament: "OT" },
+  { id: "OBA", commonName: "Obadiah", numberOfChapters: 1, testament: "OT" },
+  { id: "JON", commonName: "Jonah", numberOfChapters: 4, testament: "OT" },
+  { id: "MIC", commonName: "Micah", numberOfChapters: 7, testament: "OT" },
+  { id: "NAM", commonName: "Nahum", numberOfChapters: 3, testament: "OT" },
+  { id: "HAB", commonName: "Habakkuk", numberOfChapters: 3, testament: "OT" },
+  { id: "ZEP", commonName: "Zephaniah", numberOfChapters: 3, testament: "OT" },
+  { id: "HAG", commonName: "Haggai", numberOfChapters: 2, testament: "OT" },
+  { id: "ZEC", commonName: "Zechariah", numberOfChapters: 14, testament: "OT" },
+  { id: "MAL", commonName: "Malachi", numberOfChapters: 4, testament: "OT" },
+  { id: "MAT", commonName: "Matthew", numberOfChapters: 28, testament: "NT" },
+  { id: "MRK", commonName: "Mark", numberOfChapters: 16, testament: "NT" },
+  { id: "LUK", commonName: "Luke", numberOfChapters: 24, testament: "NT" },
+  { id: "JHN", commonName: "John", numberOfChapters: 21, testament: "NT" },
+  { id: "ACT", commonName: "Acts", numberOfChapters: 28, testament: "NT" },
+  { id: "ROM", commonName: "Romans", numberOfChapters: 16, testament: "NT" },
+  { id: "1CO", commonName: "1 Corinthians", numberOfChapters: 16, testament: "NT" },
+  { id: "2CO", commonName: "2 Corinthians", numberOfChapters: 13, testament: "NT" },
+  { id: "GAL", commonName: "Galatians", numberOfChapters: 6, testament: "NT" },
+  { id: "EPH", commonName: "Ephesians", numberOfChapters: 6, testament: "NT" },
+  { id: "PHP", commonName: "Philippians", numberOfChapters: 4, testament: "NT" },
+  { id: "COL", commonName: "Colossians", numberOfChapters: 4, testament: "NT" },
+  { id: "1TH", commonName: "1 Thessalonians", numberOfChapters: 5, testament: "NT" },
+  { id: "2TH", commonName: "2 Thessalonians", numberOfChapters: 3, testament: "NT" },
+  { id: "1TI", commonName: "1 Timothy", numberOfChapters: 6, testament: "NT" },
+  { id: "2TI", commonName: "2 Timothy", numberOfChapters: 4, testament: "NT" },
+  { id: "TIT", commonName: "Titus", numberOfChapters: 3, testament: "NT" },
+  { id: "PHM", commonName: "Philemon", numberOfChapters: 1, testament: "NT" },
+  { id: "HEB", commonName: "Hebrews", numberOfChapters: 13, testament: "NT" },
+  { id: "JAS", commonName: "James", numberOfChapters: 5, testament: "NT" },
+  { id: "1PE", commonName: "1 Peter", numberOfChapters: 5, testament: "NT" },
+  { id: "2PE", commonName: "2 Peter", numberOfChapters: 3, testament: "NT" },
+  { id: "1JN", commonName: "1 John", numberOfChapters: 5, testament: "NT" },
+  { id: "2JN", commonName: "2 John", numberOfChapters: 1, testament: "NT" },
+  { id: "3JN", commonName: "3 John", numberOfChapters: 1, testament: "NT" },
+  { id: "JUD", commonName: "Jude", numberOfChapters: 1, testament: "NT" },
+  { id: "REV", commonName: "Revelation", numberOfChapters: 22, testament: "NT" }
+];
+
 export type Footnote = {
     id: string;
     text: string;
@@ -202,3 +271,13 @@ export const GenerateVerseInsightsOutputSchema = z.object({
 
 export type GenerateVerseInsightsInput = z.infer<typeof GenerateVerseInsightsInputSchema>;
 export type GenerateVerseInsightsOutput = z.infer<typeof GenerateVerseInsightsOutputSchema>;
+
+export type StrongsDetail = {
+    strongsNumber: string;
+    lemma: string;
+    transliteration: string;
+    pronunciation?: string;
+    shortDefinition: string;
+    kjvDefinition: string;
+    strongsDerivation?: string;
+};
