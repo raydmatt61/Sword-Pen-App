@@ -80,41 +80,49 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
 
     for (let i = 0; i < content.length; i++) {
         const item = content[i];
-        const currentIsPlainText = typeof item === 'string' || (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item) && !('strongs' in item));
+        
+        // We only merge plain text segments (string or object with .text and no footnote ID)
+        const isMergeableText = typeof item === 'string' || (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item));
 
-        if (!currentIsPlainText) {
+        if (!isMergeableText) {
             result.push(item);
             lastTextItem = null;
             continue;
         }
 
-        const currentObj = typeof item === 'string' ? { text: item } : { ...item } as FormattedText;
-        
+        const currentObj: FormattedText = typeof item === 'string' ? { text: item } : { ...item } as FormattedText;
+        if (!currentObj.text) continue;
+
         if (lastTextItem) {
             const lastText = lastTextItem.text;
             const currentText = currentObj.text;
+            
             const lastChar = lastText.slice(-1);
             const firstChar = currentText.charAt(0);
 
             let needsSpace = false;
-            if (lastChar && firstChar) {
-                const isLastSpace = /\s/.test(lastChar);
-                const isFirstSpace = /\s/.test(firstChar);
-                const isLastPunct = /[.,!?:;’”)}\]'’]/.test(lastChar);
+            
+            // Check if we need to insert a space between these two segments
+            if (lastChar && firstChar && !/\s/.test(lastChar) && !/\s/.test(firstChar)) {
                 const isFirstPunct = /[.,!?:;’”)}\]'’]/.test(firstChar);
                 const isLastOpener = /[(\["'‘“]/.test(lastChar);
-
-                if (!isLastSpace && !isFirstSpace) {
-                    if (!isLastOpener && !isFirstPunct) needsSpace = true;
-                    if (isLastPunct && /[a-zA-Z0-9]/.test(firstChar)) needsSpace = true;
+                
+                // Add space if:
+                // 1. Current segment doesn't start with closing punctuation
+                // 2. AND previous segment didn't end with opening punctuation
+                if (!isFirstPunct && !isLastOpener) {
+                    needsSpace = true;
                 }
             }
 
             const isJesusEqual = !!lastTextItem.wordsOfJesus === !!currentObj.wordsOfJesus;
+            const isStrongsEqual = lastTextItem.strongs === currentObj.strongs;
 
-            if (isJesusEqual) {
+            if (isJesusEqual && isStrongsEqual) {
+                // Style and metadata are identical, merge the strings
                 lastTextItem.text += (needsSpace ? ' ' : '') + currentText;
             } else {
+                // Style/metadata changed, must keep as separate nodes but add spacing if needed
                 if (needsSpace) lastTextItem.text += ' ';
                 result.push(currentObj);
                 lastTextItem = currentObj;
