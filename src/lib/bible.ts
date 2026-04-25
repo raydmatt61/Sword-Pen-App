@@ -193,7 +193,7 @@ export type SearchResultVerse = {
 export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
     KJV: 'de4e12af7f28f599-01',
     WEB: '72f4e6dc683324df-01',
-    engnet: '72f4e6dc683324df-01',
+    engnet: '98de202246a0665f-01', // Corrected NET Bible ID
 };
 
 export const GenerateVerseInsightsInputSchema = z.object({

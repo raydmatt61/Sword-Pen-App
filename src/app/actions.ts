@@ -3,7 +3,7 @@
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
 import { API_BIBLE_IDS_SEARCH, BIBLE_BOOKS_ABBR, BIBLE_BOOK_NUMBERS, TRANSLATIONS, OLD_TESTAMENT_BOOK_NAMES, NEW_TESTAMENT_BOOK_NAMES } from "@/lib/bible";
-import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText } from "@/lib/bible";
+import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, VerseFootnoteReference } from "@/lib/bible";
 
 interface SearchBibleInput {
     query: string;
@@ -13,6 +13,13 @@ interface SearchBibleInput {
 interface SearchBibleOutput {
     verses: SearchResultVerse[];
 }
+
+const API_BIBLE_IDS = {
+    KJV: 'de4e12af7f28f599-01',
+    WEB: '72f4e6dc683324df-01',
+    'engnet': '98de202246a0665f-01', // Corrected NET Bible ID
+};
+const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
 
 export async function searchBible(input: SearchBibleInput): Promise<SearchBibleOutput | null> {
     const { query, translationId } = input;
@@ -121,13 +128,6 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     return result;
 }
 
-const API_BIBLE_IDS = {
-    KJV: 'de4e12af7f28f599-01',
-    WEB: '72f4e6dc683324df-01',
-    'engnet': '72f4e6dc683324df-01',
-};
-const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
-
 async function getChapterFromBolls(translationCode: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
     const bookNumber = BIBLE_BOOK_NUMBERS[book as keyof typeof BIBLE_BOOK_NUMBERS];
     if (!bookNumber) return null;
@@ -223,7 +223,7 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
   const apiKey = "n-eVwCRekVC0-oL2B6_s3"; 
   
   try {
-    const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/passages/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=false`, { 
+    const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=false`, { 
         headers: { 'api-key': apiKey } 
     });
     if (!response.ok) return null;
@@ -276,6 +276,7 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
             } else if (item.type === 'text' && typeof item.text === 'string' && currentVerseNumber !== null) {
                 let text = item.text;
                 if (currentVerseContent.length === 0) {
+                    // Strip leading verse numbers often baked into text nodes in some API translations
                     text = text.replace(/^\s*\d+\s*/, '');
                 }
                 if (text) {
