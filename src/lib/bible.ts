@@ -74,8 +74,6 @@ export type VerseFootnoteReference = {
 
 export type VerseContent = string | FormattedText | InlineHeading | InlineLineBreak | VerseFootnoteReference;
 
-export type HebrewSubtitleContent = string | FormattedText | VerseFootnoteReference;
-
 export type ChapterContentItem = {
     type: 'heading';
     content: string[];
@@ -85,9 +83,6 @@ export type ChapterContentItem = {
     type: 'verse';
     number: number;
     content: VerseContent[];
-} | {
-    type: 'hebrew_subtitle';
-    content: HebrewSubtitleContent[];
 };
 
 export type BibleChapterResponse = {
@@ -193,7 +188,7 @@ export type SearchResultVerse = {
 export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
     KJV: 'de4e12af7f28f599-01',
     WEB: '72f4e6dc683324df-01',
-    engnet: '98de202246a0665f-01', // Corrected NET Bible ID
+    engnet: '98de202246a0665f-01',
 };
 
 export const GenerateVerseInsightsInputSchema = z.object({

@@ -17,9 +17,11 @@ interface SearchBibleOutput {
 const API_BIBLE_IDS = {
     KJV: 'de4e12af7f28f599-01',
     WEB: '72f4e6dc683324df-01',
-    'engnet': '98de202246a0665f-01', // Corrected NET Bible ID
+    'engnet': '98de202246a0665f-01',
 };
 const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
+
+const API_KEY = "n-eVwCRekVC0-oL2B6_s3";
 
 export async function searchBible(input: SearchBibleInput): Promise<SearchBibleOutput | null> {
     const { query, translationId } = input;
@@ -27,11 +29,10 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
     if (!bibleId) {
         throw new Error(`Search is not supported for the "${translationId}" translation.`);
     }
-    const apiKey = "n-eVwCRekVC0-oL2B6_s3";
 
     try {
         const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/search?query=${encodeURIComponent(query)}&sort=relevance`, {
-            headers: { 'api-key': apiKey }
+            headers: { 'api-key': API_KEY }
         });
 
         if (!response.ok) {
@@ -50,7 +51,7 @@ export async function searchBible(input: SearchBibleInput): Promise<SearchBibleO
             verses: json.data.verses.map((v: any) => ({
                 id: v.id,
                 reference: v.reference,
-                text: v.text, 
+                text: v.text,
                 bookId: v.bookId,
             }))
         };
@@ -70,7 +71,7 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
 }
 
 /**
- * Utility function to collapse verse content into logical segments.
+ * Utility function to collapse verse content into logical segments and handle spacing.
  */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
@@ -100,6 +101,7 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
             const lastChar = lastText.slice(-1);
             const firstChar = currentText.charAt(0);
 
+            // Logic to determine if a space is needed
             let needsSpace = false;
             
             // Check if we need to insert a space between these two segments
@@ -207,6 +209,32 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
     } catch (error) { return null; }
 }
 
+async function getChapterFromLabsBible(book: string, chapter: string): Promise<BibleChapterResponse | null> {
+    try {
+        const url = `https://labs.bible.org/api/?passage=${encodeURIComponent(book)}+${chapter}&type=json`;
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const labsVerses: any[] = await response.json();
+        if (!labsVerses || !Array.isArray(labsVerses)) return null;
+
+        const chapterContent: ChapterContentItem[] = labsVerses.map(v => ({
+            type: 'verse',
+            number: parseInt(v.verse, 10),
+            content: [{ text: v.text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() }]
+        }));
+
+        return {
+            book: { name: book, id: BIBLE_BOOKS_ABBR[book] || book },
+            chapter: { number: parseInt(chapter, 10), content: chapterContent },
+            translation: { name: "New English Translation", id: "engnet" },
+            copyright: "NET Bible® copyright ©1996-2017 by Biblical Studies Press, L.L.C. http://netbible.com All rights reserved."
+        };
+    } catch (error) {
+        console.error("Labs API error:", error);
+        return null;
+    }
+}
+
 async function getCrossReferences(book: string, chapter: string): Promise<CrossRefChapterResponse | null> {
   const bookNameAliases: Record<string, string> = { 'Song of Songs': 'Song of Solomon' };
   const canonicalBook = bookNameAliases[book] || book;
@@ -228,11 +256,10 @@ async function getChapterFromApiBible(book: string, chapter: string, translation
   if (!bookAbbr) return null;
 
   const chapterId = `${bookAbbr}.${chapter}`;
-  const apiKey = "n-eVwCRekVC0-oL2B6_s3"; 
   
   try {
     const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=false`, { 
-        headers: { 'api-key': apiKey } 
+        headers: { 'api-key': API_KEY } 
     });
     if (!response.ok) return null;
 
@@ -314,7 +341,9 @@ async function getChapter(book: string, chapter: string, translationId: string, 
 
   if (translationId === 'BSB' || translationId === 'KJV') {
     chapterData = await getChapterFromBolls(translationId, book, chapter);
-  } 
+  } else if (translationId === 'engnet') {
+      chapterData = await getChapterFromLabsBible(book, chapter);
+  }
   
   if (!chapterData && API_BIBLE_TRANSLATIONS.includes(translationId)) {
     chapterData = await getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
@@ -342,12 +371,21 @@ async function getChapter(book: string, chapter: string, translationId: string, 
 }
 
 async function getBooks(translationId: string): Promise<Book[]> {
+    // For NET or other API versions, always attempt to get a robust list from a stable ID
     const bibleId = API_BIBLE_IDS[translationId as keyof typeof API_BIBLE_IDS] || 'de4e12af7f28f599-01'; 
-    const apiKey = "n-eVwCRekVC0-oL2B6_s3";
     
     try {
-        const res = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/books?include-chapters=true`, { headers: { 'api-key': apiKey } });
-        if (!res.ok) return [];
+        const res = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/books?include-chapters=true`, { headers: { 'api-key': API_KEY } });
+        if (!res.ok) {
+            // Fallback to a guaranteed stable KJV ID for the book list if the requested one fails
+            const fallbackRes = await fetch(`https://rest.api.bible/v1/bibles/de4e12af7f28f599-01/books?include-chapters=true`, { headers: { 'api-key': API_KEY } });
+            if (!fallbackRes.ok) return [];
+            const json = await fallbackRes.json();
+            return (json.data || []).map((book: any) => {
+                const testament = OLD_TESTAMENT_BOOK_NAMES.includes(book.name) ? 'OT' : 'NT';
+                return { id: book.id, commonName: book.name, numberOfChapters: book.chapters.length, testament };
+            }).filter((b: any) => b.testament);
+        }
         const json = await res.json();
         return (json.data || []).map((book: any) => {
             const testament = OLD_TESTAMENT_BOOK_NAMES.includes(book.name) ? 'OT' : 'NT';
