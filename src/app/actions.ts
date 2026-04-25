@@ -1,4 +1,3 @@
-
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
@@ -19,6 +18,8 @@ function cleanApiText(text: string): string {
         .replace(/&nbsp;/g, ' ')      // Replace non-breaking spaces
         .replace(/\s+/g, ' ')         // Collapse multiple spaces
         .replace(/([,.;:!?])([^\s\d])/g, '$1 $2') // Ensure space after punctuation
+        .replace(/([^\s])([(\["'‘“])/g, '$1 $2')   // Space before opening brackets/quotes
+        .replace(/([)\]"'’ ”])([^\s,. ;:!?])/g, '$1 $2') // Space after closing brackets/quotes
         .trim();
 }
 
@@ -132,7 +133,7 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
     if (!bookNumber) return null;
 
     try {
-        const url = `https://bolls.life/get-chapter/${translationCode}/${bookNumber}/${chapter}`;
+        const url = `https://bolls.life/get-chapter/${translationCode}/${bookNumber}/${chapter}/`;
         const response = await fetch(url);
         if (!response.ok) return null;
         const bollsVerses: any[] = await response.json();
@@ -196,7 +197,9 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
 
 async function getChapterFromLabsBible(book: string, chapter: string): Promise<BibleChapterResponse | null> {
     try {
-        const url = `https://labs.bible.org/api/?passage=${encodeURIComponent(book)}+${chapter}&type=json`;
+        // labs.bible.org works best with "Book+Chapter" format
+        const passage = `${book.replace(/ /g, '+')}+${chapter}`;
+        const url = `https://labs.bible.org/api/?passage=${passage}&type=json`;
         const response = await fetch(url);
         if (!response.ok) return null;
         const labsVerses: any[] = await response.json();
@@ -206,7 +209,8 @@ async function getChapterFromLabsBible(book: string, chapter: string): Promise<B
             type: 'verse',
             number: parseInt(v.verse, 10),
             content: [{ 
-                text: cleanApiText(v.text)
+                // Strip leading verse numbers which sometimes appear in the text and clean spacing
+                text: cleanApiText(v.text).replace(/^\d+\s*/, '')
             }]
         }));
 
@@ -225,24 +229,33 @@ async function getChapterFromHelloAo(book: string, chapter: string): Promise<Bib
     if (!bookAbbr) return null;
 
     try {
-        // Use official HelloAO API endpoint as recommended
-        const url = `https://bible.helloao.org/api/t/engwebp/${bookAbbr}/${chapter}.json`;
+        // Use GitHub Raw as a reliable source for WEB (British)
+        const url = `https://raw.githubusercontent.com/HelloAOLab/bible-api/main/bible/engwebp/${bookAbbr}/${chapter}.json`;
         const response = await fetch(url);
         if (!response.ok) return null;
         const data = await response.json();
         
         if (data.chapter && data.chapter.content) {
-            const chapterContent: ChapterContentItem[] = data.chapter.content
-                .filter((item: any) => item.type === 'verse')
-                .map((v: any) => ({
-                    type: 'verse',
-                    number: v.number,
-                    content: v.content.map((c: any) => {
-                        if (typeof c === 'string') return cleanApiText(c);
-                        if (c.text) return { text: cleanApiText(c.text), wordsOfJesus: c.wordsOfJesus };
-                        return "";
-                    })
-                }));
+            const chapterContent: ChapterContentItem[] = data.chapter.content.map((item: any) => {
+                if (item.type === 'heading') {
+                    return {
+                        type: 'heading',
+                        content: item.content.map((c: any) => cleanApiText(c))
+                    };
+                }
+                if (item.type === 'verse') {
+                    return {
+                        type: 'verse',
+                        number: item.number,
+                        content: item.content.map((c: any) => {
+                            if (typeof c === 'string') return cleanApiText(c);
+                            if (c && typeof c === 'object' && c.text) return { text: cleanApiText(c.text), wordsOfJesus: c.wordsOfJesus };
+                            return "";
+                        })
+                    };
+                }
+                return { type: 'line_break' };
+            });
 
             return {
                 book: { name: book, id: bookAbbr },
