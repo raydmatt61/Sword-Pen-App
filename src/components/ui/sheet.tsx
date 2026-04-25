@@ -113,7 +113,7 @@ const SheetTitle = React.forwardRef<
     {...props}
   />
 ))
-SheetTitle.displayName = SheetPrimitive.Title.displayName
+SheetTitle.displayName = "SheetTitle"
 
 const SheetDescription = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Description>,
@@ -125,7 +125,7 @@ const SheetDescription = React.forwardRef<
     {...props}
   />
 ))
-SheetDescription.displayName = SheetPrimitive.Description.displayName
+SheetDescription.displayName = "SheetDescription"
 
 export {
   Sheet,

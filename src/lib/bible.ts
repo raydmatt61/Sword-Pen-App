@@ -9,7 +9,7 @@ export type Translation = {
 export const TRANSLATIONS: Translation[] = [
     { id: 'BSB', name: 'Berean Standard Bible' },
     { id: 'KJV', name: 'King James Version' },
-    { id: 'engnet', name: 'New English Translation' },
+    { id: 'NET', name: 'New English Translation' },
     { id: 'WEB', name: 'World English Bible' },
 ];
 
@@ -33,9 +33,6 @@ export const BOOK_TESTAMENTS: Record<string, 'OT' | 'NT'> = {
     JAS: 'NT', '1PE': 'NT', '2PE': 'NT', '1JN': 'NT', '2JN': 'NT', '3JN': 'NT', JUD: 'NT', REV: 'NT'
 };
 
-export const OLD_TESTAMENT_BOOK_NAMES = Object.keys(BIBLE_BOOKS_ABBR).filter(name => BOOK_TESTAMENTS[BIBLE_BOOKS_ABBR[name]] === 'OT');
-export const NEW_TESTAMENT_BOOK_NAMES = Object.keys(BIBLE_BOOKS_ABBR).filter(name => BOOK_TESTAMENTS[BIBLE_BOOKS_ABBR[name]] === 'NT');
-
 export const BIBLE_BOOK_NUMBERS: Record<string, number> = {
     "Genesis": 1, "Exodus": 2, "Leviticus": 3, "Numbers": 4, "Deuteronomy": 5, "Joshua": 6, "Judges": 7, "Ruth": 8, "1 Samuel": 9, "2 Samuel": 10,
     "1 Kings": 11, "2 Kings": 12, "1 Chronicles": 13, "2 Chronicles": 14, "Ezra": 15, "Nehemiah": 16, "Esther": 17, "Job": 18, "Psalms": 19, "Proverbs": 20,
@@ -45,8 +42,6 @@ export const BIBLE_BOOK_NUMBERS: Record<string, number> = {
     "Philippians": 50, "Colossians": 51, "1 Thessalonians": 52, "2 Thessalonians": 53, "1 Timothy": 54, "2 Timothy": 55, "Titus": 56, "Philemon": 57,
     "Hebrews": 58, "James": 59, "1 Peter": 60, "2 Peter": 61, "1 John": 62, "2 John": 63, "3 John": 64, "Jude": 65, "Revelation": 66
 };
-
-export const BIBLE_BOOKS = Object.keys(BIBLE_BOOKS_ABBR);
 
 export const STATIC_BOOKS: Book[] = [
   { id: "GEN", commonName: "Genesis", numberOfChapters: 50, testament: "OT" },
@@ -257,7 +252,7 @@ export type SearchResultVerse = {
 export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
     KJV: 'de4e12af7f28f599-01',
     WEB: '72f4e6dc683324df-01',
-    engnet: '98de202246a0665f-01',
+    NET: '98de202246a0665f-01',
 };
 
 export const GenerateVerseInsightsInputSchema = z.object({

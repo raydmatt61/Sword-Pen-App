@@ -17,10 +17,21 @@ interface SearchBibleOutput {
 const API_BIBLE_IDS = {
     KJV: 'de4e12af7f28f599-01',
     WEB: '72f4e6dc683324df-01',
-    'engnet': '98de202246a0665f-01',
+    NET: '98de202246a0665f-01',
 };
 
 const API_KEY = "n-eVwCRekVC0-oL2B6_s3";
+
+function cleanApiText(text: string): string {
+    if (!text) return "";
+    return text
+        .replace(/<br\s*\/?>/gi, ' ') // Replace breaks with space
+        .replace(/<[^>]+>/g, '')      // Strip all other HTML
+        .replace(/&nbsp;/g, ' ')      // Replace non-breaking spaces
+        .replace(/\s+/g, ' ')         // Collapse multiple spaces
+        .replace(/([,.;:!?])([^\s\d])/g, '$1 $2') // Ensure space after punctuation (but not before numbers like 3:16)
+        .trim();
+}
 
 export async function searchBible(input: SearchBibleInput): Promise<SearchBibleOutput | null> {
     const { query, translationId } = input;
@@ -69,10 +80,6 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
   }
 }
 
-/**
- * Utility function to collapse verse content into logical segments and handle spacing.
- * Improved to fix spacing issues in API-based translations like NET.
- */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
 
@@ -93,7 +100,6 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
         const currentObj: FormattedText = typeof item === 'string' ? { text: item } : { ...item } as FormattedText;
         if (!currentObj.text) continue;
 
-        // Clean up internal multiple spaces
         currentObj.text = currentObj.text.replace(/\s+/g, ' ');
 
         if (lastTextItem) {
@@ -104,14 +110,9 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
             const firstChar = currentText.charAt(0);
 
             let needsSpace = false;
-            
-            // Check if we need a space between last segment and current segment
             if (lastChar && firstChar && !/\s/.test(lastChar) && !/\s/.test(firstChar)) {
-                // Don't add space before most punctuation
                 const isFirstPunct = /[.,!?:;’”)}\]'’]/.test(firstChar);
-                // Don't add space after common openers
                 const isLastOpener = /[(\["'‘“]/.test(lastChar);
-                
                 if (!isFirstPunct && !isLastOpener) {
                     needsSpace = true;
                 }
@@ -148,7 +149,6 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
         if (!bollsVerses || bollsVerses.length === 0) return null;
         
         const prefix = BOOK_TESTAMENTS[BIBLE_BOOKS_ABBR[book]] === 'OT' ? 'H' : 'G';
-
         const chapterContent: ChapterContentItem[] = [];
         
         bollsVerses.forEach((v, index) => {
@@ -165,7 +165,6 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
                 if (strongsMatch) {
                     const number = strongsMatch[1];
                     const fullStrongs = prefix + number;
-                    
                     if (segments.length > 0) {
                         const lastIndex = segments.length - 1;
                         const last = segments[lastIndex];
@@ -201,7 +200,6 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
             book: { name: book, id: BIBLE_BOOKS_ABBR[book] },
             chapter: { number: parseInt(chapter, 10), content: chapterContent },
             translation: { name: translationName, id: translationCode },
-            copyright: `Public Domain (or as specified by ${translationCode}). Data from bolls.life.`
         };
     } catch (error) { return null; }
 }
@@ -218,28 +216,51 @@ async function getChapterFromLabsBible(book: string, chapter: string): Promise<B
             type: 'verse',
             number: parseInt(v.verse, 10),
             content: [{ 
-                text: v.text
-                    .replace(/<[^>]+>/g, ' ') 
-                    .replace(/&nbsp;/g, ' ')
-                    .replace(/\s+/g, ' ')
-                    .trim() 
+                text: cleanApiText(v.text)
             }]
         }));
 
         return {
             book: { name: book, id: BIBLE_BOOKS_ABBR[book] || book },
             chapter: { number: parseInt(chapter, 10), content: chapterContent },
-            translation: { name: "New English Translation", id: "engnet" },
-            copyright: "NET Bible® copyright ©1996-2017 by Biblical Studies Press, L.L.C. http://netbible.com All rights reserved."
+            translation: { name: "New English Translation", id: "NET" },
         };
     } catch (error) {
         return null;
     }
 }
 
+async function getChapterFromHelloAo(translationId: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
+    const bookAbbr = BIBLE_BOOKS_ABBR[book];
+    if (!bookAbbr) return null;
+
+    try {
+        // Using GitHub Raw for more reliable fetching
+        const url = `https://raw.githubusercontent.com/HelloAOLab/bible-api/main/bible/engwebp/${bookAbbr}/${chapter}.json`;
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const data = await response.json();
+        
+        if (data.verses) {
+            const chapterContent: ChapterContentItem[] = data.verses.map((v: any) => ({
+                type: 'verse',
+                number: v.verse,
+                content: [{ text: cleanApiText(v.text) }]
+            }));
+            return {
+                book: { name: book, id: bookAbbr },
+                chapter: { number: parseInt(chapter, 10), content: chapterContent },
+                translation: { name: "World English Bible", id: "WEB" },
+            };
+        }
+    } catch (error) {
+        console.error("HelloAO API error:", error);
+    }
+    return null;
+}
+
 async function getCrossReferences(book: string, chapter: string): Promise<CrossRefChapterResponse | null> {
   const CanonicalBook = BIBLE_BOOKS_ABBR[book] || book;
-
   try {
     const response = await fetch(`https://bible.helloao.org/api/d/open-cross-ref/${CanonicalBook}/${chapter}.json`);
     if (response.ok) {
@@ -250,43 +271,15 @@ async function getCrossReferences(book: string, chapter: string): Promise<CrossR
   return null;
 }
 
-async function getChapterFromHelloAo(translationId: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
-    const bookAbbr = BIBLE_BOOKS_ABBR[book];
-    if (!bookAbbr) return null;
-
-    try {
-        const url = `https://bible.helloao.org/api/v1/${translationId}/${bookAbbr}/${chapter}.json`;
-        const response = await fetch(url);
-        if (!response.ok) return null;
-        const data = await response.json();
-        
-        if (data?.chapter?.content) {
-            const chapterData = data as BibleChapterResponse;
-            chapterData.chapter.content.forEach(item => {
-                if (item.type === 'verse' && item.content) {
-                    item.content = collapseVerseContent(item.content);
-                }
-            });
-            return chapterData;
-        }
-    } catch (error) {
-        console.error("HelloAO API error:", error);
-    }
-    return null;
-}
-
 async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
   let chapterData: BibleChapterResponse | null = null;
 
   if (translationId === 'BSB' || translationId === 'KJV') {
     chapterData = await getChapterFromBolls(translationId, book, chapter);
-  } else if (translationId === 'engnet') {
+  } else if (translationId === 'NET') {
       chapterData = await getChapterFromLabsBible(book, chapter);
   } else if (translationId === 'WEB') {
       chapterData = await getChapterFromHelloAo('engwebp', book, chapter);
-      if (chapterData) {
-          chapterData.translation.id = 'WEB'; // Sync ID for UI logic
-      }
   }
   
   if (chapterData) return chapterData;
@@ -296,12 +289,9 @@ async function getChapter(book: string, chapter: string, translationId: string, 
 
 async function getBooks(translationId: string): Promise<Book[]> {
     const bibleId = API_BIBLE_IDS[translationId as keyof typeof API_BIBLE_IDS] || 'de4e12af7f28f599-01'; 
-    
     try {
         const res = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/books?include-chapters=true`, { headers: { 'api-key': API_KEY } });
-        if (!res.ok) {
-            return STATIC_BOOKS;
-        }
+        if (!res.ok) return STATIC_BOOKS;
         const json = await res.json();
         if (!json.data) return STATIC_BOOKS;
 
