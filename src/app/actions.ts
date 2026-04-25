@@ -19,7 +19,6 @@ const API_BIBLE_IDS = {
     WEB: '72f4e6dc683324df-01',
     'engnet': '98de202246a0665f-01',
 };
-const API_BIBLE_TRANSLATIONS = Object.keys(API_BIBLE_IDS);
 
 const API_KEY = "n-eVwCRekVC0-oL2B6_s3";
 
@@ -82,7 +81,6 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     for (let i = 0; i < content.length; i++) {
         const item = content[i];
         
-        // We only merge plain text segments (string or object with .text and no footnote ID)
         const isMergeableText = typeof item === 'string' || (typeof item === 'object' && item !== null && 'text' in item && !('noteId' in item));
 
         if (!isMergeableText) {
@@ -94,6 +92,9 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
         const currentObj: FormattedText = typeof item === 'string' ? { text: item } : { ...item } as FormattedText;
         if (!currentObj.text) continue;
 
+        // Clean up internal multiple spaces
+        currentObj.text = currentObj.text.replace(/\s+/g, ' ');
+
         if (lastTextItem) {
             const lastText = lastTextItem.text;
             const currentText = currentObj.text;
@@ -101,17 +102,12 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
             const lastChar = lastText.slice(-1);
             const firstChar = currentText.charAt(0);
 
-            // Logic to determine if a space is needed
             let needsSpace = false;
             
-            // Check if we need to insert a space between these two segments
             if (lastChar && firstChar && !/\s/.test(lastChar) && !/\s/.test(firstChar)) {
                 const isFirstPunct = /[.,!?:;’”)}\]'’]/.test(firstChar);
                 const isLastOpener = /[(\["'‘“]/.test(lastChar);
                 
-                // Add space if:
-                // 1. Current segment doesn't start with closing punctuation
-                // 2. AND previous segment didn't end with opening punctuation
                 if (!isFirstPunct && !isLastOpener) {
                     needsSpace = true;
                 }
@@ -121,10 +117,8 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
             const isStrongsEqual = lastTextItem.strongs === currentObj.strongs;
 
             if (isJesusEqual && isStrongsEqual) {
-                // Style and metadata are identical, merge the strings
                 lastTextItem.text += (needsSpace ? ' ' : '') + currentText;
             } else {
-                // Style/metadata changed, must keep as separate nodes but add spacing if needed
                 if (needsSpace) lastTextItem.text += ' ';
                 result.push(currentObj);
                 lastTextItem = currentObj;
@@ -250,90 +244,29 @@ async function getCrossReferences(book: string, chapter: string): Promise<CrossR
   return null;
 }
 
-async function getChapterFromApiBible(book: string, chapter: string, translationId: keyof typeof API_BIBLE_IDS): Promise<BibleChapterResponse | null> {
-  const bibleId = API_BIBLE_IDS[translationId];
-  const bookAbbr = BIBLE_BOOKS_ABBR[book];
-  if (!bookAbbr) return null;
+async function getChapterFromHelloAo(translationId: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
+    const bookAbbr = BIBLE_BOOKS_ABBR[book];
+    if (!bookAbbr) return null;
 
-  const chapterId = `${bookAbbr}.${chapter}`;
-  
-  try {
-    const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=false`, { 
-        headers: { 'api-key': API_KEY } 
-    });
-    if (!response.ok) return null;
-
-    const json = await response.json();
-    const data = json.data;
-    
-    let contentData = data.content;
-    if (typeof contentData === 'string') {
-        try { contentData = JSON.parse(contentData); } catch { return null; }
-    }
-    
-    const chapterContent: ChapterContentItem[] = [];
-    let currentVerseNumber: number | null = null;
-    let currentVerseContent: VerseContent[] = [];
-
-    const flushVerse = () => {
-        if (currentVerseNumber !== null && currentVerseContent.length > 0) {
-            chapterContent.push({ 
-                type: 'verse', 
-                number: currentVerseNumber, 
-                content: collapseVerseContent(currentVerseContent) 
+    try {
+        const url = `https://bible.helloao.org/api/${translationId}/${bookAbbr}/${chapter}.json`;
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const data = await response.json();
+        
+        if (data?.chapter?.content) {
+            const chapterData = data as BibleChapterResponse;
+            chapterData.chapter.content.forEach(item => {
+                if (item.type === 'verse' && item.content) {
+                    item.content = collapseVerseContent(item.content);
+                }
             });
-            currentVerseContent = [];
+            return chapterData;
         }
-    };
-
-    const processItems = (items: any[], isWoc = false) => {
-        if (!items || !Array.isArray(items)) return;
-        items.forEach(item => {
-            if (item.type === 'tag') {
-                if (item.name === 'verse' && item.attrs?.number) {
-                    flushVerse();
-                    currentVerseNumber = parseInt(item.attrs.number, 10);
-                } else if (item.name === 'para') {
-                    if (item.attrs?.style === 'h') {
-                        flushVerse();
-                        const headingText = (item.items || []).map((i: any) => i.text || '').join('').trim();
-                        if (headingText) chapterContent.push({ type: 'heading', content: [headingText] });
-                    } else {
-                        chapterContent.push({ type: 'line_break' });
-                        processItems(item.items, isWoc);
-                    }
-                } else if (item.name === 'char') {
-                    const isNewWoc = isWoc || (item.attrs?.style === 'woc');
-                    processItems(item.items, isNewWoc);
-                } else {
-                    processItems(item.items, isWoc);
-                }
-            } else if (item.type === 'text' && typeof item.text === 'string' && currentVerseNumber !== null) {
-                let text = item.text;
-                if (currentVerseContent.length === 0) {
-                    // Strip leading verse numbers often baked into text nodes in some API translations
-                    text = text.replace(/^\s*\d+\s*/, '');
-                }
-                if (text) {
-                    currentVerseContent.push({ text, wordsOfJesus: isWoc });
-                }
-            }
-        });
-    };
-    
-    if (contentData) processItems(contentData);
-    flushVerse();
-
-    return {
-      book: { name: book, id: bookAbbr },
-      chapter: { number: parseInt(chapter, 10), content: chapterContent },
-      translation: { name: TRANSLATIONS.find(t => t.id === translationId)?.name || translationId, id: translationId },
-      copyright: data.copyright,
-    };
-  } catch (error) { 
-    console.error("API Error:", error);
-    return null; 
-  }
+    } catch (error) {
+        console.error("HelloAO API error:", error);
+    }
+    return null;
 }
 
 async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
@@ -343,26 +276,13 @@ async function getChapter(book: string, chapter: string, translationId: string, 
     chapterData = await getChapterFromBolls(translationId, book, chapter);
   } else if (translationId === 'engnet') {
       chapterData = await getChapterFromLabsBible(book, chapter);
+  } else if (translationId === 'WEB') {
+      chapterData = await getChapterFromHelloAo('WEB', book, chapter);
   }
   
-  if (!chapterData && API_BIBLE_TRANSLATIONS.includes(translationId)) {
-    chapterData = await getChapterFromApiBible(book, chapter, translationId as keyof typeof API_BIBLE_IDS);
-  } 
-  
   if (!chapterData) {
-    const bookId = BIBLE_BOOKS_ABBR[book] || book;
-    try {
-        const response = await fetch(`https://bible.helloao.org/api/${translationId}/${bookId}/${chapter}.json`);
-        if (response.ok) {
-            const data = await response.json();
-            if (data?.chapter?.content) {
-                chapterData = data as BibleChapterResponse;
-                chapterData.chapter.content.forEach(item => {
-                    if (item.type === 'verse' && item.content) item.content = collapseVerseContent(item.content);
-                });
-            }
-        }
-    } catch (error) {}
+      // General fallback to HelloAO for any translation if specifically requested fails
+      chapterData = await getChapterFromHelloAo(translationId, book, chapter);
   }
 
   if (chapterData) return chapterData;
@@ -371,13 +291,11 @@ async function getChapter(book: string, chapter: string, translationId: string, 
 }
 
 async function getBooks(translationId: string): Promise<Book[]> {
-    // For NET or other API versions, always attempt to get a robust list from a stable ID
     const bibleId = API_BIBLE_IDS[translationId as keyof typeof API_BIBLE_IDS] || 'de4e12af7f28f599-01'; 
     
     try {
         const res = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/books?include-chapters=true`, { headers: { 'api-key': API_KEY } });
         if (!res.ok) {
-            // Fallback to a guaranteed stable KJV ID for the book list if the requested one fails
             const fallbackRes = await fetch(`https://rest.api.bible/v1/bibles/de4e12af7f28f599-01/books?include-chapters=true`, { headers: { 'api-key': API_KEY } });
             if (!fallbackRes.ok) return [];
             const json = await fallbackRes.json();
@@ -401,4 +319,24 @@ export async function getPageData(book: string, chapter: string, translationId: 
         getCrossReferences(book, chapter),
     ]);
     return { books: booksData, chapterData: chapterContent, crossRefs: crossRefData };
+}
+
+export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
+    try {
+        const isGreek = strongsNumber.startsWith('G');
+        const number = strongsNumber.substring(1);
+        const url = isGreek 
+            ? `https://bolls.life/get-greek-lexicon/${number}/`
+            : `https://bolls.life/get-hebrew-lexicon/${number}/`;
+        
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const data = await response.json();
+        
+        if (Array.isArray(data)) return data;
+        if (data && typeof data === 'object') return [data];
+        return null;
+    } catch (error) {
+        return null;
+    }
 }
