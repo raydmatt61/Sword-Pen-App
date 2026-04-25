@@ -133,7 +133,8 @@ function collapseVerseContent(content: VerseContent[]): VerseContent[] {
 }
 
 async function getChapterFromBolls(translationCode: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
-    const bookNumber = BIBLE_BOOK_NUMBERS[book] || BIBLE_BOOK_NUMBERS[BIBLE_BOOKS_ABBR[book]];
+    const bookAbbr = BIBLE_BOOKS_ABBR[book] || book;
+    const bookNumber = BIBLE_BOOK_NUMBERS[bookAbbr];
     if (!bookNumber) return null;
 
     try {
@@ -143,7 +144,6 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
         const bollsVerses: any[] = await response.json();
         if (!bollsVerses || bollsVerses.length === 0) return null;
         
-        const bookAbbr = BIBLE_BOOKS_ABBR[book] || book;
         const prefix = BOOK_TESTAMENTS[bookAbbr] === 'OT' ? 'H' : 'G';
         const chapterContent: ChapterContentItem[] = [];
         
@@ -189,7 +189,7 @@ async function getChapterFromBolls(translationCode: string, book: string, chapte
         const translationName = TRANSLATIONS.find(t => t.id === translationCode)?.name || translationCode;
 
         return {
-            book: { name: book, id: bookAbbr },
+            book: { name: BIBLE_ABBR_BOOKS[bookAbbr] || book, id: bookAbbr },
             chapter: { number: parseInt(chapter, 10), content: chapterContent },
             translation: { name: translationName, id: translationCode },
         };
@@ -228,51 +228,42 @@ async function getChapterFromHelloAo(book: string, chapter: string): Promise<Bib
     const bookAbbr = BIBLE_BOOKS_ABBR[book] || book;
     if (!bookAbbr) return null;
 
-    // Use official API as primary
-    const apiUrl = `https://bible.helloao.org/api/t/engwebp/${bookAbbr}/${chapter}.json`;
     const githubUrl = `https://raw.githubusercontent.com/HelloAOLab/bible-api/main/bible/engwebp/${bookAbbr}/${chapter}.json`;
 
-    const fetchSource = async (url: string) => {
-        try {
-            const response = await fetch(url, { next: { revalidate: 86400 } });
-            if (!response.ok) return null;
-            const data = await response.json();
-            if (data && data.chapter && data.chapter.content) return data;
-        } catch (e) { return null; }
-        return null;
-    };
+    try {
+        const response = await fetch(githubUrl, { next: { revalidate: 86400 } });
+        if (!response.ok) return null;
+        const data = await response.json();
+        if (data && data.chapter && data.chapter.content) {
+            const chapterContent: ChapterContentItem[] = data.chapter.content.map((item: any) => {
+                if (item.type === 'heading') {
+                    return {
+                        type: 'heading',
+                        content: item.content.map((c: any) => cleanApiText(c))
+                    };
+                }
+                if (item.type === 'verse') {
+                    return {
+                        type: 'verse',
+                        number: item.number,
+                        content: item.content.map((c: any) => {
+                            if (typeof c === 'string') return cleanApiText(c);
+                            if (c && typeof c === 'object' && c.text) return { text: cleanApiText(c.text), wordsOfJesus: c.wordsOfJesus };
+                            return "";
+                        })
+                    };
+                }
+                return { type: 'line_break' };
+            });
 
-    let data = await fetchSource(apiUrl);
-    if (!data) data = await fetchSource(githubUrl);
+            return {
+                book: { name: book, id: bookAbbr },
+                chapter: { number: parseInt(chapter, 10), content: chapterContent },
+                translation: { name: "World English Bible", id: "WEB" },
+            };
+        }
+    } catch (e) { return null; }
     
-    if (data) {
-        const chapterContent: ChapterContentItem[] = data.chapter.content.map((item: any) => {
-            if (item.type === 'heading') {
-                return {
-                    type: 'heading',
-                    content: item.content.map((c: any) => cleanApiText(c))
-                };
-            }
-            if (item.type === 'verse') {
-                return {
-                    type: 'verse',
-                    number: item.number,
-                    content: item.content.map((c: any) => {
-                        if (typeof c === 'string') return cleanApiText(c);
-                        if (c && typeof c === 'object' && c.text) return { text: cleanApiText(c.text), wordsOfJesus: c.wordsOfJesus };
-                        return "";
-                    })
-                };
-            }
-            return { type: 'line_break' };
-        });
-
-        return {
-            book: { name: book, id: bookAbbr },
-            chapter: { number: parseInt(chapter, 10), content: chapterContent },
-            translation: { name: "World English Bible", id: "WEB" },
-        };
-    }
     return null;
 }
 
