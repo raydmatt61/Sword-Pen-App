@@ -10,7 +10,6 @@ export const TRANSLATIONS: Translation[] = [
     { id: 'BSB', name: 'Berean Standard Bible' },
     { id: 'KJV', name: 'King James Version' },
     { id: 'NET', name: 'New English Translation' },
-    { id: 'WEB', name: 'World English Bible' },
 ];
 
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
@@ -266,7 +265,6 @@ export type SearchResultVerse = {
 
 export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
     KJV: 'de4e12af7f28f599-01',
-    WEB: '72f4e6dc683324df-01',
     NET: '98de202246a0665f-01',
 };
 
