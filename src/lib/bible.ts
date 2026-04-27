@@ -46,7 +46,7 @@ export const COPYRIGHTS: Record<string, string> = {
     'AMP': 'Scripture quotations taken from the Amplified® Bible (AMP), Copyright © 2015 by The Lockman Foundation. Used by permission. www.lockman.org',
     'ASV': 'Public Domain.',
     'BBE': 'Public Domain.',
-    'CEV': 'Copyright © 1995 by American Bible Society. Used by permission.',
+    'CEV': 'Copyright © 1995 by American Bible Institute. Used by permission.',
     'CSB': 'Christian Standard Bible®, Copyright © 2017 by Holman Bible Publishers. Used by permission.',
     'DARBY': 'Public Domain.',
     'DRA': 'Public Domain.',
@@ -55,6 +55,10 @@ export const COPYRIGHTS: Record<string, string> = {
     'NRSV': 'New Revised Standard Version Bible, copyright © 1989 the Division of Christian Education of the National Council of the Churches of Christ in the United States of America. Used by permission. All rights reserved.',
     'RSV': 'Revised Standard Version of the Bible, copyright © 1946, 1952, and 1971 the Division of Christian Education of the National Council of the Churches of Christ in the United States of America. Used by permission. All rights reserved.',
     'YLT': 'Public Domain.'
+};
+
+export const NOTES_LINKS: Record<string, string> = {
+    'NET': 'https://netbible.org/bible'
 };
 
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
@@ -194,7 +198,7 @@ export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
     NKJV: '61fd76e930ef5722-01',
     NLT: '7080e7225114757b-01',
     WEB: '98de202246a0665f-02',
-    CSB: 'c30f406642646d32-01', // HCSB mapping
+    CSB: 'c30f406642646d32-01',
 };
 
 export const GenerateVerseInsightsInputSchema = z.object({
@@ -318,5 +322,6 @@ export type BibleChapterResponse = {
     book: { name: string, id: string },
     chapter: { number: number, content: ChapterContentItem[], footnotes?: VerseFootnote[] },
     translation: { name: string, id: string },
-    copyright?: string;
+    copyright?: string,
+    notesUrl?: string;
 };

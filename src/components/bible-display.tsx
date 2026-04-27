@@ -11,7 +11,7 @@ import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useBookmarkContext } from '@/contexts/bookmark-context';
 import { useUser } from '@/firebase';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Bookmark as BookmarkIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Bookmark as BookmarkIcon, ExternalLink } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
@@ -529,6 +529,17 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                 </div>
                             </CardContent>
                             <CardFooter className="px-0 pt-6 flex flex-col items-start gap-4 pb-20">
+                                {chapterData.notesUrl && (
+                                    <a 
+                                        href={chapterData.notesUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 text-sm font-bold text-primary hover:underline bg-primary/5 px-3 py-2 rounded-lg border border-primary/10 transition-colors hover:bg-primary/10"
+                                    >
+                                        <ExternalLink className="h-4 w-4" />
+                                        Access NET Bible Notes & Commentary
+                                    </a>
+                                )}
                                 {chapterData.copyright && (
                                     <p className="text-xs text-muted-foreground italic leading-relaxed">
                                         {chapterData.copyright}
