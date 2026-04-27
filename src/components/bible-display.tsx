@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from './ui/scroll-area';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 function VerseComponent({
     verse,
@@ -324,6 +325,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         chapterAnnotations,
     } = useAnnotationContext();
     const { user } = useUser();
+    const isMobile = useIsMobile();
     const bibleContentRef = useRef<HTMLDivElement>(null);
     
     const [emblaRef, emblaApi] = useEmblaCarousel({ 
@@ -454,6 +456,12 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         fontSize === '2xl' && 'text-[28px] md:text-2xl leading-[1.8]',
     );
 
+    const notesLink = useMemo(() => {
+        if (chapterData.translation.id === 'NET') {
+            return isMobile ? 'https://netbible.org/reader#' : 'https://netbible.org/bible';
+        }
+        return chapterData.notesUrl;
+    }, [chapterData.translation.id, chapterData.notesUrl, isMobile]);
 
     return (
         <TooltipProvider>
@@ -529,9 +537,9 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                 </div>
                             </CardContent>
                             <CardFooter className="px-0 pt-6 flex flex-col items-start gap-4 pb-20">
-                                {chapterData.notesUrl && (
+                                {notesLink && (
                                     <a 
-                                        href={chapterData.notesUrl} 
+                                        href={notesLink} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-2 text-sm font-bold text-primary hover:underline bg-primary/5 px-3 py-2 rounded-lg border border-primary/10 transition-colors hover:bg-primary/10"
