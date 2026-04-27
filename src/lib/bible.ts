@@ -58,7 +58,7 @@ export const COPYRIGHTS: Record<string, string> = {
 };
 
 export const NOTES_LINKS: Record<string, string> = {
-    'NET': 'https://netbible.org/bible'
+    'NET': 'https://netbible.org/reader#'
 };
 
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
