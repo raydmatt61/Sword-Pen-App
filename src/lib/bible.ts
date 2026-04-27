@@ -6,23 +6,29 @@ export type Translation = {
     name: string;
 };
 
+// All English translations available in the Bolls Bible (Bain) dataset
 export const TRANSLATIONS: Translation[] = [
     { id: 'BSB', name: 'Berean Standard Bible' },
-    { id: 'ESV', name: 'English Standard Version' },
     { id: 'KJV', name: 'King James Version' },
     { id: 'NKJV', name: 'New King James Version' },
+    { id: 'ESV', name: 'English Standard Version' },
     { id: 'NIV', name: 'New International Version' },
     { id: 'NASB', name: 'New American Standard Bible' },
     { id: 'NET', name: 'New English Translation' },
     { id: 'NLT', name: 'New Living Translation' },
-    { id: 'RSV', name: 'Revised Standard Version' },
     { id: 'WEB', name: 'World English Bible' },
     { id: 'AMP', name: 'Amplified Bible' },
     { id: 'ASV', name: 'American Standard Version' },
+    { id: 'BBE', name: 'Bible in Basic English' },
     { id: 'CEV', name: 'Contemporary English Version' },
+    { id: 'CSB', name: 'Christian Standard Bible' },
+    { id: 'DARBY', name: 'Darby Bible' },
+    { id: 'DRA', name: 'Douay-Rheims Bible' },
     { id: 'GNT', name: 'Good News Translation' },
     { id: 'MSG', name: 'The Message' },
     { id: 'NRSV', name: 'New Revised Standard Version' },
+    { id: 'RSV', name: 'Revised Standard Version' },
+    { id: 'WEBBE', name: 'World English Bible (British)' },
     { id: 'YLT', name: 'Young\'s Literal Translation' },
 ];
 
@@ -34,7 +40,6 @@ export const BIBLE_BOOKS_ABBR: Record<string, string> = {
     "Matthew": "MAT", "Mark": "MRK", "Luke": "LUK", "John": "JHN", "Acts": "ACT", "Romans": "ROM", "1 Corinthians": "1CO", "2 Corinthians": "2CO", "Galatians": "GAL", "Ephesians": "EPH",
     "Philippians": "PHP", "Colossians": "COL", "1 Thessalonians": "1TH", "2 Thessalonians": "2TH", "1 Timothy": "1TI", "2 Timothy": "2TI", "Titus": "TIT", "Philemon": "PHM",
     "Hebrews": "HEB", "James": "JAS", "1 Peter": "1PE", "2 Peter": "2PE", "1 John": "1JN", "2 John": "2JN", "3 John": "3JN", "Jude": "JUD", "Revelation": "REV",
-    // Reverse mappings
     "GEN": "GEN", "EXO": "EXO", "LEV": "LEV", "NUM": "NUM", "DEU": "DEU", "JOS": "JOS", "JDG": "JDG", "RUT": "RUT", "1SA": "1SA", "2SA": "2SA",
     "1KI": "1KI", "2KI": "2KI", "1CH": "1CH", "2CH": "2CH", "EZR": "EZR", "NEH": "NEH", "EST": "EST", "JOB": "JOB", "PSA": "PSA", "PRO": "PRO",
     "ECC": "ECC", "SNG": "SNG", "ISA": "ISA", "JER": "JER", "LAM": "LAM", "EZK": "EZK", "DAN": "DAN", "HOS": "HOS", "JOL": "JOL", "AMO": "AMO",
@@ -60,7 +65,6 @@ export const BIBLE_BOOK_NUMBERS: Record<string, number> = {
   "2 Timothy": 55, "Titus": 56, "Philemon": 57, "Hebrews": 58, "James": 59,
   "1 Peter": 60, "2 Peter": 61, "1 John": 62, "2 John": 63, "3 John": 64,
   "Jude": 65, "Revelation": 66,
-  // Abbreviations
   "GEN": 1, "EXO": 2, "LEV": 3, "NUM": 4, "DEU": 5, "JOS": 6, "JDG": 7, "RUT": 8,
   "1SA": 9, "2SA": 10, "1KI": 11, "2KI": 12, "1CH": 13, "2CH": 14, "EZR": 15,
   "NEH": 16, "EST": 17, "JOB": 18, "PSA": 19, "PRO": 20, "ECC": 21, "SNG": 22,
@@ -141,67 +145,6 @@ export const STATIC_BOOKS: Book[] = [
   { id: "JUD", commonName: "Jude", numberOfChapters: 1, testament: "NT" },
   { id: "REV", commonName: "Revelation", numberOfChapters: 22, testament: "NT" }
 ];
-
-export type Footnote = {
-    id: string;
-    text: string;
-};
-
-export type FormattedText = {
-    text: string;
-    poem?: number;
-    wordsOfJesus?: boolean;
-    strongs?: string;
-};
-
-export type InlineHeading = {
-    heading: string;
-};
-
-export type InlineLineBreak = {
-    lineBreak: true;
-};
-
-export type VerseFootnoteReference = {
-    noteId: string;
-};
-
-export type VerseContent = string | FormattedText | InlineHeading | InlineLineBreak | VerseFootnoteReference;
-
-export type ChapterContentItem = {
-    type: 'heading';
-    content: string[];
-} | {
-    type: 'line_break';
-} | {
-    type: 'verse';
-    number: number;
-    content: VerseContent[];
-};
-
-export type BibleChapterResponse = {
-    book: {
-        name: string;
-        id: string;
-    };
-    chapter: {
-        number: number;
-        content: ChapterContentItem[];
-        footnotes?: Footnote[];
-    };
-    translation: {
-        name: string;
-        id: string;
-    };
-    copyright?: string;
-};
-
-export type Book = {
-    id: string;
-    commonName: string;
-    numberOfChapters: number;
-    testament: 'OT' | 'NT';
-};
 
 export const BIBLE_ABBR_BOOKS: Record<string, string> = Object.fromEntries(
     Object.entries(BIBLE_BOOKS_ABBR).map(([name, abbr]) => [abbr, name])
