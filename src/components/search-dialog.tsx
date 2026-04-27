@@ -3,14 +3,14 @@
 
 import { useState } from 'react';
 import { Button } from './ui/button';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { searchBible } from '@/app/actions';
 import type { SearchResultVerse } from '@/lib/bible';
-import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
+import { BIBLE_ABBR_BOOKS, API_BIBLE_IDS_SEARCH } from '@/lib/bible';
 
 export function SearchDialog({ translationId, navigate }: { translationId: string; navigate: (newValues: Partial<{ book: string; chapter: string; translation: string }>) => void; }) {
   const [query, setQuery] = useState('');
@@ -19,9 +19,11 @@ export function SearchDialog({ translationId, navigate }: { translationId: strin
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
+  const isSearchSupported = !!API_BIBLE_IDS_SEARCH[translationId.toUpperCase()];
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || !isSearchSupported) return;
     setIsLoading(true);
     setResults([]);
     try {
@@ -70,17 +72,33 @@ export function SearchDialog({ translationId, navigate }: { translationId: strin
             Search for a word or phrase in {translationId.toUpperCase()}.
           </DialogDescription>
         </DialogHeader>
+
+        {!isSearchSupported && (
+          <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-xl flex items-start gap-3 mt-4">
+            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold text-destructive text-sm uppercase tracking-wider">Search Unavailable</p>
+              <p className="text-sm text-stone-700 leading-relaxed">
+                Full-text search is not yet supported for <strong>{translationId.toUpperCase()}</strong>. 
+                Please switch to <strong>KJV, ESV, NIV, NET, or NLT</strong> to search the scriptures.
+              </p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSearch} className="flex gap-2 mt-4">
           <Input 
             placeholder="e.g., God is love"
             className="h-12 text-lg"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            disabled={!isSearchSupported}
           />
-          <Button type="submit" size="lg" disabled={isLoading} className="h-12 px-6">
+          <Button type="submit" size="lg" disabled={isLoading || !isSearchSupported} className="h-12 px-6">
             {isLoading ? <Loader2 className="animate-spin h-6 w-6" /> : <Search className="h-6 w-6" />}
           </Button>
         </form>
+
         <ScrollArea className="max-h-[60vh] mt-6">
           <div className="pr-4 space-y-4 pb-4">
             {results.map((verse) => (
