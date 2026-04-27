@@ -32,6 +32,31 @@ export const TRANSLATIONS: Translation[] = [
     { id: 'YLT', name: 'Young\'s Literal Translation' },
 ];
 
+export const COPYRIGHTS: Record<string, string> = {
+    'BSB': 'The Berean Bible and Majority Bible texts are officially dedicated to the public domain as of April 30, 2023.',
+    'KJV': 'Public Domain.',
+    'NKJV': 'Scripture taken from the New King James Version®. Copyright © 1982 by Thomas Nelson. Used by permission. All rights reserved.',
+    'ESV': 'Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), copyright © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved.',
+    'NIV': 'Holy Bible, New International Version®, NIV® Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by permission. All rights reserved worldwide.',
+    'NASB': 'New American Standard Bible®, Copyright © 1960, 1971, 1977, 1995, 2020 by The Lockman Foundation. Used by permission.',
+    'NET': 'NET Bible® Copyright © 1996-2021 Bible.org. All rights reserved. NET Bible is a registered trademark of Bible.org.',
+    'NLT': 'Scripture quotations are taken from the Holy Bible, New Living Translation, copyright © 1996, 2004, 2015 by Tyndale House Foundation. Used by permission of Tyndale House Publishers, Carol Stream, Illinois 60188. All rights reserved.',
+    'WEB': 'Public Domain.',
+    'WEBBE': 'Public Domain.',
+    'AMP': 'Scripture quotations taken from the Amplified® Bible (AMP), Copyright © 2015 by The Lockman Foundation. Used by permission. www.lockman.org',
+    'ASV': 'Public Domain.',
+    'BBE': 'Public Domain.',
+    'CEV': 'Copyright © 1995 by American Bible Society. Used by permission.',
+    'CSB': 'Christian Standard Bible®, Copyright © 2017 by Holman Bible Publishers. Used by permission.',
+    'DARBY': 'Public Domain.',
+    'DRA': 'Public Domain.',
+    'GNT': 'Good News Translation® (Today’s English Version, Second Edition) © 1992 American Bible Society. All rights reserved.',
+    'MSG': 'Scripture taken from The Message, copyright © 1993, 2002, 2018 by Eugene H. Peterson. Used by permission of NavPress. All rights reserved. Represented by Tyndale House Publishers, Inc.',
+    'NRSV': 'New Revised Standard Version Bible, copyright © 1989 the Division of Christian Education of the National Council of the Churches of Christ in the United States of America. Used by permission. All rights reserved.',
+    'RSV': 'Revised Standard Version of the Bible, copyright © 1946, 1952, and 1971 the Division of Christian Education of the National Council of the Churches of Christ in the United States of America. Used by permission. All rights reserved.',
+    'YLT': 'Public Domain.'
+};
+
 export const BIBLE_BOOKS_ABBR: Record<string, string> = {
     "Genesis": "GEN", "Exodus": "EXO", "Leviticus": "LEV", "Numbers": "NUM", "Deuteronomy": "DEU", "Joshua": "JOS", "Judges": "JDG", "Ruth": "RUT", "1 Samuel": "1SA", "2 Samuel": "2SA",
     "1 Kings": "1KI", "2 Kings": "2KI", "1 Chronicles": "1CH", "2 Chronicles": "2CH", "Ezra": "EZR", "Nehemiah": "NEH", "Esther": "EST", "Job": "JOB", "Psalms": "PSA", "Psalm": "PSA", "Proverbs": "PRO",
@@ -192,6 +217,7 @@ export type StrongsDetail = {
     kjvDefinition: string;
     strongsDerivation?: string;
 };
+
 export type Annotation = {
   id: string;
   userId: string;
@@ -255,4 +281,41 @@ export type CrossRefChapterResponse = {
         number: number;
         content: CrossRefVerse[];
     };
+};
+
+export type FormattedText = {
+  text: string;
+  wordsOfJesus?: boolean;
+  strongs?: string;
+};
+
+export type VerseFootnoteReference = {
+  noteId: string;
+};
+
+export type VerseFootnote = {
+  id: string;
+  text: string;
+};
+
+export type VerseContent = string | FormattedText | VerseFootnoteReference;
+
+export type ChapterContentItem = {
+    type: 'heading' | 'verse' | 'line_break';
+    number?: number;
+    content: VerseContent[] | string[];
+};
+
+export type Book = {
+    id: string;
+    commonName: string;
+    numberOfChapters: number;
+    testament: string;
+};
+
+export type BibleChapterResponse = {
+    book: { name: string, id: string },
+    chapter: { number: number, content: ChapterContentItem[], footnotes?: VerseFootnote[] },
+    translation: { name: string, id: string },
+    copyright?: string;
 };

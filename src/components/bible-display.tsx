@@ -529,26 +529,10 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                 </div>
                             </CardContent>
                             <CardFooter className="px-0 pt-6 flex flex-col items-start gap-4 pb-20">
-                                {chapterData.translation.id === 'engnet' ? (
-                                    <p className="text-xs text-muted-foreground">
-                                        NET Bible® Copyright | For full NET Bible notes, please see{' '}
-                                        <a href="https://netbible.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
-                                            netbible.org
-                                        </a>
-                                        . | Donations appreciated to support free services at{' '}
-                                        <a href="https://bible.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
-                                            Bible.org
-                                        </a>
-                                        .
+                                {chapterData.copyright && (
+                                    <p className="text-xs text-muted-foreground italic leading-relaxed">
+                                        {chapterData.copyright}
                                     </p>
-                                ) : chapterData.translation.id === 'BSB' ? (
-                                    <p className="text-xs text-muted-foreground">
-                                        The Berean Bible and Majority Bible texts are officially dedicated to the public domain as of April 30, 2023.
-                                    </p>
-                                ) : (
-                                    chapterData.copyright && (
-                                        <p className="text-xs text-muted-foreground italic">{chapterData.copyright}</p>
-                                    )
                                 )}
                             </CardFooter>
                         </Card>

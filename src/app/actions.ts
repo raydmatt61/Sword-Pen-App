@@ -2,7 +2,7 @@
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
-import { BIBLE_BOOKS_ABBR, TRANSLATIONS, STATIC_BOOKS, BIBLE_ABBR_BOOKS, BIBLE_BOOK_NUMBERS, API_BIBLE_IDS_SEARCH } from "@/lib/bible";
+import { BIBLE_BOOKS_ABBR, TRANSLATIONS, STATIC_BOOKS, BIBLE_ABBR_BOOKS, BIBLE_BOOK_NUMBERS, API_BIBLE_IDS_SEARCH, COPYRIGHTS } from "@/lib/bible";
 import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, StrongsDetail } from "@/lib/bible";
 
 const API_KEY = "n-eVwCRekVC0-oL2B6_s3";
@@ -136,7 +136,6 @@ async function getChapterFromBolls(translationId: string, book: string, chapter:
     if (!bookNumber) return null;
 
     try {
-        // Use the official Bolls API which serves the 'bain' dataset reliably via HTTP
         const url = `https://bolls.life/get-text/${translationId.toUpperCase()}/${bookNumber}/${chapter}/`;
         const response = await fetch(url, { next: { revalidate: 86400 } });
         
@@ -153,11 +152,13 @@ async function getChapterFromBolls(translationId: string, book: string, chapter:
 
         const translationName = TRANSLATIONS.find(t => t.id === translationId.toUpperCase())?.name || translationId;
         const bookName = BIBLE_ABBR_BOOKS[bookAbbr] || book;
+        const copyright = COPYRIGHTS[translationId.toUpperCase()];
 
         return {
             book: { name: bookName, id: bookAbbr },
             chapter: { number: parseInt(chapter, 10), content: chapterContent },
             translation: { name: translationName, id: translationId.toUpperCase() },
+            copyright
         };
     } catch (error) {
         return null;
