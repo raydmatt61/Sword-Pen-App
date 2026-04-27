@@ -19,7 +19,6 @@ function cleanApiText(text: string): string {
         .replace(/<[^>]+>/g, ' ')
         .replace(/&nbsp;/g, ' ')
         .replace(/\s+/g, ' ')
-        .replace(/([,.;:!?])([^\s\d])/g, '$1 $2')
         .trim();
 }
 
@@ -136,28 +135,35 @@ async function getChapterFromBolls(translationId: string, book: string, chapter:
     if (!bookNumber) return null;
 
     try {
-        const url = `https://bolls.life/get-text/${translationId.toUpperCase()}/${bookNumber}/${chapter}/`;
+        // Robust fetch with ID mapping if needed (Bolls uses CSB for Christian Standard Bible)
+        const versionId = translationId.toUpperCase();
+        const url = `https://bolls.life/get-text/${versionId}/${bookNumber}/${chapter}/`;
         const response = await fetch(url, { next: { revalidate: 86400 } });
         
         if (!response.ok) return null;
         
         const bollsVerses = await response.json();
-        if (!bollsVerses || !Array.isArray(bollsVerses)) return null;
+        if (!bollsVerses || !Array.isArray(bollsVerses) || bollsVerses.length === 0) return null;
 
-        const chapterContent: ChapterContentItem[] = bollsVerses.map(v => ({
-            type: 'verse',
-            number: v.verse,
-            content: collapseVerseContent([{ text: cleanApiText(v.text) }])
-        }));
+        const chapterContent: ChapterContentItem[] = bollsVerses.map(v => {
+            // Handle different Bolls response formats (sometimes v, sometimes verse, etc.)
+            const verseNum = v.verse || v.v || v.number;
+            const verseText = v.text || v.t || v.content;
+            return {
+                type: 'verse',
+                number: verseNum,
+                content: collapseVerseContent([{ text: cleanApiText(verseText) }])
+            };
+        });
 
-        const translationName = TRANSLATIONS.find(t => t.id === translationId.toUpperCase())?.name || translationId;
+        const translationName = TRANSLATIONS.find(t => t.id === versionId)?.name || translationId;
         const bookName = BIBLE_ABBR_BOOKS[bookAbbr] || book;
-        const copyright = COPYRIGHTS[translationId.toUpperCase()];
+        const copyright = COPYRIGHTS[versionId];
 
         return {
             book: { name: bookName, id: bookAbbr },
             chapter: { number: parseInt(chapter, 10), content: chapterContent },
-            translation: { name: translationName, id: translationId.toUpperCase() },
+            translation: { name: translationName, id: versionId },
             copyright
         };
     } catch (error) {

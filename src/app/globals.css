@@ -61,11 +61,11 @@
 
 /* Enhanced mobile font sizes for readability */
 @media (max-width: 768px) {
-  .bible-content .text-\[15px\] { font-size: 17px !important; }
-  .bible-content .text-\[18px\] { font-size: 20px !important; }
-  .bible-content .text-\[21px\] { font-size: 23px !important; }
-  .bible-content .text-\[24px\] { font-size: 26px !important; }
-  .bible-content .text-\[28px\] { font-size: 30px !important; }
+  .bible-content .text-\[15px\], .bible-content .text-sm { font-size: 17px !important; }
+  .bible-content .text-\[18px\], .bible-content .text-base { font-size: 20px !important; }
+  .bible-content .text-\[21px\], .bible-content .text-lg { font-size: 23px !important; }
+  .bible-content .text-\[24px\], .bible-content .text-xl { font-size: 26px !important; }
+  .bible-content .text-\[28px\], .bible-content .text-2xl { font-size: 30px !important; }
 }
 
 /* Highlights */

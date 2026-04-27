@@ -194,6 +194,7 @@ export const API_BIBLE_IDS_SEARCH: Record<string, string> = {
     NKJV: '61fd76e930ef5722-01',
     NLT: '7080e7225114757b-01',
     WEB: '98de202246a0665f-02',
+    CSB: 'c30f406642646d32-01', // HCSB mapping
 };
 
 export const GenerateVerseInsightsInputSchema = z.object({
