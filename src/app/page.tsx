@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'react';
@@ -21,6 +20,8 @@ import { getPageData } from '@/app/actions';
 import { Logo } from '@/components/logo';
 import { BookmarksSheet } from '@/components/bookmarks-sheet';
 import { JournalSheet } from '@/components/journal-sheet';
+import { Navigation as NavigateIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 function PageContent({ books, chapterData, crossRefs, initialBook, initialChapter, initialTranslationId }: { 
     books: Book[], 
@@ -51,10 +52,10 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   }, [chapterData]);
 
   useEffect(() => {
-    if (chapterData && chapterData.translation.id !== initialTranslationId) {
+    if (chapterData && chapterData.translation.id !== initialTranslationId.toUpperCase()) {
         toast({
             title: "Translation Fallback",
-            description: `Displaying in BSB as ${initialTranslationId} was unavailable.`,
+            description: `Displaying in ${chapterData.translation.id} as ${initialTranslationId.toUpperCase()} was unavailable.`,
         });
     }
   }, [chapterData, initialTranslationId, toast]);
@@ -95,15 +96,15 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     <AnnotationProvider key={providerKey} chapterData={chapterData}>
       <BookmarkProvider>
         <JournalProvider>
-          <main className="flex flex-col h-screen overflow-hidden">
-            <header className="flex items-center justify-between border-b px-2 py-1 md:px-4 md:py-2 shrink-0">
-              <div className="flex items-center gap-2 md:gap-3">
-                <Logo className="h-6 w-6 md:h-8 md:w-8 text-primary shrink-0" />
-                <div>
-                  <h1 className="text-lg md:text-2xl font-headline font-bold text-primary leading-none">
+          <main className="flex flex-col h-screen overflow-hidden bg-background">
+            <header className="flex items-center justify-between border-b px-4 py-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <Logo className="h-8 w-8 text-primary" />
+                <div className="flex flex-col">
+                  <h1 className="text-xl md:text-2xl font-headline font-bold text-primary leading-none">
                     The Sword and Pen
                   </h1>
-                  <p className="hidden md:block text-[10px] text-muted-foreground mt-1 font-headline uppercase tracking-wider">
+                  <p className="text-[10px] text-muted-foreground mt-1 font-headline uppercase tracking-widest">
                     Digital Scripture Study Tool
                   </p>
                 </div>
@@ -118,7 +119,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
               </div>
             </header>
 
-            <div className="sticky top-0 z-20 flex flex-row items-center gap-2 bg-background/80 backdrop-blur-sm px-2 py-1.5 md:px-4 md:py-2 border-b shrink-0">
+            <div className="sticky top-0 z-20 flex flex-row items-center gap-4 bg-background/90 backdrop-blur-md px-4 py-2 border-b shrink-0 shadow-sm">
               <div className="flex-[3] min-w-0">
                 <VerseSelector
                     defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslationId }}
@@ -134,12 +135,12 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
               </div>
             </div>
 
-            <div ref={contentRef} className="flex-grow overflow-y-auto p-2 md:p-4">
+            <div ref={contentRef} className="flex-grow overflow-y-auto p-4 md:p-8">
               {!chapterData ? (
-                <Card className="mt-6">
-                  <CardContent className="pt-6">
-                    <p className="text-center text-muted-foreground text-sm">
-                      Could not load chapter <span className="font-bold">{initialBook} {initialChapter}</span>.
+                <Card className="mt-6 max-w-lg mx-auto border-none shadow-none bg-stone-100">
+                  <CardContent className="pt-12 pb-12">
+                    <p className="text-center text-muted-foreground text-sm font-headline uppercase tracking-widest">
+                      Could not load chapter <span className="font-bold text-primary">{initialBook} {initialChapter}</span>.
                     </p>
                   </CardContent>
                 </Card>
@@ -153,6 +154,24 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
                   maxChapters={maxChapters}
                 />
               )}
+            </div>
+
+            {/* Floating Navigation UI as seen in the image */}
+            <div className="fixed bottom-6 left-6 z-50 flex items-center gap-3">
+              <Button 
+                variant="secondary" 
+                size="icon" 
+                className="h-12 w-12 rounded-full shadow-xl bg-primary text-primary-foreground hover:scale-110 transition-transform"
+                onClick={() => {
+                  const event = new CustomEvent('open-mobile-nav');
+                  document.dispatchEvent(event);
+                }}
+              >
+                <NavigateIcon className="h-6 w-6" />
+              </Button>
+              <div className="hidden md:block">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Navigate</span>
+              </div>
             </div>
           </main>
         </JournalProvider>
@@ -190,7 +209,6 @@ function PageWithSearchParams() {
   const [initStatus, setInitStatus] = useState<'loading' | 'redirecting' | 'ready'>('loading');
 
   useEffect(() => {
-    // Only run initialization once when status is 'loading'
     if (initStatus !== 'loading') return;
 
     if (!searchParams.has('book')) {
@@ -219,7 +237,6 @@ function PageWithSearchParams() {
   const queryKey = `${book}-${chapter}-${translationUrlParam}`;
 
   useEffect(() => {
-    // Save location only when we are ready and the URL has actual data
     if (initStatus === 'ready' && searchParams.has('book')) {
       try {
         localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ book, chapter, translationId: translationUrlParam }));
@@ -245,9 +262,9 @@ function FullPageSkeleton() {
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background">
       <div className="flex flex-col items-center animate-pulse">
-        <Logo className="h-24 w-24 md:h-32 md:w-32 text-primary mb-8" />
-        <h1 className="text-3xl md:text-4xl font-headline font-bold text-primary tracking-tight">The Sword and Pen</h1>
-        <p className="mt-2 text-muted-foreground uppercase tracking-[0.3em] text-[10px] md:text-xs font-headline">
+        <Logo className="h-24 w-24 md:h-32 md:w-32 text-primary mb-8 opacity-20" />
+        <h1 className="text-3xl md:text-4xl font-headline font-bold text-primary tracking-tight opacity-40">The Sword and Pen</h1>
+        <p className="mt-2 text-muted-foreground uppercase tracking-[0.4em] text-[10px] md:text-xs font-headline opacity-30">
           Scripture • Study • Insights
         </p>
       </div>

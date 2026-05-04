@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
@@ -238,12 +237,12 @@ function VerseComponent({
                 {verse.number}
             </sup>
             
-            <span className="inline-flex items-center gap-1 mr-2 align-baseline">
+            <span className="inline-flex items-center gap-1.5 mr-2 align-baseline">
                 <button 
                     onClick={handleBookmarkToggle}
                     className={cn(
-                        "p-1 rounded-full transition-colors",
-                        bookmarked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-secondary"
+                        "p-1 rounded-full transition-all duration-300",
+                        bookmarked ? "text-primary bg-primary/10" : "text-muted-foreground/40 hover:text-primary hover:bg-stone-200"
                     )}
                     title="Bookmark verse"
                 >
@@ -252,7 +251,7 @@ function VerseComponent({
                 {verseNotes.length > 0 && (
                     <Dialog>
                         <DialogTrigger asChild>
-                            <button className="p-1 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors" title="View notes">
+                            <button className="p-1 text-muted-foreground/40 hover:text-primary rounded-full hover:bg-stone-200 transition-colors" title="View notes">
                                 <StickyNote className="h-4 w-4 md:h-3.5 md:w-3.5" />
                             </button>
                         </DialogTrigger>
@@ -271,7 +270,7 @@ function VerseComponent({
                 {crossReferences && crossReferences.length > 0 && (
                     <Dialog>
                         <DialogTrigger asChild>
-                            <button className="p-1 text-muted-foreground hover:text-primary rounded-full hover:bg-secondary transition-colors" title="Cross-references">
+                            <button className="p-1 text-muted-foreground/40 hover:text-primary rounded-full hover:bg-stone-200 transition-colors" title="Cross-references">
                                 <LinkIcon className="h-4 w-4 md:h-3.5 md:w-3.5" />
                             </button>
                         </DialogTrigger>
@@ -418,7 +417,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         setActiveAnnotation(annotation);
     };
     
-    const fullReference = `${chapterData.book.name} ${chapterData.chapter.number}`;
+    const fullReference = `${chapterData.book.id} ${chapterData.chapter.number}`;
 
     const renderContentItem = (item: ChapterContentItem, index: number) => {
         if (item.type === 'heading') {
@@ -465,58 +464,32 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
 
     return (
         <TooltipProvider>
-            <div ref={emblaRef} className="pt-4 relative overflow-hidden">
+            <div ref={emblaRef} className="relative overflow-hidden">
                 <div className="flex">
                     <div className="min-w-0 flex-shrink-0 flex-grow-0 basis-full">
                         <Card className="border-none shadow-none bg-transparent">
-                            <CardHeader className="px-0 pt-0">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <CardTitle className="font-headline text-3xl font-bold">{fullReference}</CardTitle>
-                                        <p className="text-sm text-muted-foreground mt-1">{chapterData.translation.name}</p>
-                                    </div>
-                                    <div className="md:hidden flex gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            type="button"
-                                            onClick={() => onChapterNav('prev')}
-                                            disabled={currentChapter <= 1}
-                                            className="h-10 w-10"
-                                            aria-label="Previous Chapter"
-                                        >
-                                            <ChevronLeft className="h-5 w-5" />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            type="button"
-                                            onClick={() => onChapterNav('next')}
-                                            disabled={currentChapter >= maxChapters}
-                                            className="h-10 w-10"
-                                            aria-label="Next Chapter"
-                                        >
-                                            <ChevronRight className="h-5 w-5" />
-                                        </Button>
-                                    </div>
+                            <CardHeader className="px-0 pt-0 pb-8">
+                                <div className="flex flex-col gap-1">
+                                    <CardTitle className="font-headline text-5xl font-bold tracking-tight text-primary">{fullReference}</CardTitle>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-[0.4em] font-headline">{chapterData.translation.name}</p>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-0">
                                 <div ref={bibleContentRef} className={cn("select-text bible-content", textClasses)}>
-                                    <div className="block pt-4">
+                                    <div className="block pt-2">
                                         {chapterData.chapter.content.map(renderContentItem)}
                                     </div>
                                 </div>
 
-                                <div className="mt-20 flex items-center justify-between border-t border-stone-200 pt-12 pb-16">
+                                <div className="mt-24 flex items-center justify-between border-t border-stone-200 pt-12 pb-16">
                                     <Button
                                         variant="ghost"
-                                        className="flex flex-col items-start gap-1 h-auto py-6 px-8 group rounded-xl hover:bg-stone-100 transition-all"
+                                        className="flex flex-col items-start gap-1 h-auto py-6 px-4 md:px-8 group rounded-xl hover:bg-stone-100 transition-all"
                                         onClick={() => onChapterNav('prev')}
                                         disabled={currentChapter <= 1}
                                     >
-                                        <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground group-hover:text-primary transition-colors font-bold">Previous</span>
-                                        <div className="flex items-center gap-2 font-headline font-bold text-xl">
+                                        <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground group-hover:text-primary transition-colors font-bold">Previous</span>
+                                        <div className="flex items-center gap-2 font-headline font-bold text-lg md:text-xl">
                                             <ChevronLeft className="h-5 w-5" />
                                             {chapterData.book.name} {currentChapter > 1 ? currentChapter - 1 : currentChapter}
                                         </div>
@@ -524,32 +497,32 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
 
                                     <Button
                                         variant="ghost"
-                                        className="flex flex-col items-end gap-1 h-auto py-6 px-8 group rounded-xl hover:bg-stone-100 transition-all"
+                                        className="flex flex-col items-end gap-1 h-auto py-6 px-4 md:px-8 group rounded-xl hover:bg-stone-100 transition-all"
                                         onClick={() => onChapterNav('next')}
-                                        disabled={currentChapter < maxChapters ? false : true}
+                                        disabled={currentChapter >= maxChapters}
                                     >
-                                        <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground group-hover:text-primary transition-colors font-bold">Next</span>
-                                        <div className="flex items-center gap-2 font-headline font-bold text-xl text-right">
+                                        <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground group-hover:text-primary transition-colors font-bold">Next</span>
+                                        <div className="flex items-center gap-2 font-headline font-bold text-lg md:text-xl text-right">
                                             {chapterData.book.name} {currentChapter < maxChapters ? currentChapter + 1 : currentChapter}
                                             <ChevronRight className="h-5 w-5" />
                                         </div>
                                     </Button>
                                 </div>
                             </CardContent>
-                            <CardFooter className="px-0 pt-6 flex flex-col items-start gap-4 pb-20">
+                            <CardFooter className="px-0 pt-6 flex flex-col items-start gap-6 pb-24 border-t border-stone-100">
                                 {notesLink && (
                                     <a 
                                         href={notesLink} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-2 text-sm font-bold text-primary hover:underline bg-primary/5 px-3 py-2 rounded-lg border border-primary/10 transition-colors hover:bg-primary/10"
+                                        className="flex items-center gap-3 text-xs font-bold text-primary uppercase tracking-[0.2em] hover:bg-stone-100 px-4 py-3 rounded-xl border border-stone-200 transition-all shadow-sm"
                                     >
                                         <ExternalLink className="h-4 w-4" />
-                                        Access NET Bible Notes & Commentary
+                                        NET Bible Notes & Commentary
                                     </a>
                                 )}
                                 {chapterData.copyright && (
-                                    <p className="text-xs text-muted-foreground italic leading-relaxed">
+                                    <p className="text-[10px] text-muted-foreground italic leading-relaxed uppercase tracking-wider max-w-2xl">
                                         {chapterData.copyright}
                                     </p>
                                 )}

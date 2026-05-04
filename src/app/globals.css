@@ -1,29 +1,28 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 50 27% 94%; /* Soft Beige */
+    --background: 40 20% 95%; /* Soft Stone/Beige */
     --foreground: 224 10% 12%;
     --card: 0 0% 100%;
     --card-foreground: 224 10% 12%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 10% 12%;
-    --primary: 37 15% 45%; /* Darker Sand for contrast */
+    --primary: 37 15% 35%; /* Deep Charcoal Stone */
     --primary-foreground: 224 10% 12%;
-    --secondary: 37 10% 88%;
+    --secondary: 37 10% 90%;
     --secondary-foreground: 215 30% 18%;
     --muted: 220 9% 46%;
     --muted-foreground: 215 19% 47%;
-    --accent: 92 11% 40%; /* Stronger Olive */
-    --accent-foreground: 50 27% 94%;
+    --accent: 92 11% 40%;
+    --accent-foreground: 40 20% 95%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 37 10% 82%;
-    --input: 37 10% 82%;
-    --ring: 37 15% 45%;
+    --border: 37 10% 86%;
+    --input: 37 10% 86%;
+    --ring: 37 15% 35%;
     --radius: 0.75rem;
   }
 
@@ -34,7 +33,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 224 10% 12%;
     --popover-foreground: 210 40% 98%;
-    --primary: 37 15% 70%;
+    --primary: 37 15% 75%;
     --primary-foreground: 224 10% 12%;
     --secondary: 215 28% 22%;
     --secondary-foreground: 210 40% 98%;
@@ -46,7 +45,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 215 28% 27%;
     --input: 215 28% 27%;
-    --ring: 37 15% 70%;
+    --ring: 37 15% 75%;
   }
 }
 
@@ -59,7 +58,6 @@
   }
 }
 
-/* Enhanced mobile font sizes for readability */
 @media (max-width: 768px) {
   .bible-content .text-\[15px\], .bible-content .text-sm { font-size: 17px !important; }
   .bible-content .text-\[18px\], .bible-content .text-base { font-size: 20px !important; }
@@ -68,41 +66,45 @@
   .bible-content .text-\[28px\], .bible-content .text-2xl { font-size: 30px !important; }
 }
 
-/* Highlights */
-.hl-yellow { background-color: #fef08a !important; color: black !important; }
-.hl-green { background-color: #bbf7d0 !important; color: black !important; }
-.hl-blue { background-color: #bfdbfe !important; color: black !important; }
-.hl-purple { background-color: #e9d5ff !important; color: black !important; }
-.hl-pink { background-color: #fbcfe8 !important; color: black !important; }
-.hl-orange { background-color: #fed7aa !important; color: black !important; }
-.hl-teal { background-color: #99f6e4 !important; color: black !important; }
+/* Study Highlights */
+.hl-yellow { background-color: #fde68a !important; color: #1c1917 !important; border-radius: 2px; }
+.hl-green { background-color: #bbf7d0 !important; color: #1c1917 !important; border-radius: 2px; }
+.hl-blue { background-color: #bfdbfe !important; color: #1c1917 !important; border-radius: 2px; }
+.hl-purple { background-color: #e9d5ff !important; color: #1c1917 !important; border-radius: 2px; }
+.hl-pink { background-color: #fbcfe8 !important; color: #1c1917 !important; border-radius: 2px; }
+.hl-orange { background-color: #fed7aa !important; color: #1c1917 !important; border-radius: 2px; }
+.hl-teal { background-color: #99f6e4 !important; color: #1c1917 !important; border-radius: 2px; }
 
-/* Underlines */
-.ul-red { border-bottom: 3px solid #991b1b; padding-bottom: 1px; }
-.ul-blue { border-bottom: 3px solid #2563eb; padding-bottom: 1px; }
-.ul-orange { border-bottom: 3px solid #ea580c; padding-bottom: 1px; }
-.ul-green { border-bottom: 3px solid #15803d; padding-bottom: 1px; }
-.ul-purple { border-bottom: 3px solid #7e22ce; padding-bottom: 1px; }
-.ul-teal { border-bottom: 3px solid #0f766e; padding-bottom: 1px; }
+/* Study Underlines */
+.ul-red { border-bottom: 2px solid #b91c1c; padding-bottom: 1px; }
+.ul-blue { border-bottom: 2px solid #1d4ed8; padding-bottom: 1px; }
+.ul-orange { border-bottom: 2px solid #c2410c; padding-bottom: 1px; }
+.ul-green { border-bottom: 2px solid #15803d; padding-bottom: 1px; }
+.ul-purple { border-bottom: 2px solid #7e22ce; padding-bottom: 1px; }
+.ul-teal { border-bottom: 2px solid #0f766e; padding-bottom: 1px; }
 
 .words-of-jesus {
-  color: #c00;
+  color: #991b1b;
 }
 
 .dark .words-of-jesus {
-  color: #ff5555;
+  color: #ef4444;
 }
 
 .verse-highlight {
-  background-color: hsl(var(--accent));
+  background-color: hsl(var(--accent) / 0.15);
   border-radius: var(--radius);
   transition: background-color 1.5s ease-out;
 }
 
-.dark .verse-highlight {
-  background-color: hsl(var(--accent) / 0.3);
-}
-
 .bible-content sup {
     line-height: 0;
+}
+
+.font-body {
+  font-family: 'Literata', serif;
+}
+
+.font-headline {
+  font-family: 'PT Sans', sans-serif;
 }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -25,14 +24,14 @@ const BookSelectorGrid = ({ books, currentBook, onSelect }: { books: Book[], cur
 
     const renderBookGrid = (testamentBooks: Book[], title: string) => (
         <div>
-            <p className="text-sm font-medium text-muted-foreground px-2 py-1.5">{title}</p>
-            <div className="grid grid-cols-5 gap-1">
+            <p className="text-[10px] font-bold text-muted-foreground px-2 py-3 uppercase tracking-widest">{title}</p>
+            <div className="grid grid-cols-5 gap-1 px-1">
                 {testamentBooks.map(book => (
                     <Button
                         key={book.id}
                         variant={book.commonName === currentBook ? "secondary" : "ghost"}
                         size="sm"
-                        className="h-auto px-2 py-1.5 justify-center"
+                        className="h-9 px-2 justify-center font-bold text-xs"
                         onClick={() => handleSelect(book.commonName)}
                     >
                         {book.id}
@@ -44,9 +43,9 @@ const BookSelectorGrid = ({ books, currentBook, onSelect }: { books: Book[], cur
 
     return (
         <ScrollArea className="h-96">
-            <div className="p-2">
+            <div className="pb-4">
                 {renderBookGrid(otBooks, "Old Testament")}
-                <div className="mt-2" />
+                <div className="mt-4 border-t border-stone-100" />
                 {renderBookGrid(ntBooks, "New Testament")}
             </div>
         </ScrollArea>
@@ -62,7 +61,7 @@ const ChapterSelectorGrid = ({ numberOfChapters, onSelect }: { numberOfChapters:
                         key={chapNum}
                         variant="ghost"
                         size="sm"
-                        className="h-auto px-2 py-1.5 justify-center"
+                        className="h-10 justify-center font-headline"
                         onClick={() => onSelect(chapNum)}
                     >
                         {chapNum}
@@ -82,7 +81,7 @@ const VerseSelectorGrid = ({ numberOfVerses, onSelect }: { numberOfVerses: numbe
                         key={verseNum}
                         variant="ghost"
                         size="sm"
-                        className="h-auto px-2 py-1.5 justify-center"
+                        className="h-10 justify-center font-headline"
                         onClick={() => onSelect(verseNum)}
                     >
                         {verseNum}
@@ -121,6 +120,9 @@ export function VerseSelector({
 
   useEffect(() => {
     setIsClient(true);
+    const handleOpenMobileNav = () => setIsMobileSheetOpen(true);
+    document.addEventListener('open-mobile-nav', handleOpenMobileNav);
+    return () => document.removeEventListener('open-mobile-nav', handleOpenMobileNav);
   }, []);
   
   useEffect(() => {
@@ -171,19 +173,19 @@ export function VerseSelector({
     <div className="flex items-center gap-2 animate-in fade-in duration-500">
         <Popover open={isBookSelectorOpen} onOpenChange={setIsBookSelectorOpen}>
             <PopoverTrigger asChild>
-                 <Button variant="outline" className="w-[200px] justify-between h-9">
+                 <Button variant="outline" className="w-[180px] justify-between h-10 border-stone-200 shadow-sm font-bold bg-white">
                     <span className="truncate">{defaultValues.book} {defaultValues.chapter}</span>
                     <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[340px] p-0">
+            <PopoverContent className="w-[340px] p-0 shadow-2xl rounded-2xl border-stone-200">
                 {selectionStep === 'book' ? (
                     <BookSelectorGrid books={books} currentBook={defaultValues.book} onSelect={handleBookSelect} />
                 ) : (
                     <div>
-                        <div className="p-2 border-b flex items-center gap-2">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectionStep('book')}><ChevronLeft /></Button>
-                            <p className="font-medium">{tempBook}</p>
+                        <div className="p-3 border-b border-stone-100 flex items-center gap-2">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectionStep('book')}><ChevronLeft className="h-4 w-4" /></Button>
+                            <p className="font-bold text-sm tracking-tight">{tempBook}</p>
                         </div>
                         <ChapterSelectorGrid 
                             numberOfChapters={books.find(b => b.commonName === tempBook)?.numberOfChapters || 1} 
@@ -195,128 +197,140 @@ export function VerseSelector({
         </Popover>
 
         <Select value={defaultValues.translation} onValueChange={(t) => navigate({ translation: t })}>
-            <SelectTrigger id="translation" aria-label="Translation" className="w-[80px] h-9 text-xs"><SelectValue placeholder="Tr" /></SelectTrigger>
-            <SelectContent>{translations.map(t => <SelectItem key={t.id} value={t.id}>{t.id.toUpperCase()}</SelectItem>)}</SelectContent>
+            <SelectTrigger id="translation" aria-label="Translation" className="w-[90px] h-10 border-stone-200 shadow-sm font-bold bg-white uppercase text-[11px] tracking-widest">
+                <SelectValue placeholder="Tr" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-stone-200 shadow-xl">
+                {translations.map(t => <SelectItem key={t.id} value={t.id} className="text-xs font-bold uppercase tracking-wider">{t.id}</SelectItem>)}
+            </SelectContent>
         </Select>
         
-         <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} className="h-9 w-9">
+         <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('prev')} disabled={parseInt(defaultValues.chapter) <= 1} className="h-10 w-10 border-stone-200 bg-white">
             <ChevronLeft className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook} className="h-9 w-9">
+        <Button variant="outline" size="icon" type="button" onClick={() => onChapterNav('next')} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook} className="h-10 w-10 border-stone-200 bg-white">
             <ChevronRight className="h-4 w-4" />
         </Button>
         <Popover open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" type="button" className="h-9 w-9" disabled={maxVerses === 0}>
+                <Button variant="outline" size="icon" type="button" className="h-10 w-10 border-stone-200 bg-white" disabled={maxVerses === 0}>
                     <Hash className="h-4 w-4" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[340px] p-0">
+            <PopoverContent className="w-[340px] p-0 shadow-2xl rounded-2xl border-stone-200">
+                <div className="p-3 border-b border-stone-100">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Jump to Verse</p>
+                </div>
                 <VerseSelectorGrid 
                     numberOfVerses={maxVerses} 
                     onSelect={handleVerseSelect} 
                 />
             </PopoverContent>
         </Popover>
-        <Button variant="outline" size="icon" type="button" onClick={handleGoBack} className="h-9 w-9">
+        <Button variant="outline" size="icon" type="button" onClick={handleGoBack} className="h-10 w-10 border-stone-200 bg-white">
             <History className="h-4 w-4" />
         </Button>
     </div>
   );
 
   const renderMobileControls = () => (
-    <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
-        <SheetTrigger asChild>
-            <Button variant="outline" className="w-full h-12 text-base px-4 justify-between font-bold border-2 border-primary/20 shadow-md">
-                <span className="truncate">
-                    {defaultValues.book} {defaultValues.chapter} ({defaultValues.translation.toUpperCase()})
-                </span>
-                <ChevronsUpDown className="h-5 w-5 opacity-50 shrink-0" />
-            </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="rounded-t-3xl px-6 pb-12 h-[80vh]" onOpenAutoFocus={(e) => e.preventDefault()}>
-            <SheetHeader className="mb-6 pt-2">
-                <SheetTitle className="text-2xl font-headline text-center">Study Navigation</SheetTitle>
-            </SheetHeader>
-            <div className="space-y-6">
-                 <Dialog open={isBookSelectorOpen} onOpenChange={setIsBookSelectorOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" className="w-full h-14 justify-between text-lg font-medium border-stone-200">
-                            Select Book & Chapter
-                            <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-[95vw] rounded-2xl p-0 overflow-hidden">
-                        {selectionStep === 'book' ? (
-                            <>
-                                <DialogHeader className="p-4 border-b">
-                                    <DialogTitle>Select a Book</DialogTitle>
-                                </DialogHeader>
-                                <BookSelectorGrid books={books} currentBook={defaultValues.book} onSelect={handleBookSelect} />
-                            </>
-                        ) : (
-                            <>
-                                <DialogHeader className="p-4 border-b">
-                                    <DialogTitle className="flex items-center gap-2">
-                                        <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setSelectionStep('book')}><ChevronLeft /></Button>
-                                        <span>{tempBook}</span>
-                                    </DialogTitle>
-                                </DialogHeader>
-                                <ChapterSelectorGrid 
-                                    numberOfChapters={books.find(b => b.commonName === tempBook)?.numberOfChapters || 1} 
-                                    onSelect={handleChapterSelect} 
-                                />
-                            </>
-                        )}
-                    </DialogContent>
-                </Dialog>
+    <div className="w-full flex items-center justify-between gap-2">
+        <Button variant="outline" onClick={() => setIsMobileSheetOpen(true)} className="flex-grow h-12 text-base px-4 justify-between font-bold border-2 border-primary/10 shadow-sm bg-white rounded-xl">
+            <span className="truncate">
+                {defaultValues.book} {defaultValues.chapter} ({defaultValues.translation.toUpperCase()})
+            </span>
+            <ChevronsUpDown className="h-5 w-5 opacity-50 shrink-0" />
+        </Button>
+        
+        <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
+            <SheetContent side="bottom" className="rounded-t-[2.5rem] px-6 pb-14 h-[85vh] bg-background border-t-4 border-primary/5" onOpenAutoFocus={(e) => e.preventDefault()}>
+                <SheetHeader className="mb-8 pt-4">
+                    <SheetTitle className="text-3xl font-headline font-bold text-center tracking-tight text-primary">Scripture Library</SheetTitle>
+                </SheetHeader>
+                <div className="space-y-8">
+                     <Dialog open={isBookSelectorOpen} onOpenChange={setIsBookSelectorOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full h-16 justify-between text-xl font-bold border-stone-200 shadow-sm rounded-2xl bg-white">
+                                Book & Chapter
+                                <ChevronsUpDown className="ml-2 h-6 w-6 shrink-0 opacity-50" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-[95vw] rounded-3xl p-0 overflow-hidden shadow-2xl border-stone-200">
+                            {selectionStep === 'book' ? (
+                                <>
+                                    <DialogHeader className="p-5 border-b border-stone-100 bg-stone-50">
+                                        <DialogTitle className="text-xl font-bold">Old & New Testament</DialogTitle>
+                                    </DialogHeader>
+                                    <BookSelectorGrid books={books} currentBook={defaultValues.book} onSelect={handleBookSelect} />
+                                </>
+                            ) : (
+                                <>
+                                    <DialogHeader className="p-5 border-b border-stone-100 bg-stone-50">
+                                        <DialogTitle className="flex items-center gap-3">
+                                            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full" onClick={() => setSelectionStep('book')}><ChevronLeft className="h-6 w-6" /></Button>
+                                            <span className="text-2xl font-bold">{tempBook}</span>
+                                        </DialogTitle>
+                                    </DialogHeader>
+                                    <ChapterSelectorGrid 
+                                        numberOfChapters={books.find(b => b.commonName === tempBook)?.numberOfChapters || 1} 
+                                        onSelect={handleChapterSelect} 
+                                    />
+                                </>
+                            )}
+                        </DialogContent>
+                    </Dialog>
 
-                <Dialog open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" className="w-full h-14 justify-between text-lg font-medium border-stone-200" disabled={maxVerses === 0}>
-                            Jump to Verse
-                            <Hash className="ml-2 h-5 w-5 shrink-0 opacity-50" />
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-[95vw] rounded-2xl p-0 overflow-hidden">
-                        <DialogHeader className="p-4 border-b">
-                            <DialogTitle>Select a Verse</DialogTitle>
-                        </DialogHeader>
-                        <VerseSelectorGrid 
-                            numberOfVerses={maxVerses} 
-                            onSelect={(v) => {
-                                handleVerseSelect(v);
-                                setIsMobileSheetOpen(false);
-                                setIsVerseSelectorOpen(false);
-                            }} 
-                        />
-                    </DialogContent>
-                </Dialog>
+                    <Dialog open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full h-16 justify-between text-xl font-bold border-stone-200 shadow-sm rounded-2xl bg-white" disabled={maxVerses === 0}>
+                                Jump to Verse
+                                <Hash className="ml-2 h-6 w-6 shrink-0 opacity-50" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-[95vw] rounded-3xl p-0 overflow-hidden shadow-2xl border-stone-200">
+                            <DialogHeader className="p-5 border-b border-stone-100 bg-stone-50">
+                                <DialogTitle className="text-xl font-bold uppercase tracking-widest">Select Verse</DialogTitle>
+                            </DialogHeader>
+                            <VerseSelectorGrid 
+                                numberOfVerses={maxVerses} 
+                                onSelect={(v) => {
+                                    handleVerseSelect(v);
+                                    setIsMobileSheetOpen(false);
+                                    setIsVerseSelectorOpen(false);
+                                }} 
+                            />
+                        </DialogContent>
+                    </Dialog>
 
-                <div className="space-y-2">
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Current Translation</p>
-                    <Select value={defaultValues.translation} onValueChange={(t) => { navigate({ translation: t }); setIsMobileSheetOpen(false); }}>
-                        <SelectTrigger className="h-14 text-lg border-stone-200"><SelectValue placeholder="Translation" /></SelectTrigger>
-                        <SelectContent className="max-h-[300px]">{translations.map(t => <SelectItem key={t.id} value={t.id} className="text-lg py-3">{t.id.toUpperCase() ?? ''} - {t.name ?? ''}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <div className="space-y-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground ml-2">Translation</p>
+                        <Select value={defaultValues.translation} onValueChange={(t) => { navigate({ translation: t }); setIsMobileSheetOpen(false); }}>
+                            <SelectTrigger className="h-16 text-xl font-bold border-stone-200 rounded-2xl bg-white shadow-sm">
+                                <SelectValue placeholder="Translation" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-stone-200 shadow-2xl max-h-[40vh]">
+                                {translations.map(t => <SelectItem key={t.id} value={t.id} className="text-lg py-4 font-bold tracking-tight">{t.id.toUpperCase()} - {t.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    
+                     <div className="flex gap-4 w-full pt-8">
+                        <Button variant="outline" size="icon" className="flex-1 h-20 border-2 rounded-2xl shadow-sm bg-white hover:bg-stone-50" onClick={() => { onChapterNav('prev'); setIsMobileSheetOpen(false); }} disabled={parseInt(defaultValues.chapter) <= 1}><ChevronLeft className="h-10 w-10" /></Button>
+                        <Button variant="outline" size="icon" className="flex-1 h-20 border-2 rounded-2xl shadow-sm bg-white hover:bg-stone-50" onClick={() => { onChapterNav('next'); setIsMobileSheetOpen(false); }} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook}><ChevronRight className="h-10 w-10" /></Button>
+                        <Button variant="outline" size="icon" className="flex-1 h-20 border-2 rounded-2xl shadow-sm bg-white hover:bg-stone-50" onClick={() => { handleGoBack(); setIsMobileSheetOpen(false); }}>
+                            <History className="h-10 w-10" />
+                        </Button>
+                    </div>
                 </div>
-                
-                 <div className="flex gap-3 w-full pt-6">
-                    <Button variant="outline" size="icon" className="flex-1 h-16 border-2" onClick={() => { onChapterNav('prev'); setIsMobileSheetOpen(false); }} disabled={parseInt(defaultValues.chapter) <= 1}><ChevronLeft className="h-8 w-8" /></Button>
-                    <Button variant="outline" size="icon" className="flex-1 h-16 border-2" onClick={() => { onChapterNav('next'); setIsMobileSheetOpen(false); }} disabled={parseInt(defaultValues.chapter) >= maxChaptersForCurrentBook}><ChevronRight className="h-8 w-8" /></Button>
-                    <Button variant="outline" size="icon" className="flex-1 h-16 border-2" onClick={() => { handleGoBack(); setIsMobileSheetOpen(false); }}>
-                        <History className="h-8 w-8" />
-                    </Button>
-                </div>
-            </div>
-        </SheetContent>
-    </Sheet>
+            </SheetContent>
+        </Sheet>
+    </div>
   );
 
   if (!isClient) {
     return (
-        <div className="w-full animate-in fade-in duration-500">
-             <Skeleton className="h-11 w-full" />
+        <div className="w-full">
+             <Skeleton className="h-10 w-full rounded-xl" />
         </div>
     );
   }
