@@ -186,31 +186,51 @@ function PageWithSearchParams() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  
+  // Use a status string to handle the initialization lifecycle safely.
+  const [initStatus, setInitStatus] = useState<'loading' | 'redirecting' | 'ready'>('loading');
+
   const book = searchParams.get('book') || 'John';
   const chapter = searchParams.get('chapter') || '1';
   const translationUrlParam = searchParams.get('translation') || 'BSB';
   const queryKey = `${book}-${chapter}-${translationUrlParam}`;
-  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    // Only run initialization once when status is 'loading'
+    if (initStatus !== 'loading') return;
+
     if (!searchParams.has('book')) {
-      const saved = localStorage.getItem(LAST_LOCATION_KEY);
-      if (saved) {
-        try {
-          const loc = JSON.parse(saved);
-          router.replace(`${pathname}?book=${loc.book}&chapter=${loc.chapter}&translation=${loc.translationId}`);
-        } catch { setIsReady(true); }
-      } else setIsReady(true);
-    } else setIsReady(true);
-  }, [searchParams, router, pathname]);
+      try {
+        const savedRaw = localStorage.getItem(LAST_LOCATION_KEY);
+        if (savedRaw) {
+          const loc = JSON.parse(savedRaw);
+          if (loc && loc.book && loc.chapter && loc.translationId) {
+            setInitStatus('redirecting');
+            router.replace(`${pathname}?book=${loc.book}&chapter=${loc.chapter}&translation=${loc.translationId}`);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Could not retrieve last location", e);
+      }
+      setInitStatus('ready');
+    } else {
+      setInitStatus('ready');
+    }
+  }, [searchParams, router, pathname, initStatus]);
   
   useEffect(() => {
-    if (searchParams.has('book')) {
-      localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ book, chapter, translationId: translationUrlParam }));
+    // Save location only when we are ready and the URL has actual data
+    if (initStatus === 'ready' && searchParams.has('book')) {
+      try {
+        localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ book, chapter, translationId: translationUrlParam }));
+      } catch (e) {
+        console.warn("Could not save location", e);
+      }
     }
-  }, [book, chapter, translationUrlParam, searchParams]);
+  }, [book, chapter, translationUrlParam, searchParams, initStatus]);
   
-  if (!isReady) return <FullPageSkeleton />;
+  if (initStatus !== 'ready') return <FullPageSkeleton />;
   return <ChapterLoader key={queryKey} book={book} chapter={chapter} translationId={translationUrlParam} />
 }
 

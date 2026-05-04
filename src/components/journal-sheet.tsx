@@ -12,7 +12,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 
@@ -36,7 +36,11 @@ export function JournalSheet() {
                  e.prayer?.toLowerCase().includes(searchQuery.toLowerCase()) || 
                  e.reference?.toLowerCase().includes(searchQuery.toLowerCase()))
             )
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            .sort((a, b) => {
+                const dateA = a.date ? new Date(a.date).getTime() : 0;
+                const dateB = b.date ? new Date(b.date).getTime() : 0;
+                return dateB - dateA;
+            });
     }, [entries, searchQuery]);
 
     const handleNewEntry = () => {
@@ -105,54 +109,60 @@ export function JournalSheet() {
                                     <p className="text-xs">Start your spiritual journey by adding your first entry.</p>
                                 </div>
                             ) : (
-                                filteredEntries.map((e) => (
-                                    <div key={e.id} className="group border rounded-xl p-4 bg-card hover:shadow-md transition-all space-y-3">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex items-center gap-2 text-primary font-bold">
-                                                <CalendarIcon className="h-4 w-4" />
-                                                <span className="font-headline text-sm">
-                                                    {format(new Date(e.date + 'T12:00:00'), 'MMMM d, yyyy')}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => handleEditEntry(e)}>
-                                                    <Edit2 className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => deleteEntry(e.id)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
+                                filteredEntries.map((e) => {
+                                    // Robust date parsing to prevent client-side crashes on corrupted dates.
+                                    const dateObj = new Date(e.date + (e.date.includes('T') ? '' : 'T12:00:00'));
+                                    const displayDate = isValid(dateObj) ? format(dateObj, 'MMMM d, yyyy') : 'Unknown Date';
 
-                                        {e.reference && (
-                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary text-primary font-bold text-xs">
-                                                <Quote className="h-3 w-3" />
-                                                {e.reference}
-                                            </div>
-                                        )}
-
-                                        {e.thoughts && (
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Thoughts</p>
-                                                <p className="font-body text-sm text-stone-700 leading-relaxed italic line-clamp-4">
-                                                    "{e.thoughts}"
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {e.prayer && (
-                                            <div className="space-y-1 bg-stone-50 p-3 rounded-lg border border-stone-100">
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-accent">
-                                                    <Heart className="h-3 w-3 fill-accent/20" />
-                                                    Prayer
+                                    return (
+                                        <div key={e.id} className="group border rounded-xl p-4 bg-card hover:shadow-md transition-all space-y-3">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex items-center gap-2 text-primary font-bold">
+                                                    <CalendarIcon className="h-4 w-4" />
+                                                    <span className="font-headline text-sm">
+                                                        {displayDate}
+                                                    </span>
                                                 </div>
-                                                <p className="font-body text-sm text-stone-800 leading-relaxed">
-                                                    {e.prayer}
-                                                </p>
+                                                <div className="flex items-center gap-1">
+                                                    <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => handleEditEntry(e)}>
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => deleteEntry(e.id)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
-                                ))
+
+                                            {e.reference && (
+                                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary text-primary font-bold text-xs">
+                                                    <Quote className="h-3 w-3" />
+                                                    {e.reference}
+                                                </div>
+                                            )}
+
+                                            {e.thoughts && (
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Thoughts</p>
+                                                    <p className="font-body text-sm text-stone-700 leading-relaxed italic line-clamp-4">
+                                                        "{e.thoughts}"
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {e.prayer && (
+                                                <div className="space-y-1 bg-stone-50 p-3 rounded-lg border border-stone-100">
+                                                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+                                                        <Heart className="h-3 w-3 fill-accent/20" />
+                                                        Prayer
+                                                    </div>
+                                                    <p className="font-body text-sm text-stone-800 leading-relaxed">
+                                                        {e.prayer}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     </ScrollArea>

@@ -12,7 +12,7 @@ const API_KEY = "n-eVwCRekVC0-oL2B6_s3";
  * then collapsing multiple spaces and trimming.
  */
 function cleanApiText(text: string): string {
-    if (!text) return "";
+    if (typeof text !== 'string' || !text) return "";
     return text
         .replace(/<(br|p|div|span|b|i|i|em|strong|sup|sub|a)[^>]*>/gi, ' ')
         .replace(/<\/(br|p|div|span|b|i|i|em|strong|sup|sub|a)>/gi, ' ')

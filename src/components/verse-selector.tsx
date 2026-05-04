@@ -125,10 +125,11 @@ export function VerseSelector({
   
   useEffect(() => {
     if (!isBookSelectorOpen) {
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             setSelectionStep('book');
             setTempBook(defaultValues.book);
         }, 200);
+        return () => clearTimeout(timer);
     }
   }, [isBookSelectorOpen, defaultValues.book]);
   
@@ -144,14 +145,18 @@ export function VerseSelector({
   };
 
   const handleGoBack = () => {
-    const savedLocationRaw = localStorage.getItem(LAST_LOCATION_KEY);
-    if (savedLocationRaw) {
-        const savedLocation = JSON.parse(savedLocationRaw);
-        navigate({
-            book: savedLocation.book,
-            chapter: savedLocation.chapter,
-            translation: savedLocation.translationId
-        });
+    try {
+        const savedLocationRaw = localStorage.getItem(LAST_LOCATION_KEY);
+        if (savedLocationRaw) {
+            const savedLocation = JSON.parse(savedLocationRaw);
+            navigate({
+                book: savedLocation.book,
+                chapter: savedLocation.chapter,
+                translation: savedLocation.translationId
+            });
+        }
+    } catch (e) {
+        console.warn("Go Back failed", e);
     }
   };
   
@@ -292,7 +297,7 @@ export function VerseSelector({
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Current Translation</p>
                     <Select value={defaultValues.translation} onValueChange={(t) => { navigate({ translation: t }); setIsMobileSheetOpen(false); }}>
                         <SelectTrigger className="h-14 text-lg border-stone-200"><SelectValue placeholder="Translation" /></SelectTrigger>
-                        <SelectContent className="max-h-[300px]">{translations.map(t => <SelectItem key={t.id} value={t.id} className="text-lg py-3">{t.id.toUpperCase()} - {t.name}</SelectItem>)}</SelectContent>
+                        <SelectContent className="max-h-[300px]">{translations.map(t => <SelectItem key={t.id} value={t.id} className="text-lg py-3">{t.id.toUpperCase() ?? ''} - {t.name ?? ''}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 
