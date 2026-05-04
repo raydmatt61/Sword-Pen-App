@@ -14,8 +14,8 @@ const API_KEY = "n-eVwCRekVC0-oL2B6_s3";
 function cleanApiText(text: string): string {
     if (typeof text !== 'string' || !text) return "";
     return text
-        .replace(/<(br|p|div|span|b|i|i|em|strong|sup|sub|a)[^>]*>/gi, ' ')
-        .replace(/<\/(br|p|div|span|b|i|i|em|strong|sup|sub|a)>/gi, ' ')
+        .replace(/<(br|p|div|span|h[1-6]|b|i|i|em|strong|sup|sub|a)[^>]*>/gi, ' ')
+        .replace(/<\/(br|p|div|span|h[1-6]|b|i|i|em|strong|sup|sub|a)>/gi, ' ')
         .replace(/<[^>]+>/g, ' ')
         .replace(/&nbsp;/g, ' ')
         .replace(/\s+/g, ' ')
@@ -128,6 +128,68 @@ export async function generateVerseInsights(input: GenerateVerseInsightsInput): 
   }
 }
 
+async function getChapterFromApiBible(translationId: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
+    const bibleId = API_BIBLE_IDS_SEARCH[translationId.toUpperCase()];
+    if (!bibleId) return null;
+
+    const bookAbbr = BIBLE_BOOKS_ABBR[book] || book;
+    const chapterId = `${bookAbbr}.${chapter}`;
+
+    try {
+        const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=json&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=false`, {
+            headers: { 'api-key': API_KEY },
+            next: { revalidate: 86400 }
+        });
+
+        if (!response.ok) return null;
+
+        const json = await response.json();
+        const contentHtml = json.data.content;
+
+        const chapterContent: ChapterContentItem[] = [];
+        
+        // Robust manual parsing for API.Bible HTML structure
+        const markerDiv = contentHtml
+            .replace(/<(div|h[1-6])\s+class="s\d*">/gi, '###HEADING###')
+            .replace(/<span\s+[^>]*data-number="(\d+)"[^>]*>/gi, '###VERSE_$1###')
+            .replace(/<\/span>/gi, '')
+            .replace(/<\/div>|<\/h[1-6]>/gi, ' ');
+            
+        const cleanContent = markerDiv.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+        const sections = cleanContent.split(/###(HEADING|VERSE_\d+)###/);
+        
+        for (let i = 1; i < sections.length; i += 2) {
+            const marker = sections[i];
+            const text = cleanApiText(sections[i+1]);
+            if (!text) continue;
+            
+            if (marker === 'HEADING') {
+                chapterContent.push({ type: 'heading', content: [text] });
+            } else if (marker.startsWith('VERSE_')) {
+                const num = parseInt(marker.split('_')[1], 10);
+                chapterContent.push({
+                    type: 'verse',
+                    number: num,
+                    content: collapseVerseContent([{ text }])
+                });
+            }
+        }
+
+        const translationName = TRANSLATIONS.find(t => t.id === translationId.toUpperCase())?.name || translationId;
+        const bookName = BIBLE_ABBR_BOOKS[bookAbbr] || book;
+        const copyright = COPYRIGHTS[translationId.toUpperCase()];
+
+        return {
+            book: { name: bookName, id: bookAbbr },
+            chapter: { number: parseInt(chapter, 10), content: chapterContent },
+            translation: { name: translationName, id: translationId.toUpperCase() },
+            copyright
+        };
+    } catch (error) {
+        return null;
+    }
+}
+
 async function getChapterFromBolls(translationId: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
     const bookAbbr = BIBLE_BOOKS_ABBR[book] || book;
     const bookNumber = BIBLE_BOOK_NUMBERS[book] || BIBLE_BOOK_NUMBERS[bookAbbr.toUpperCase()];
@@ -184,11 +246,24 @@ async function getCrossReferences(book: string, chapter: string): Promise<CrossR
 }
 
 export async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
-  const chapterData = await getChapterFromBolls(translationId, book, chapter);
+  const tid = translationId.toUpperCase();
   
+  // Prioritize API.Bible for CSB as requested, or if Bolls fails
+  if (tid === 'CSB' && API_BIBLE_IDS_SEARCH[tid]) {
+      const apiData = await getChapterFromApiBible(translationId, book, chapter);
+      if (apiData) return apiData;
+  }
+
+  const chapterData = await getChapterFromBolls(translationId, book, chapter);
   if (chapterData) return chapterData;
   
-  if (!isFallbackAttempt && translationId.toUpperCase() !== 'BSB') {
+  // Secondary source: Try API.Bible for any other mapped ID if Bolls fails
+  if (API_BIBLE_IDS_SEARCH[tid]) {
+      const apiData = await getChapterFromApiBible(translationId, book, chapter);
+      if (apiData) return apiData;
+  }
+  
+  if (!isFallbackAttempt && tid !== 'BSB') {
     return await getChapter(book, chapter, 'BSB', true);
   }
   return null;

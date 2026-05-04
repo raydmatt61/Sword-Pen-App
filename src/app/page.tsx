@@ -187,13 +187,7 @@ function PageWithSearchParams() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   
-  // Use a status string to handle the initialization lifecycle safely.
   const [initStatus, setInitStatus] = useState<'loading' | 'redirecting' | 'ready'>('loading');
-
-  const book = searchParams.get('book') || 'John';
-  const chapter = searchParams.get('chapter') || '1';
-  const translationUrlParam = searchParams.get('translation') || 'BSB';
-  const queryKey = `${book}-${chapter}-${translationUrlParam}`;
 
   useEffect(() => {
     // Only run initialization once when status is 'loading'
@@ -219,6 +213,11 @@ function PageWithSearchParams() {
     }
   }, [searchParams, router, pathname, initStatus]);
   
+  const book = searchParams.get('book') || 'John';
+  const chapter = searchParams.get('chapter') || '1';
+  const translationUrlParam = searchParams.get('translation') || 'BSB';
+  const queryKey = `${book}-${chapter}-${translationUrlParam}`;
+
   useEffect(() => {
     // Save location only when we are ready and the URL has actual data
     if (initStatus === 'ready' && searchParams.has('book')) {
