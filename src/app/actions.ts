@@ -149,9 +149,12 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
         const chapterContent: ChapterContentItem[] = [];
         
         // Robust manual parsing for API.Bible HTML structure
+        // 1. Identify Headings (usually divs or h tags with class 's' or 's1')
+        // 2. Identify Verses (spans with data-number or similar)
         const markerDiv = contentHtml
-            .replace(/<(div|h[1-6])\s+class="s\d*">/gi, '###HEADING###')
+            .replace(/<(div|h[1-6])\s+[^>]*class="s\d*"[^>]*>/gi, '###HEADING###')
             .replace(/<span\s+[^>]*data-number="(\d+)"[^>]*>/gi, '###VERSE_$1###')
+            .replace(/<span\s+[^>]*class="v"[^>]*data-sid="[^"]+\.(\d+)"[^>]*>/gi, '###VERSE_$1###')
             .replace(/<\/span>/gi, '')
             .replace(/<\/div>|<\/h[1-6]>/gi, ' ');
             
@@ -248,17 +251,18 @@ async function getCrossReferences(book: string, chapter: string): Promise<CrossR
 export async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
   const tid = translationId.toUpperCase();
   
-  // Prioritize API.Bible for CSB as requested, or if Bolls fails
+  // Prioritize API.Bible for CSB as requested
   if (tid === 'CSB' && API_BIBLE_IDS_SEARCH[tid]) {
       const apiData = await getChapterFromApiBible(translationId, book, chapter);
       if (apiData) return apiData;
   }
 
+  // Fallback to Bolls for CSB if API.Bible failed, or primary for others
   const chapterData = await getChapterFromBolls(translationId, book, chapter);
   if (chapterData) return chapterData;
   
-  // Secondary source: Try API.Bible for any other mapped ID if Bolls fails
-  if (API_BIBLE_IDS_SEARCH[tid]) {
+  // Secondary fallback: Try API.Bible for any other mapped ID if Bolls fails
+  if (tid !== 'CSB' && API_BIBLE_IDS_SEARCH[tid]) {
       const apiData = await getChapterFromApiBible(translationId, book, chapter);
       if (apiData) return apiData;
   }
