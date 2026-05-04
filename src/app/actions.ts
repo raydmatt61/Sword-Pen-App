@@ -145,12 +145,11 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
 
         const json = await response.json();
         const contentHtml = json.data.content;
+        if (!contentHtml) return null;
 
         const chapterContent: ChapterContentItem[] = [];
         
-        // Robust manual parsing for API.Bible HTML structure
-        // 1. Identify Headings (usually divs or h tags with class 's' or 's1')
-        // 2. Identify Verses (spans with data-number or similar)
+        // Improved manual parsing for API.Bible HTML structure
         const markerDiv = contentHtml
             .replace(/<(div|h[1-6])\s+[^>]*class="s\d*"[^>]*>/gi, '###HEADING###')
             .replace(/<span\s+[^>]*data-number="(\d+)"[^>]*>/gi, '###VERSE_$1###')
@@ -164,19 +163,21 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
         for (let i = 1; i < sections.length; i += 2) {
             const marker = sections[i];
             const text = cleanApiText(sections[i+1]);
-            if (!text) continue;
+            if (!text && marker !== 'HEADING') continue;
             
             if (marker === 'HEADING') {
-                chapterContent.push({ type: 'heading', content: [text] });
+                if (text) chapterContent.push({ type: 'heading', content: [text] });
             } else if (marker.startsWith('VERSE_')) {
                 const num = parseInt(marker.split('_')[1], 10);
                 chapterContent.push({
                     type: 'verse',
                     number: num,
-                    content: collapseVerseContent([{ text }])
+                    content: collapseVerseContent([{ text: text || "" }])
                 });
             }
         }
+
+        if (chapterContent.length === 0) return null;
 
         const translationName = TRANSLATIONS.find(t => t.id === translationId.toUpperCase())?.name || translationId;
         const bookName = BIBLE_ABBR_BOOKS[bookAbbr] || book;
@@ -195,7 +196,7 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
 
 async function getChapterFromBolls(translationId: string, book: string, chapter: string): Promise<BibleChapterResponse | null> {
     const bookAbbr = BIBLE_BOOKS_ABBR[book] || book;
-    const bookNumber = BIBLE_BOOK_NUMBERS[book] || BIBLE_BOOK_NUMBERS[bookAbbr.toUpperCase()];
+    const bookNumber = BIBLE_BOOK_NUMBERS[book] || BIBLE_BOOK_NUMBERS[bookAbbr.toUpperCase()] || BIBLE_BOOK_NUMBERS[bookAbbr];
     
     if (!bookNumber) return null;
 
@@ -265,6 +266,12 @@ export async function getChapter(book: string, chapter: string, translationId: s
   if (tid !== 'CSB' && API_BIBLE_IDS_SEARCH[tid]) {
       const apiData = await getChapterFromApiBible(translationId, book, chapter);
       if (apiData) return apiData;
+  }
+  
+  // If we are looking for CSB specifically and it failed, try HCSB as a last resort on Bolls
+  if (tid === 'CSB' && !isFallbackAttempt) {
+    const hcsbData = await getChapterFromBolls('HCSB', book, chapter);
+    if (hcsbData) return { ...hcsbData, translation: { name: 'Christian Standard Bible', id: 'CSB' } };
   }
   
   if (!isFallbackAttempt && tid !== 'BSB') {

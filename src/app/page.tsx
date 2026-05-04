@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'react';
@@ -156,7 +157,6 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
               )}
             </div>
 
-            {/* Floating Navigation UI as seen in the image */}
             <div className="fixed bottom-6 left-6 z-50 flex items-center gap-3">
               <Button 
                 variant="secondary" 
@@ -209,6 +209,7 @@ function PageWithSearchParams() {
   const [initStatus, setInitStatus] = useState<'loading' | 'redirecting' | 'ready'>('loading');
 
   useEffect(() => {
+    // Ensuring hydration is complete and searchParams are available
     if (initStatus !== 'loading') return;
 
     if (!searchParams.has('book')) {
@@ -251,6 +252,14 @@ function PageWithSearchParams() {
 }
 
 export default function Home() {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return <FullPageSkeleton />;
+
   return (
     <Suspense fallback={<FullPageSkeleton />}>
       <PageWithSearchParams />
