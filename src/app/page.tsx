@@ -21,7 +21,7 @@ import { getPageData } from '@/app/actions';
 import { Logo } from '@/components/logo';
 import { BookmarksSheet } from '@/components/bookmarks-sheet';
 import { JournalSheet } from '@/components/journal-sheet';
-import { Navigation as NavigateIcon } from 'lucide-react';
+import { Navigation as NavigateIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function PageContent({ books, chapterData, crossRefs, initialBook, initialChapter, initialTranslationId }: { 
@@ -185,16 +185,30 @@ function ChapterLoader({ book, chapter, translationId }: { book: string; chapter
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadData() {
       setIsLoading(true);
-      const data = await getPageData(book, chapter, translationId);
-      setPageData(data);
-      setIsLoading(false);
+      try {
+        const data = await getPageData(book, chapter, translationId);
+        if (isMounted) setPageData(data);
+      } catch (e) {
+        console.error("Failed to load chapter data", e);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
     }
     loadData();
+    return () => { isMounted = false; };
   }, [book, chapter, translationId]);
 
-  if (isLoading || !pageData) return <FullPageSkeleton />;
+  if (isLoading || !pageData) {
+      return (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+              <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-40">Loading Scripture...</p>
+          </div>
+      );
+  }
 
   return <PageContent books={pageData.books} chapterData={pageData.chapterData} crossRefs={pageData.crossRefs} initialBook={book} initialChapter={chapter} initialTranslationId={translationId} />;
 }
@@ -206,49 +220,68 @@ function PageWithSearchParams() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   
-  const [initStatus, setInitStatus] = useState<'loading' | 'redirecting' | 'ready'>('loading');
+  const [initStatus, setInitStatus] = useState<'loading' | 'ready'>('loading');
+  const [initialParams, setInitialParams] = useState<{ book: string; chapter: string; translation: string } | null>(null);
 
   useEffect(() => {
-    // Ensuring hydration is complete and searchParams are available
     if (initStatus !== 'loading') return;
 
-    if (!searchParams.has('book')) {
+    // Determine target location: URL first, then localStorage, then default
+    let book = searchParams.get('book');
+    let chapter = searchParams.get('chapter');
+    let translation = searchParams.get('translation');
+
+    if (!book) {
       try {
         const savedRaw = localStorage.getItem(LAST_LOCATION_KEY);
         if (savedRaw) {
           const loc = JSON.parse(savedRaw);
-          if (loc && loc.book && loc.chapter && loc.translationId) {
-            setInitStatus('redirecting');
-            router.replace(`${pathname}?book=${loc.book}&chapter=${loc.chapter}&translation=${loc.translationId}`);
-            return;
+          if (loc?.book) {
+            book = loc.book;
+            chapter = loc.chapter;
+            translation = loc.translationId;
+            // Immediate replace if we're pulling from storage
+            router.replace(`${pathname}?book=${book}&chapter=${chapter}&translation=${translation}`);
           }
         }
-      } catch (e) {
-        console.warn("Could not retrieve last location", e);
-      }
-      setInitStatus('ready');
-    } else {
-      setInitStatus('ready');
+      } catch (e) {}
     }
-  }, [searchParams, router, pathname, initStatus]);
-  
-  const book = searchParams.get('book') || 'John';
-  const chapter = searchParams.get('chapter') || '1';
-  const translationUrlParam = searchParams.get('translation') || 'BSB';
-  const queryKey = `${book}-${chapter}-${translationUrlParam}`;
+
+    setInitialParams({
+        book: book || 'John',
+        chapter: chapter || '1',
+        translation: translation || 'BSB'
+    });
+    setInitStatus('ready');
+  }, [initStatus, searchParams, router, pathname]);
+
+  // Save current location whenever it changes (after initialization)
+  const currentBook = searchParams.get('book') || initialParams?.book || 'John';
+  const currentChapter = searchParams.get('chapter') || initialParams?.chapter || '1';
+  const currentTranslation = searchParams.get('translation') || initialParams?.translation || 'BSB';
 
   useEffect(() => {
-    if (initStatus === 'ready' && searchParams.has('book')) {
+    if (initStatus === 'ready' && initialParams) {
       try {
-        localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ book, chapter, translationId: translationUrlParam }));
-      } catch (e) {
-        console.warn("Could not save location", e);
-      }
+        localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ 
+            book: currentBook, 
+            chapter: currentChapter, 
+            translationId: currentTranslation 
+        }));
+      } catch (e) {}
     }
-  }, [book, chapter, translationUrlParam, searchParams, initStatus]);
+  }, [currentBook, currentChapter, currentTranslation, initStatus, initialParams]);
   
-  if (initStatus !== 'ready') return <FullPageSkeleton />;
-  return <ChapterLoader key={queryKey} book={book} chapter={chapter} translationId={translationUrlParam} />
+  if (initStatus !== 'ready' || !initialParams) return <FullPageSkeleton />;
+
+  return (
+    <ChapterLoader 
+        key={`${currentBook}-${currentChapter}-${currentTranslation}`} 
+        book={currentBook} 
+        chapter={currentChapter} 
+        translationId={currentTranslation} 
+    />
+  );
 }
 
 export default function Home() {

@@ -149,9 +149,9 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
 
         const chapterContent: ChapterContentItem[] = [];
         
-        // Improved manual parsing for API.Bible HTML structure across different translations
+        // Flexible parsing for API.Bible HTML
         const markerDiv = contentHtml
-            .replace(/<(div|h[1-6]|p)\s+[^>]*class="(s\d*|para)"[^>]*>/gi, '###HEADING###')
+            .replace(/<(div|h[1-6]|p)\s+[^>]*class="(s\d*|para|mt|ms|mr|r|p)"[^>]*>/gi, '###HEADING###')
             .replace(/<span\s+[^>]*data-number="(\d+)"[^>]*>/gi, '###VERSE_$1###')
             .replace(/<span\s+[^>]*data-sid="[^"]+\.(\d+)"[^>]*>/gi, '###VERSE_$1###')
             .replace(/<span\s+[^>]*class="v"[^>]*data-sid="[^"]+\.(\d+)"[^>]*>/gi, '###VERSE_$1###')
@@ -164,17 +164,20 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
         for (let i = 1; i < sections.length; i += 2) {
             const marker = sections[i];
             const text = cleanApiText(sections[i+1]);
-            if (!text && marker !== 'HEADING') continue;
             
             if (marker === 'HEADING') {
-                if (text) chapterContent.push({ type: 'heading', content: [text] });
+                if (text && text.trim().length > 0) {
+                    chapterContent.push({ type: 'heading', content: [text.trim()] });
+                }
             } else if (marker.startsWith('VERSE_')) {
                 const num = parseInt(marker.split('_')[1], 10);
-                chapterContent.push({
-                    type: 'verse',
-                    number: num,
-                    content: collapseVerseContent([{ text: text || "" }])
-                });
+                if (text) {
+                    chapterContent.push({
+                        type: 'verse',
+                        number: num,
+                        content: collapseVerseContent([{ text: text }])
+                    });
+                }
             }
         }
 
@@ -260,10 +263,10 @@ export async function getChapter(book: string, chapter: string, translationId: s
   }
 
   // 2. Try primary Bolls version
-  const chapterData = await getChapterFromBolls(translationId, book, chapter);
+  const chapterData = await getChapterFromBolls(tid, book, chapter);
   if (chapterData) return chapterData;
   
-  // 3. Specific CSB -> HCSB fallback for Bolls (HCSB is often the dataset name for CSB)
+  // 3. Specific CSB -> HCSB fallback for Bolls (HCSB is the direct equivalent for CSB in this API)
   if (tid === 'CSB') {
     const hcsbData = await getChapterFromBolls('HCSB', book, chapter);
     if (hcsbData) return { ...hcsbData, translation: { name: 'Christian Standard Bible', id: 'CSB' } };
