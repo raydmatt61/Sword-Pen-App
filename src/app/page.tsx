@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'react';
@@ -21,7 +20,7 @@ import { getPageData } from '@/app/actions';
 import { Logo } from '@/components/logo';
 import { BookmarksSheet } from '@/components/bookmarks-sheet';
 import { JournalSheet } from '@/components/journal-sheet';
-import { Navigation as NavigateIcon, Loader2, AlertCircle } from 'lucide-react';
+import { Navigation as NavigateIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const LAST_LOCATION_KEY = 'verse-insights-last-location';
@@ -54,17 +53,18 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     return lastVerse.type === 'verse' ? (lastVerse.number || 0) : 0;
   }, [chapterData]);
 
+  // Handle translation fallback notifications
   useEffect(() => {
     if (!chapterData) return;
     
-    const requestedId = initialTranslationId.toUpperCase();
-    const returnedId = chapterData.translation.id.toUpperCase();
+    const requestedId = initialTranslationId.toUpperCase().trim();
+    const returnedId = chapterData.translation.id.toUpperCase().trim();
     
-    // Only toast if it's a real fallback (e.g., requested CSB and got BSB)
-    // Don't toast if it's an internal mapping (e.g., requested CSB and got HCSB, which is the direct text equivalent)
-    const isInternalMapping = (requestedId === 'CSB' && returnedId === 'HCSB');
+    // Whitelist known digital mappings to prevent false error notifications
+    const isDirectMatch = returnedId === requestedId;
+    const isKnownMapping = (requestedId === 'CSB' && returnedId === 'HCSB');
     
-    if (returnedId !== requestedId && !isInternalMapping) {
+    if (!isDirectMatch && !isKnownMapping) {
         toast({
             title: "Translation Fallback",
             description: `Displaying in ${returnedId} as ${requestedId} was unavailable.`,
@@ -261,7 +261,7 @@ function PageWithSearchParams() {
   if (initStatus === 'error') {
     return (
         <div className="fixed inset-0 flex flex-col items-center justify-center bg-background p-6">
-            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <Logo className="h-16 w-16 text-primary mb-4 opacity-20" />
             <h2 className="text-xl font-headline font-bold mb-2">Connection Error</h2>
             <p className="text-muted-foreground text-center max-w-md mb-6">
                 We encountered an issue loading the Bible text. Please check your internet connection and try again.

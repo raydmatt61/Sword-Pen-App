@@ -40,6 +40,7 @@ export function JournalSheet() {
             });
     }, [entries, searchQuery]);
 
+    // Move the conditional return to the bottom to comply with Rules of Hooks
     if (!user) return null;
 
     const handleNewEntry = () => {

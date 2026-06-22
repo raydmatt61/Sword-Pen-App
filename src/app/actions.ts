@@ -148,9 +148,7 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
 
         const chapterContent: ChapterContentItem[] = [];
         
-        // Refined parser for API.Bible HTML
-        // Standardizes block elements into HEADING markers and spans into VERSE markers
-        // Added support for poetry markers (q\d*) and direct verse number spans used in some editions like CSB
+        // Comprehensive HTML parser for API.Bible structures
         const markerDiv = contentHtml
             .replace(/<(div|h[1-6]|p)\s+[^>]*class="(s\d*|para|mt|ms|mr|r|p|s|m|q\d*)"[^>]*>/gi, '###HEADING###')
             .replace(/<span\s+[^>]*data-number="(\d+)"[^>]*>/gi, ' ###VERSE_$1### ')
@@ -270,14 +268,17 @@ export async function getChapter(book: string, chapter: string, translationId: s
   const chapterData = await getChapterFromBolls(tid, book, chapter);
   if (chapterData) return chapterData;
   
-  // 3. Specific CSB -> HCSB fallback for Bolls (HCSB is the direct equivalent for CSB in this API)
+  // 3. Specific CSB -> HCSB fallback for Bolls (HCSB is the direct digital equivalent for CSB in the Bain repo)
   if (tid === 'CSB') {
     const hcsbData = await getChapterFromBolls('HCSB', book, chapter);
     if (hcsbData) return { ...hcsbData, translation: { name: 'Christian Standard Bible', id: 'CSB' } };
     
+    // Last ditch check for CSB ID in Bolls
     const csbBollsData = await getChapterFromBolls('CSB', book, chapter);
-    if (csbBollsData) csbBollsData.translation.id = 'CSB';
-    if (csbBollsData) return csbBollsData;
+    if (csbBollsData) {
+        csbBollsData.translation.id = 'CSB';
+        return csbBollsData;
+    }
   }
   
   // 4. Ultimate fallback to BSB if everything else fails
