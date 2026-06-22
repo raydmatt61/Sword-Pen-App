@@ -55,10 +55,19 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   }, [chapterData]);
 
   useEffect(() => {
-    if (chapterData && chapterData.translation.id !== initialTranslationId.toUpperCase()) {
+    if (!chapterData) return;
+    
+    const requestedId = initialTranslationId.toUpperCase();
+    const returnedId = chapterData.translation.id.toUpperCase();
+    
+    // Only toast if it's a real fallback (e.g., requested CSB and got BSB)
+    // Don't toast if it's an internal mapping (e.g., requested CSB and got HCSB, which is the direct text equivalent)
+    const isInternalMapping = (requestedId === 'CSB' && returnedId === 'HCSB');
+    
+    if (returnedId !== requestedId && !isInternalMapping) {
         toast({
             title: "Translation Fallback",
-            description: `Displaying in ${chapterData.translation.id} as ${initialTranslationId.toUpperCase()} was unavailable.`,
+            description: `Displaying in ${returnedId} as ${requestedId} was unavailable.`,
         });
     }
   }, [chapterData, initialTranslationId, toast]);
@@ -189,13 +198,19 @@ function PageWithSearchParams() {
   
   const [initStatus, setInitStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [pageData, setPageData] = useState<{ books: Book[]; chapterData: BibleChapterResponse | null; crossRefs: CrossRefChapterResponse | null; } | null>(null);
-  
+  const [isMounted, setIsMounted] = useState(false);
+
   const book = searchParams.get('book') || 'John';
   const chapter = searchParams.get('chapter') || '1';
   const translation = searchParams.get('translation') || 'BSB';
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Restoration from localStorage
   useEffect(() => {
+    if (!isMounted) return;
     const hasParams = searchParams.has('book') || searchParams.has('chapter');
     if (!hasParams) {
       try {
@@ -209,11 +224,11 @@ function PageWithSearchParams() {
         }
       } catch (e) {}
     }
-  }, [searchParams, router, pathname]);
+  }, [isMounted, searchParams, router, pathname]);
 
   // Data fetching effect
   useEffect(() => {
-    let isMounted = true;
+    if (!isMounted) return;
     setInitStatus('loading');
 
     async function loadData() {
@@ -237,10 +252,9 @@ function PageWithSearchParams() {
       }
     }
     loadData();
-    return () => { isMounted = false; };
-  }, [book, chapter, translation]);
+  }, [isMounted, book, chapter, translation]);
 
-  if (initStatus === 'loading') {
+  if (!isMounted || initStatus === 'loading') {
     return <FullPageSkeleton />;
   }
 
@@ -270,14 +284,6 @@ function PageWithSearchParams() {
 }
 
 export default function Home() {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) return <FullPageSkeleton />;
-
   return (
     <Suspense fallback={<FullPageSkeleton />}>
       <PageWithSearchParams />

@@ -149,18 +149,18 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
 
         const chapterContent: ChapterContentItem[] = [];
         
-        // Robust parsing for API.Bible HTML
-        // Handles data-number, data-sid, and various class patterns for maximum compatibility
+        // Refined parser for API.Bible HTML
+        // Standardizes block elements into HEADING markers and spans into VERSE markers
         const markerDiv = contentHtml
-            .replace(/<(div|h[1-6]|p)\s+[^>]*class="(s\d*|para|mt|ms|mr|r|p|s)"[^>]*>/gi, '###HEADING###')
-            .replace(/<span\s+[^>]*data-number="(\d+)"[^>]*>/gi, '###VERSE_$1###')
-            .replace(/<span\s+[^>]*data-sid="[^"]+\.(\d+)"[^>]*>/gi, '###VERSE_$1###')
-            .replace(/<span\s+[^>]*class="v"[^>]*data-sid="[^"]+\.(\d+)"[^>]*>/gi, '###VERSE_$1###')
-            .replace(/<\/span>/gi, '')
-            .replace(/<\/div>|<\/h[1-6]>|<\/p>/gi, ' ');
+            .replace(/<(div|h[1-6]|p)\s+[^>]*class="(s\d*|para|mt|ms|mr|r|p|s|m)"[^>]*>/gi, '###HEADING###')
+            .replace(/<span\s+[^>]*data-number="(\d+)"[^>]*>/gi, ' ###VERSE_$1### ')
+            .replace(/<span\s+[^>]*data-sid="[^"]+\.(\d+)"[^>]*>/gi, ' ###VERSE_$1### ')
+            .replace(/<span\s+[^>]*class="v"[^>]*data-sid="[^"]+\.(\d+)"[^>]*>/gi, ' ###VERSE_$1### ')
+            .replace(/<\/span>/gi, ' ')
+            .replace(/<\/div>|<\/h[1-6]>|<\/p>/gi, ' ###BREAK### ');
             
         const cleanContent = markerDiv.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
-        const sections = cleanContent.split(/###(HEADING|VERSE_\d+)###/);
+        const sections = cleanContent.split(/###(HEADING|VERSE_\d+|BREAK)###/);
         
         for (let i = 1; i < sections.length; i += 2) {
             const marker = sections[i];
@@ -170,6 +170,8 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
                 if (text && text.trim().length > 0) {
                     chapterContent.push({ type: 'heading', content: [text.trim()] });
                 }
+            } else if (marker === 'BREAK') {
+                chapterContent.push({ type: 'line_break', content: [] });
             } else if (marker.startsWith('VERSE_')) {
                 const num = parseInt(marker.split('_')[1], 10);
                 if (text) {
@@ -271,6 +273,9 @@ export async function getChapter(book: string, chapter: string, translationId: s
   if (tid === 'CSB') {
     const hcsbData = await getChapterFromBolls('HCSB', book, chapter);
     if (hcsbData) return { ...hcsbData, translation: { name: 'Christian Standard Bible', id: 'CSB' } };
+    
+    const csbBollsData = await getChapterFromBolls('CSB', book, chapter);
+    if (csbBollsData) return csbBollsData;
   }
   
   // 4. Ultimate fallback to BSB if everything else fails
@@ -285,13 +290,17 @@ export async function getBooks(translationId: string): Promise<Book[]> {
 }
 
 export async function getPageData(book: string, chapter: string, translationId: string) {
-    const [booksData, chapterContent, crossRefData] = await Promise.all([
-        getBooks(translationId),
-        getChapter(book, chapter, translationId),
-        getCrossReferences(book, chapter),
-    ]);
-    if (!booksData || !chapterContent) return null;
-    return { books: booksData, chapterData: chapterContent, crossRefs: crossRefData };
+    try {
+        const [booksData, chapterContent, crossRefData] = await Promise.all([
+            getBooks(translationId),
+            getChapter(book, chapter, translationId),
+            getCrossReferences(book, chapter),
+        ]);
+        if (!booksData || !chapterContent) return null;
+        return { books: booksData, chapterData: chapterContent, crossRefs: crossRefData };
+    } catch (e) {
+        return null;
+    }
 }
 
 export async function getStrongsDetail(strongsNumber: string): Promise<StrongsDetail[] | null> {
