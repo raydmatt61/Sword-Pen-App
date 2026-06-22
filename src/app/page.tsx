@@ -24,6 +24,8 @@ import { JournalSheet } from '@/components/journal-sheet';
 import { Navigation as NavigateIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+const LAST_LOCATION_KEY = 'verse-insights-last-location';
+
 function PageContent({ books, chapterData, crossRefs, initialBook, initialChapter, initialTranslationId }: { 
     books: Book[], 
     chapterData: BibleChapterResponse | null, 
@@ -49,7 +51,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     const verses = chapterData.chapter.content.filter(item => item.type === 'verse');
     if (verses.length === 0) return 0;
     const lastVerse = verses[verses.length - 1];
-    return lastVerse.type === 'verse' ? lastVerse.number : 0;
+    return lastVerse.type === 'verse' ? (lastVerse.number || 0) : 0;
   }, [chapterData]);
 
   useEffect(() => {
@@ -180,53 +182,22 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   );
 }
 
-function ChapterLoader({ book, chapter, translationId }: { book: string; chapter: string; translationId: string; }) {
-  const [pageData, setPageData] = useState<{ books: Book[]; chapterData: BibleChapterResponse | null; crossRefs: CrossRefChapterResponse | null; } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const data = await getPageData(book, chapter, translationId);
-        if (isMounted) setPageData(data);
-      } catch (e) {
-        console.error("Failed to load chapter data", e);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    }
-    loadData();
-    return () => { isMounted = false; };
-  }, [book, chapter, translationId]);
-
-  if (isLoading || !pageData) {
-      return (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-              <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-40">Loading Scripture...</p>
-          </div>
-      );
-  }
-
-  return <PageContent books={pageData.books} chapterData={pageData.chapterData} crossRefs={pageData.crossRefs} initialBook={book} initialChapter={chapter} initialTranslationId={translationId} />;
-}
-
-const LAST_LOCATION_KEY = 'verse-insights-last-location';
-
 function PageWithSearchParams() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   
-  const [initStatus, setInitStatus] = useState<'loading' | 'ready'>('loading');
-  const [initialParams, setInitialParams] = useState<{ book: string; chapter: string; translation: string } | null>(null);
+  const [initStatus, setInitStatus] = useState<'initializing' | 'loading' | 'ready'>('initializing');
+  const [pageData, setPageData] = useState<{ books: Book[]; chapterData: BibleChapterResponse | null; crossRefs: CrossRefChapterResponse | null; } | null>(null);
+  
+  const currentBook = searchParams.get('book');
+  const currentChapter = searchParams.get('chapter');
+  const currentTranslation = searchParams.get('translation');
 
+  // Phase 1: Initialize routing from localStorage if needed
   useEffect(() => {
-    if (initStatus !== 'loading') return;
+    if (initStatus !== 'initializing') return;
 
-    // Determine target location: URL first, then localStorage, then default
     let book = searchParams.get('book');
     let chapter = searchParams.get('chapter');
     let translation = searchParams.get('translation');
@@ -240,46 +211,64 @@ function PageWithSearchParams() {
             book = loc.book;
             chapter = loc.chapter;
             translation = loc.translationId;
-            // Immediate replace if we're pulling from storage
             router.replace(`${pathname}?book=${book}&chapter=${chapter}&translation=${translation}`);
           }
         }
       } catch (e) {}
     }
 
-    setInitialParams({
-        book: book || 'John',
-        chapter: chapter || '1',
-        translation: translation || 'BSB'
-    });
-    setInitStatus('ready');
+    setInitStatus('loading');
   }, [initStatus, searchParams, router, pathname]);
 
-  // Save current location whenever it changes (after initialization)
-  const currentBook = searchParams.get('book') || initialParams?.book || 'John';
-  const currentChapter = searchParams.get('chapter') || initialParams?.chapter || '1';
-  const currentTranslation = searchParams.get('translation') || initialParams?.translation || 'BSB';
-
+  // Phase 2: Load data when params are stable
   useEffect(() => {
-    if (initStatus === 'ready' && initialParams) {
+    if (initStatus !== 'loading') return;
+
+    const book = searchParams.get('book') || 'John';
+    const chapter = searchParams.get('chapter') || '1';
+    const translation = searchParams.get('translation') || 'BSB';
+
+    let isMounted = true;
+    async function loadData() {
       try {
-        localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ 
-            book: currentBook, 
-            chapter: currentChapter, 
-            translationId: currentTranslation 
-        }));
-      } catch (e) {}
+        const data = await getPageData(book, chapter, translation);
+        if (isMounted) {
+          setPageData(data);
+          setInitStatus('ready');
+          // Save for next session
+          try {
+            localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ 
+                book, 
+                chapter, 
+                translationId: translation 
+            }));
+          } catch (e) {}
+        }
+      } catch (e) {
+        console.error("Failed to load page data", e);
+        if (isMounted) setInitStatus('ready');
+      }
     }
-  }, [currentBook, currentChapter, currentTranslation, initStatus, initialParams]);
-  
-  if (initStatus !== 'ready' || !initialParams) return <FullPageSkeleton />;
+    loadData();
+    return () => { isMounted = false; };
+  }, [initStatus, searchParams]);
+
+  if (initStatus !== 'ready' || !pageData) {
+    return <FullPageSkeleton />;
+  }
+
+  const book = searchParams.get('book') || 'John';
+  const chapter = searchParams.get('chapter') || '1';
+  const translation = searchParams.get('translation') || 'BSB';
 
   return (
-    <ChapterLoader 
-        key={`${currentBook}-${currentChapter}-${currentTranslation}`} 
-        book={currentBook} 
-        chapter={currentChapter} 
-        translationId={currentTranslation} 
+    <PageContent 
+      books={pageData.books} 
+      chapterData={pageData.chapterData} 
+      crossRefs={pageData.crossRefs} 
+      initialBook={book} 
+      initialChapter={chapter} 
+      initialTranslationId={translation} 
     />
   );
 }
