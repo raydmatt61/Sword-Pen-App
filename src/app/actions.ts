@@ -151,11 +151,13 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
         
         // Refined parser for API.Bible HTML
         // Standardizes block elements into HEADING markers and spans into VERSE markers
+        // Added support for poetry markers (q\d*) and direct verse number spans used in some editions like CSB
         const markerDiv = contentHtml
-            .replace(/<(div|h[1-6]|p)\s+[^>]*class="(s\d*|para|mt|ms|mr|r|p|s|m)"[^>]*>/gi, '###HEADING###')
+            .replace(/<(div|h[1-6]|p)\s+[^>]*class="(s\d*|para|mt|ms|mr|r|p|s|m|q\d*)"[^>]*>/gi, '###HEADING###')
             .replace(/<span\s+[^>]*data-number="(\d+)"[^>]*>/gi, ' ###VERSE_$1### ')
             .replace(/<span\s+[^>]*data-sid="[^"]+\.(\d+)"[^>]*>/gi, ' ###VERSE_$1### ')
             .replace(/<span\s+[^>]*class="v"[^>]*data-sid="[^"]+\.(\d+)"[^>]*>/gi, ' ###VERSE_$1### ')
+            .replace(/<span\s+[^>]*class="v"[^>]*>(\d+)<\/span>/gi, ' ###VERSE_$1### ')
             .replace(/<\/span>/gi, ' ')
             .replace(/<\/div>|<\/h[1-6]>|<\/p>/gi, ' ###BREAK### ');
             
@@ -275,6 +277,7 @@ export async function getChapter(book: string, chapter: string, translationId: s
     if (hcsbData) return { ...hcsbData, translation: { name: 'Christian Standard Bible', id: 'CSB' } };
     
     const csbBollsData = await getChapterFromBolls('CSB', book, chapter);
+    if (csbBollsData) csbBollsData.translation.id = 'CSB';
     if (csbBollsData) return csbBollsData;
   }
   

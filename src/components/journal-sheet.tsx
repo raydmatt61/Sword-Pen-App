@@ -26,8 +26,6 @@ export function JournalSheet() {
     const [editingEntry, setEditingEntry] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
-    if (!user) return null;
-
     const filteredEntries = useMemo(() => {
         if (!entries) return [];
         return entries
@@ -42,6 +40,8 @@ export function JournalSheet() {
                 return dateB - dateA;
             });
     }, [entries, searchQuery]);
+
+    if (!user) return null;
 
     const handleNewEntry = () => {
         const currentRef = chapterData ? `${chapterData.book.name} ${chapterData.chapter.number}` : "";
