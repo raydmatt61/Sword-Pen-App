@@ -21,7 +21,7 @@ import { getPageData } from '@/app/actions';
 import { Logo } from '@/components/logo';
 import { BookmarksSheet } from '@/components/bookmarks-sheet';
 import { JournalSheet } from '@/components/journal-sheet';
-import { Navigation as NavigateIcon, Loader2 } from 'lucide-react';
+import { Navigation as NavigateIcon, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const LAST_LOCATION_KEY = 'verse-insights-last-location';
@@ -187,85 +187,81 @@ function PageWithSearchParams() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   
-  const [initStatus, setInitStatus] = useState<'initializing' | 'loading' | 'ready'>('initializing');
+  const [initStatus, setInitStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [pageData, setPageData] = useState<{ books: Book[]; chapterData: BibleChapterResponse | null; crossRefs: CrossRefChapterResponse | null; } | null>(null);
   
-  const currentBook = searchParams.get('book');
-  const currentChapter = searchParams.get('chapter');
-  const currentTranslation = searchParams.get('translation');
+  const book = searchParams.get('book') || 'John';
+  const chapter = searchParams.get('chapter') || '1';
+  const translation = searchParams.get('translation') || 'BSB';
 
-  // Phase 1: Initialize routing from localStorage if needed
+  // Restoration from localStorage
   useEffect(() => {
-    if (initStatus !== 'initializing') return;
-
-    let book = searchParams.get('book');
-    let chapter = searchParams.get('chapter');
-    let translation = searchParams.get('translation');
-
-    if (!book) {
+    const hasParams = searchParams.has('book') || searchParams.has('chapter');
+    if (!hasParams) {
       try {
         const savedRaw = localStorage.getItem(LAST_LOCATION_KEY);
         if (savedRaw) {
           const loc = JSON.parse(savedRaw);
           if (loc?.book) {
-            book = loc.book;
-            chapter = loc.chapter;
-            translation = loc.translationId;
-            router.replace(`${pathname}?book=${book}&chapter=${chapter}&translation=${translation}`);
+            router.replace(`${pathname}?book=${loc.book}&chapter=${loc.chapter}&translation=${loc.translationId}`);
+            return;
           }
         }
       } catch (e) {}
     }
+  }, [searchParams, router, pathname]);
 
-    setInitStatus('loading');
-  }, [initStatus, searchParams, router, pathname]);
-
-  // Phase 2: Load data when params are stable
+  // Data fetching effect
   useEffect(() => {
-    if (initStatus !== 'loading') return;
-
-    const book = searchParams.get('book') || 'John';
-    const chapter = searchParams.get('chapter') || '1';
-    const translation = searchParams.get('translation') || 'BSB';
-
     let isMounted = true;
+    setInitStatus('loading');
+
     async function loadData() {
       try {
         const data = await getPageData(book, chapter, translation);
         if (isMounted) {
-          setPageData(data);
-          setInitStatus('ready');
-          // Save for next session
-          try {
-            localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ 
-                book, 
-                chapter, 
-                translationId: translation 
-            }));
-          } catch (e) {}
+          if (data) {
+            setPageData(data);
+            setInitStatus('ready');
+            // Save location
+            try {
+              localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ book, chapter, translationId: translation }));
+            } catch (e) {}
+          } else {
+            setInitStatus('error');
+          }
         }
       } catch (e) {
         console.error("Failed to load page data", e);
-        if (isMounted) setInitStatus('ready');
+        if (isMounted) setInitStatus('error');
       }
     }
     loadData();
     return () => { isMounted = false; };
-  }, [initStatus, searchParams]);
+  }, [book, chapter, translation]);
 
-  if (initStatus !== 'ready' || !pageData) {
+  if (initStatus === 'loading') {
     return <FullPageSkeleton />;
   }
 
-  const book = searchParams.get('book') || 'John';
-  const chapter = searchParams.get('chapter') || '1';
-  const translation = searchParams.get('translation') || 'BSB';
+  if (initStatus === 'error') {
+    return (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-background p-6">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <h2 className="text-xl font-headline font-bold mb-2">Connection Error</h2>
+            <p className="text-muted-foreground text-center max-w-md mb-6">
+                We encountered an issue loading the Bible text. Please check your internet connection and try again.
+            </p>
+            <Button onClick={() => window.location.reload()}>Retry Loading</Button>
+        </div>
+    );
+  }
 
   return (
     <PageContent 
-      books={pageData.books} 
-      chapterData={pageData.chapterData} 
-      crossRefs={pageData.crossRefs} 
+      books={pageData?.books || []} 
+      chapterData={pageData?.chapterData || null} 
+      crossRefs={pageData?.crossRefs || null} 
       initialBook={book} 
       initialChapter={chapter} 
       initialTranslationId={translation} 

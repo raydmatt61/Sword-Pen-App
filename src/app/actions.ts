@@ -149,8 +149,8 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
 
         const chapterContent: ChapterContentItem[] = [];
         
-        // Flexible parsing for API.Bible HTML
-        // Targets data-number, data-sid, and various class patterns for maximum compatibility
+        // Robust parsing for API.Bible HTML
+        // Handles data-number, data-sid, and various class patterns for maximum compatibility
         const markerDiv = contentHtml
             .replace(/<(div|h[1-6]|p)\s+[^>]*class="(s\d*|para|mt|ms|mr|r|p|s)"[^>]*>/gi, '###HEADING###')
             .replace(/<span\s+[^>]*data-number="(\d+)"[^>]*>/gi, '###VERSE_$1###')
@@ -290,6 +290,7 @@ export async function getPageData(book: string, chapter: string, translationId: 
         getChapter(book, chapter, translationId),
         getCrossReferences(book, chapter),
     ]);
+    if (!booksData || !chapterContent) return null;
     return { books: booksData, chapterData: chapterContent, crossRefs: crossRefData };
 }
 
