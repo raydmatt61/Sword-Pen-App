@@ -298,12 +298,13 @@ function VerseComponent({
     };
 
     const textClasses = cn(
-        "font-body tracking-tight",
-        fontSize === 'sm' && 'text-[15px] md:text-sm leading-[1.8]',
-        fontSize === 'md' && 'text-[18px] md:text-base leading-[1.8]',
-        fontSize === 'lg' && 'text-[21px] md:text-lg leading-[1.8]',
-        fontSize === 'xl' && 'text-[24px] md:text-xl leading-[1.8]',
-        fontSize === '2xl' && 'text-[28px] md:text-2xl leading-[1.8]',
+        "font-body tracking-tight transition-all duration-300",
+        !showVerseIcons ? "leading-[2.0]" : "leading-[1.8]",
+        fontSize === 'sm' && 'text-[15px] md:text-sm',
+        fontSize === 'md' && 'text-[18px] md:text-base',
+        fontSize === 'lg' && 'text-[21px] md:text-lg',
+        fontSize === 'xl' && 'text-[24px] md:text-xl',
+        fontSize === '2xl' && 'text-[28px] md:text-2xl',
     );
 
     return (
@@ -448,6 +449,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         setActiveAnnotation,
         fontSize,
         chapterAnnotations,
+        showVerseIcons
     } = useAnnotationContext();
     const { user } = useUser();
     const isMobile = useIsMobile();
@@ -573,12 +575,13 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     };
     
     const textClasses = cn(
-        "font-body tracking-tight",
-        fontSize === 'sm' && 'text-[15px] md:text-sm leading-[1.8]',
-        fontSize === 'md' && 'text-[18px] md:text-base leading-[1.8]',
-        fontSize === 'lg' && 'text-[21px] md:text-lg leading-[1.8]',
-        fontSize === 'xl' && 'text-[24px] md:text-xl leading-[1.8]',
-        fontSize === '2xl' && 'text-[28px] md:text-2xl leading-[1.8]',
+        "font-body tracking-tight transition-all duration-300",
+        !showVerseIcons ? "leading-[2.0]" : "leading-[1.8]",
+        fontSize === 'sm' && 'text-[15px] md:text-sm',
+        fontSize === 'md' && 'text-[18px] md:text-base',
+        fontSize === 'lg' && 'text-[21px] md:text-lg',
+        fontSize === 'xl' && 'text-[24px] md:text-xl',
+        fontSize === '2xl' && 'text-[28px] md:text-2xl',
     );
 
     const notesLink = useMemo(() => {
