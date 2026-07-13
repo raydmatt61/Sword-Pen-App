@@ -8,7 +8,7 @@ import { Textarea } from './ui/textarea';
 import { Eraser, Download, Type, PenTool, Loader2, Save, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudySession } from '@/contexts/study-session-context';
-import { ScrollArea, ScrollBar } from './ui/scroll-area';
+import { ScrollArea } from './ui/scroll-area';
 
 export function StudySidePanel() {
     const { scratchpad, setScratchpad, sketchpad, setSketchpad, isLoading, isSaving, persistNow } = useStudySession();
@@ -26,18 +26,19 @@ export function StudySidePanel() {
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: true });
         if (!ctx) return;
 
         const dpr = window.devicePixelRatio || 1;
-        const width = 350; // Sidebar width approx
-        const height = 2000; // Large scrollable height
+        const width = 350; 
+        const height = 2000; 
         
         canvas.width = width * dpr;
         canvas.height = height * dpr;
         ctx.scale(dpr, dpr);
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+        ctx.imageSmoothingEnabled = true;
 
         if (sketchpad) {
             const img = new Image();
@@ -52,7 +53,6 @@ export function StudySidePanel() {
     }, [sketchpad, isLoading]);
 
     const startDrawing = (e: React.PointerEvent) => {
-        // Track pointers for multi-touch (panning)
         activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
         if (activePointers.current.size > 1) {
@@ -63,6 +63,7 @@ export function StudySidePanel() {
 
         setIsDrawing(true);
         isPanning.current = false;
+        
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (!canvas || !ctx) return;
@@ -79,13 +80,10 @@ export function StudySidePanel() {
         const prevPos = activePointers.current.get(e.pointerId);
         activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-        // Handle Panning with 2 fingers
         if (isPanning.current || activePointers.current.size > 1) {
             if (prevPos && scrollContainerRef.current) {
-                const dx = e.clientX - prevPos.x;
                 const dy = e.clientY - prevPos.y;
                 scrollContainerRef.current.scrollTop -= dy;
-                scrollContainerRef.current.scrollLeft -= dx;
             }
             return;
         }
@@ -99,19 +97,24 @@ export function StudySidePanel() {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Tool settings
         ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+        
         if (isEraser) {
             ctx.lineWidth = 20;
         } else if (e.pointerType === 'pen' && e.pressure > 0) {
-            ctx.lineWidth = 1 + (e.pressure * 6);
+            // Optimized thickness for stylus (S-Pen / Apple Pencil)
+            ctx.lineWidth = 0.5 + (e.pressure * 2.5);
         } else {
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1.2;
         }
 
         ctx.strokeStyle = color;
         ctx.lineTo(x, y);
         ctx.stroke();
+        
+        // Start a new path from the current point to keep lines smooth
+        ctx.beginPath();
+        ctx.moveTo(x, y);
     };
 
     const stopDrawing = (e: React.PointerEvent) => {
@@ -133,8 +136,7 @@ export function StudySidePanel() {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (!canvas || !ctx) return;
-        const rect = canvas.getBoundingClientRect();
-        ctx.clearRect(0, 0, rect.width, rect.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         setSketchpad('');
     };
 
@@ -219,7 +221,8 @@ export function StudySidePanel() {
                                     onPointerUp={stopDrawing}
                                     onPointerLeave={stopDrawing}
                                     onPointerCancel={stopDrawing}
-                                    className="w-full h-full"
+                                    className="w-full h-full block"
+                                    style={{ touchAction: 'none' }}
                                 />
                             </div>
                         </div>
