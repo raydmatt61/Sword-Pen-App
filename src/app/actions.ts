@@ -1,15 +1,12 @@
+
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
 import { BIBLE_BOOKS_ABBR, TRANSLATIONS, STATIC_BOOKS, BIBLE_ABBR_BOOKS, BIBLE_BOOK_NUMBERS, API_BIBLE_IDS_SEARCH, COPYRIGHTS, NOTES_LINKS } from "@/lib/bible";
-import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, StrongsDetail } from "@/lib/bible";
+import type { GenerateVerseInsightsInput, GenerateVerseInsightsOutput, SearchResultVerse, BibleChapterResponse, Book, CrossRefChapterResponse, ChapterContentItem, VerseContent, FormattedText, VerseFootnoteReference, StrongsDetail } from "@/lib/bible";
 
 const API_KEY = "n-eVwCRekVC0-oL2B6_s3";
 
-/**
- * Cleans API text by replacing HTML tags with spaces to prevent word joining,
- * then collapsing multiple spaces and trimming.
- */
 function cleanApiText(text: string): string {
     if (typeof text !== 'string' || !text) return "";
     return text
@@ -21,9 +18,6 @@ function cleanApiText(text: string): string {
         .trim();
 }
 
-/**
- * Collapses and cleans verse content segments to ensure proper spacing.
- */
 function collapseVerseContent(content: VerseContent[]): VerseContent[] {
     if (!content || content.length === 0) return [];
 
@@ -147,9 +141,7 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
         if (!contentHtml) return null;
 
         const chapterContent: ChapterContentItem[] = [];
-        
-        // Comprehensive HTML parser for API.Bible structures
-        const markerDiv = contentHtml
+        const cleanHtml = contentHtml
             .replace(/<(div|h[1-6]|p)\s+[^>]*class="(s\d*|para|mt|ms|mr|r|p|s|m|q\d*)"[^>]*>/gi, '###HEADING###')
             .replace(/<span\s+[^>]*data-number="(\d+)"[^>]*>/gi, ' ###VERSE_$1### ')
             .replace(/<span\s+[^>]*data-sid="[^"]+\.(\d+)"[^>]*>/gi, ' ###VERSE_$1### ')
@@ -158,7 +150,7 @@ async function getChapterFromApiBible(translationId: string, book: string, chapt
             .replace(/<\/span>/gi, ' ')
             .replace(/<\/div>|<\/h[1-6]>|<\/p>/gi, ' ###BREAK### ');
             
-        const cleanContent = markerDiv.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+        const cleanContent = cleanHtml.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
         const sections = cleanContent.split(/###(HEADING|VERSE_\d+|BREAK)###/);
         
         for (let i = 1; i < sections.length; i += 2) {
@@ -243,37 +235,21 @@ async function getChapterFromBolls(translationId: string, book: string, chapter:
     }
 }
 
-async function getCrossReferences(book: string, chapter: string): Promise<CrossRefChapterResponse | null> {
-  const CanonicalBook = BIBLE_BOOKS_ABBR[book] || book;
-  try {
-    const response = await fetch(`https://bible.helloao.org/api/d/open-cross-ref/${CanonicalBook}/${chapter}.json`);
-    if (response.ok) {
-        const text = await response.text();
-        return text ? JSON.parse(text) : null;
-    }
-  } catch (error) {}
-  return null;
-}
-
 export async function getChapter(book: string, chapter: string, translationId: string, isFallbackAttempt = false): Promise<BibleChapterResponse | null> {
   const tid = translationId.toUpperCase();
   
-  // 1. Try API.Bible for mapped translations (like CSB, NKJV, NLT)
   if (API_BIBLE_IDS_SEARCH[tid]) {
       const apiData = await getChapterFromApiBible(translationId, book, chapter);
       if (apiData) return apiData;
   }
 
-  // 2. Try primary Bolls version
   const chapterData = await getChapterFromBolls(tid, book, chapter);
   if (chapterData) return chapterData;
   
-  // 3. Specific CSB -> HCSB fallback for Bolls (HCSB is the direct digital equivalent for CSB in the Bain repo)
   if (tid === 'CSB') {
     const hcsbData = await getChapterFromBolls('HCSB', book, chapter);
     if (hcsbData) return { ...hcsbData, translation: { name: 'Christian Standard Bible', id: 'CSB' } };
     
-    // Last ditch check for CSB ID in Bolls
     const csbBollsData = await getChapterFromBolls('CSB', book, chapter);
     if (csbBollsData) {
         csbBollsData.translation.id = 'CSB';
@@ -281,7 +257,6 @@ export async function getChapter(book: string, chapter: string, translationId: s
     }
   }
   
-  // 4. Ultimate fallback to BSB if everything else fails
   if (!isFallbackAttempt && tid !== 'BSB') {
     return await getChapter(book, chapter, 'BSB', true);
   }
@@ -294,10 +269,11 @@ export async function getBooks(translationId: string): Promise<Book[]> {
 
 export async function getPageData(book: string, chapter: string, translationId: string) {
     try {
+        const canonicalBookAbbr = BIBLE_BOOKS_ABBR[book] || book;
         const [booksData, chapterContent, crossRefData] = await Promise.all([
             getBooks(translationId),
             getChapter(book, chapter, translationId),
-            getCrossReferences(book, chapter),
+            fetch(`https://bible.helloao.org/api/d/open-cross-ref/${canonicalBookAbbr}/${chapter}.json`).then(r => r.ok ? r.json() : null).catch(() => null)
         ]);
         if (!booksData || !chapterContent) return null;
         return { books: booksData, chapterData: chapterContent, crossRefs: crossRefData };

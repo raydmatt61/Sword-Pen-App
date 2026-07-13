@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'react';
@@ -65,7 +66,6 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     const returnedChapter = String(chapterData.chapter.number);
 
     // Only show fallback notifications if the data matches our current chapter request
-    // to prevent false error notifications during navigation.
     const isResponseForCurrentRequest = requestedBookAbbr === returnedBookAbbr && requestedChapter === returnedChapter;
     if (!isResponseForCurrentRequest) return;
     
@@ -217,7 +217,7 @@ function PageWithSearchParams() {
     setIsMounted(true);
   }, []);
 
-  // Restoration from localStorage
+  // Restoration logic
   useEffect(() => {
     if (!isMounted) return;
     const hasParams = searchParams.has('book') || searchParams.has('chapter');
@@ -247,7 +247,6 @@ function PageWithSearchParams() {
           if (data) {
             setPageData(data);
             setInitStatus('ready');
-            // Save location
             try {
               localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ book, chapter, translationId: translation }));
             } catch (e) {}
