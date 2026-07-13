@@ -5,12 +5,12 @@ import { useState, useRef, useEffect } from 'react';
 import { SidebarHeader, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from './ui/sidebar';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
-import { Eraser, Download, Type, PenTool, Loader2 } from 'lucide-react';
+import { Eraser, Download, Type, PenTool, Loader2, Save, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudySession } from '@/contexts/study-session-context';
 
 export function StudySidePanel() {
-    const { scratchpad, setScratchpad, sketchpad, setSketchpad, isLoading } = useStudySession();
+    const { scratchpad, setScratchpad, sketchpad, setSketchpad, isLoading, isSaving, persistNow } = useStudySession();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [color, setColor] = useState('#1c1917');
@@ -68,7 +68,6 @@ export function StudySidePanel() {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Support pressure sensitivity for pens/styluses
         if (e.pointerType === 'pen' && e.pressure > 0) {
             ctx.lineWidth = 1 + e.pressure * 6;
         } else {
@@ -115,7 +114,22 @@ export function StudySidePanel() {
                         <PenTool className="h-5 w-5" />
                         Study Workspace
                     </h3>
-                    {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                    <div className="flex items-center gap-2">
+                        {isSaving ? (
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 text-amber-600 rounded-full border border-amber-200">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Saving</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-200">
+                                <CheckCircle2 className="h-3 w-3" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Synced</span>
+                            </div>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={persistNow} title="Force Save">
+                            <Save className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Chapter-Linked Session Data</p>
             </SidebarHeader>
