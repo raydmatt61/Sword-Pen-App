@@ -220,7 +220,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
                   </div>
                 </SidebarInset>
                 
-                <Sidebar side="right" collapsible="none" className="hidden lg:landscape:block w-[350px] shrink-0 border-l">
+                <Sidebar side="right" collapsible="none" className="hidden md:landscape:block w-[350px] shrink-0 border-l">
                   <StudySidePanel />
                 </Sidebar>
               </div>

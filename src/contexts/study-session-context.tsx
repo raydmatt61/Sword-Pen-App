@@ -40,6 +40,7 @@ export const StudySessionProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: sessionData, isLoading } = useDoc<StudySession>(sessionDocRef);
     const lastSessionId = useRef<string | null>(null);
+    const saveTimeout = useRef<NodeJS.Timeout | null>(null);
 
     // Synchronize local state when the cloud data changes or session switches
     useEffect(() => {
@@ -81,15 +82,21 @@ export const StudySessionProvider = ({ children }: { children: ReactNode }) => {
 
     const setScratchpad = useCallback((text: string) => {
         setScratchpadState(text);
-        persistSession({ scratchpad: text });
+        if (saveTimeout.current) clearTimeout(saveTimeout.current);
+        saveTimeout.current = setTimeout(() => {
+            persistSession({ scratchpad: text });
+        }, 1000);
     }, [persistSession]);
 
     const setSketchpad = useCallback((dataUrl: string) => {
         setSketchpadState(dataUrl);
+        // Sketchpad saves on pointer up (stroke end) so it doesn't need heavy debouncing,
+        // but we ensure it's persisted immediately.
         persistSession({ sketchpad: dataUrl });
     }, [persistSession]);
 
     const persistNow = useCallback(() => {
+        if (saveTimeout.current) clearTimeout(saveTimeout.current);
         persistSession({ scratchpad, sketchpad });
     }, [persistSession, scratchpad, sketchpad]);
 
