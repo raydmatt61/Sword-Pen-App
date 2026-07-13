@@ -15,8 +15,6 @@ import {
 } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from './ui/input';
-import { Switch } from './ui/switch';
-import { Label } from './ui/label';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
@@ -98,11 +96,7 @@ export function SettingsDialog() {
         try {
             const content = e.target?.result as string;
             const importedData = JSON.parse(content);
-
-            if (!Array.isArray(importedData)) {
-                throw new Error("Invalid format: Expected an array of annotations.");
-            }
-
+            if (!Array.isArray(importedData)) throw new Error("Invalid format.");
             let count = 0;
             for (const item of importedData) {
                 const { id, ...rest } = item;
@@ -115,18 +109,9 @@ export function SettingsDialog() {
                 });
                 count++;
             }
-
-            toast({
-                title: "Import Successful",
-                description: `Successfully imported ${count} annotations.`,
-            });
+            toast({ title: "Import Successful", description: `Successfully imported ${count} annotations.` });
         } catch (error) {
-            console.error(error);
-            toast({
-                variant: "destructive",
-                title: "Import Failed",
-                description: "Could not parse the JSON file. Please ensure it is a valid export.",
-            });
+            toast({ variant: "destructive", title: "Import Failed", description: "Could not parse JSON file." });
         } finally {
             setIsImporting(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -154,10 +139,10 @@ export function SettingsDialog() {
         </DialogHeader>
 
         <Tabs defaultValue="share" className="w-full mt-2">
-            <TabsList className="grid w-full grid-cols-3 h-12 bg-stone-100 p-1 rounded-xl">
-                <TabsTrigger value="share" className="text-xs md:text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Share</TabsTrigger>
-                <TabsTrigger value="data" className="text-xs md:text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Data</TabsTrigger>
-                <TabsTrigger value="branding" className="text-xs md:text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Logo</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 h-12 bg-stone-200/50 p-1 rounded-xl">
+                <TabsTrigger value="share" className="text-xs md:text-sm font-bold text-stone-600 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Share</TabsTrigger>
+                <TabsTrigger value="data" className="text-xs md:text-sm font-bold text-stone-600 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Data</TabsTrigger>
+                <TabsTrigger value="branding" className="text-xs md:text-sm font-bold text-stone-600 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Logo</TabsTrigger>
             </TabsList>
             
             <TabsContent value="share" className="space-y-6 pt-6">

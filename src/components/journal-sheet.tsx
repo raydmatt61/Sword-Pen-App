@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import { BookOpen, Calendar as CalendarIcon, Plus, Trash2, Edit2, Search, Heart, Quote } from 'lucide-react';
 import { Button } from './ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from './ui/sheet';
 import { useJournal } from '@/contexts/journal-context';
 import { ScrollArea } from './ui/scroll-area';
 import { useUser } from '@/firebase';
@@ -13,7 +13,6 @@ import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { format, isValid } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 
 export function JournalSheet() {

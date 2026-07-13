@@ -28,9 +28,6 @@ export const StudySessionProvider = ({ children }: { children: ReactNode }) => {
     const [sketchpad, setSketchpadState] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
-    // Track original data to prevent overwriting local state while typing
-    const lastSessionId = useRef<string | null>(null);
-
     const sessionId = useMemo(() => {
         if (!chapterData) return null;
         return `${chapterData.book.id}-${chapterData.chapter.number}`;
@@ -42,27 +39,33 @@ export const StudySessionProvider = ({ children }: { children: ReactNode }) => {
     }, [user, firestore, sessionId]);
 
     const { data: sessionData, isLoading } = useDoc<StudySession>(sessionDocRef);
+    const lastSessionId = useRef<string | null>(null);
 
-    // Reset or Load session when chapter changes
+    // Explicitly handle data loading when the session changes or when data arrives
     useEffect(() => {
+        if (!sessionId) return;
+        
+        // If chapter changed, immediately clear local state to avoid seeing old data
         if (sessionId !== lastSessionId.current) {
             lastSessionId.current = sessionId;
+            setScratchpadState('');
+            setSketchpadState('');
+        }
+        
+        // Once data is no longer loading, sync if we found something
+        if (!isLoading && sessionId === lastSessionId.current) {
             if (sessionData) {
                 setScratchpadState(sessionData.scratchpad || '');
                 setSketchpadState(sessionData.sketchpad || '');
-            } else {
-                setScratchpadState('');
-                setSketchpadState('');
             }
         }
-    }, [sessionId, sessionData]);
+    }, [sessionId, sessionData, isLoading]);
 
     const persistSession = useCallback((updates: Partial<StudySession>) => {
         if (!user || !firestore || !sessionId) return;
         setIsSaving(true);
         const ref = doc(firestore, `users/${user.uid}/studySessions/${sessionId}`);
         
-        // Use a small delay to simulate network/processing and provide visual feedback
         setDocumentNonBlocking(ref, {
             ...updates,
             id: sessionId,
@@ -72,8 +75,7 @@ export const StudySessionProvider = ({ children }: { children: ReactNode }) => {
             updatedAt: serverTimestamp(),
         }, { merge: true });
         
-        // Mocking saving state duration for UI certainty
-        setTimeout(() => setIsSaving(false), 800);
+        setTimeout(() => setIsSaving(false), 1200);
     }, [user, firestore, sessionId, chapterData]);
 
     const setScratchpad = useCallback((text: string) => {
