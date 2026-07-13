@@ -10,13 +10,87 @@ import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useBookmarkContext } from '@/contexts/bookmark-context';
 import { useUser } from '@/firebase';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Bookmark as BookmarkIcon, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Bookmark as BookmarkIcon, ExternalLink, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
 import { BIBLE_ABBR_BOOKS } from '@/lib/bible';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getChapter } from '@/app/actions';
+
+function CrossReferenceItem({ cr, translationId, navigate }: { cr: CrossRef, translationId: string, navigate: any }) {
+    const [preview, setPreview] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const refString = `${cr.book} ${cr.chapter}:${cr.verse}${cr.endVerse ? `-${cr.endVerse}` : ''}`;
+
+    const handlePreview = async () => {
+        if (preview) return;
+        setIsLoading(true);
+        try {
+            const data = await getChapter(cr.book, String(cr.chapter), translationId);
+            if (data && data.chapter.content) {
+                const verseItem = data.chapter.content.find(item => item.type === 'verse' && item.number === cr.verse);
+                if (verseItem && verseItem.type === 'verse') {
+                    const text = verseItem.content
+                        .map(c => typeof c === 'string' ? c : (c as FormattedText).text)
+                        .join(' ');
+                    setPreview(text);
+                } else {
+                    setPreview("Verse text not found in the chapter data.");
+                }
+            }
+        } catch (e) {
+            setPreview("Failed to load preview.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center gap-4 py-1">
+            <Popover onOpenChange={(open) => open && handlePreview()}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="link"
+                        className="p-0 h-auto font-body text-primary hover:underline"
+                    >
+                        {refString}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4 shadow-xl border-stone-200">
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <h4 className="font-headline font-bold text-sm text-primary">{refString} ({translationId})</h4>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 text-[10px] uppercase tracking-widest font-bold"
+                                onClick={() => navigate({ book: BIBLE_ABBR_BOOKS[cr.book] || cr.book, chapter: String(cr.chapter), verse: String(cr.verse) })}
+                            >
+                                Go to Verse
+                            </Button>
+                        </div>
+                        <ScrollArea className="max-h-32">
+                            {isLoading ? (
+                                <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+                            ) : (
+                                <p className="font-body text-sm leading-relaxed text-stone-700 italic">
+                                    {preview || "No preview available."}
+                                </p>
+                            )}
+                        </ScrollArea>
+                    </div>
+                </PopoverContent>
+            </Popover>
+            <div className="flex-1 h-px bg-border/50"></div>
+            <span className="text-[10px] font-bold text-muted-foreground opacity-50 uppercase tracking-widest">
+                Score: {(cr.score ?? 0).toFixed(2)}
+            </span>
+        </div>
+    );
+}
 
 function VerseComponent({
     verse,
@@ -212,13 +286,6 @@ function VerseComponent({
         document.dispatchEvent(new Event('selectionchange'));
     };
 
-    const handleRefClick = (bookAbbr: string, chapter: number) => {
-        const bookName = BIBLE_ABBR_BOOKS[bookAbbr];
-        if (bookName) {
-            navigate({ book: bookName, chapter: String(chapter) });
-        }
-    };
-
     const textClasses = cn(
         "font-body tracking-tight",
         fontSize === 'sm' && 'text-[15px] md:text-sm leading-[1.8]',
@@ -280,22 +347,14 @@ function VerseComponent({
                             </DialogHeader>
                             <ScrollArea className="py-4 text-sm max-h-[60vh] -mx-6">
                                 <div className="px-6 space-y-2">
-                                    {crossReferences.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((cr, index) => {
-                                        const refString = `${cr.book} ${cr.chapter}:${cr.verse}${cr.endVerse ? `-${cr.endVerse}` : ''}`;
-                                        return (
-                                            <div key={index} className="flex items-center gap-4">
-                                                <Button
-                                                    variant="link"
-                                                    className="p-0 h-auto font-body"
-                                                    onClick={() => handleRefClick(cr.book, cr.chapter)}
-                                                >
-                                                    {refString}
-                                                </Button>
-                                                <div className="flex-1 h-px bg-border"></div>
-                                                <span className="text-xs text-muted-foreground">{(cr.score ?? 0).toFixed(2)}</span>
-                                            </div>
-                                        );
-                                    })}
+                                    {crossReferences.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((cr, index) => (
+                                        <CrossReferenceItem 
+                                            key={index} 
+                                            cr={cr} 
+                                            translationId={chapterData.translation.id}
+                                            navigate={navigate}
+                                        />
+                                    ))}
                                 </div>
                             </ScrollArea>
                         </DialogContent>

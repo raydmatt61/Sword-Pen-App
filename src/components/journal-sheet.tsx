@@ -40,7 +40,6 @@ export function JournalSheet() {
             });
     }, [entries, searchQuery]);
 
-    // Move the conditional return to the bottom to comply with Rules of Hooks
     if (!user) return null;
 
     const handleNewEntry = () => {
@@ -110,7 +109,6 @@ export function JournalSheet() {
                                 </div>
                             ) : (
                                 filteredEntries.map((e) => {
-                                    // Robust date parsing to prevent client-side crashes on corrupted dates.
                                     const dateObj = new Date(e.date + (e.date.includes('T') ? '' : 'T12:00:00'));
                                     const displayDate = isValid(dateObj) ? format(dateObj, 'MMMM d, yyyy') : 'Unknown Date';
 
