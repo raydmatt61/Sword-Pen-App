@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 
 export function JournalSheet() {
+    // Hooks must be called unconditionally at the top level
     const { entries, addOrUpdateEntry, deleteEntry } = useJournal();
     const { chapterData } = useAnnotationContext();
     const { user } = useUser();
@@ -41,6 +42,7 @@ export function JournalSheet() {
             });
     }, [entries, searchQuery]);
 
+    // Conditional return for authentication occurs AFTER all hooks
     if (!user) return null;
 
     const handleNewEntry = () => {

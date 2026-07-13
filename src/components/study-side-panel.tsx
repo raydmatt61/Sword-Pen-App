@@ -15,7 +15,7 @@ export function StudySidePanel() {
     const [isDrawing, setIsDrawing] = useState(false);
     const [color, setColor] = useState('#1c1917');
 
-    // Initialize Canvas
+    // Initialize Canvas with Pointer Events and restore saved drawing
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -31,7 +31,7 @@ export function StudySidePanel() {
         ctx.lineJoin = 'round';
         ctx.lineWidth = 2;
 
-        // Load saved sketch
+        // Restore saved sketch from state
         if (sketchpad) {
             const img = new Image();
             img.onload = () => {
@@ -68,9 +68,9 @@ export function StudySidePanel() {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Modern pen/stylus features: use pressure if available
+        // Support pressure sensitivity for pens/styluses
         if (e.pointerType === 'pen' && e.pressure > 0) {
-            ctx.lineWidth = 1 + e.pressure * 5;
+            ctx.lineWidth = 1 + e.pressure * 6;
         } else {
             ctx.lineWidth = 2;
         }
@@ -81,6 +81,7 @@ export function StudySidePanel() {
     };
 
     const stopDrawing = () => {
+        if (!isDrawing) return;
         setIsDrawing(false);
         const canvas = canvasRef.current;
         if (canvas) {

@@ -22,6 +22,7 @@ export const StudySessionProvider = ({ children }: { children: ReactNode }) => {
     const firestore = useFirestore();
     const { chapterData } = useAnnotationContext();
 
+    // The sessionId is uniquely tied to the book and chapter
     const sessionId = useMemo(() => {
         if (!chapterData) return null;
         return `${chapterData.book.id}-${chapterData.chapter.number}`;
@@ -37,7 +38,7 @@ export const StudySessionProvider = ({ children }: { children: ReactNode }) => {
     const [scratchpad, setScratchpadState] = useState('');
     const [sketchpad, setSketchpadState] = useState('');
 
-    // Load initial data
+    // Synchronize local state with Firestore when the chapter (session) changes
     useEffect(() => {
         if (sessionData) {
             setScratchpadState(sessionData.scratchpad || '');

@@ -9,7 +9,9 @@ const API_KEY = "n-eVwCRekVC0-oL2B6_s3";
 
 function cleanApiText(text: string): string {
     if (typeof text !== 'string' || !text) return "";
+    // Inject spaces before tags to prevent word joining
     return text
+        .replace(/<([^>]+)>/g, ' <$1> ') 
         .replace(/<(br|p|div|span|h[1-6]|b|i|i|em|strong|sup|sub|a)[^>]*>/gi, ' ')
         .replace(/<\/(br|p|div|span|h[1-6]|b|i|i|em|strong|sup|sub|a)>/gi, ' ')
         .replace(/<[^>]+>/g, ' ')
