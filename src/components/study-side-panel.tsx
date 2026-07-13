@@ -8,6 +8,7 @@ import { Textarea } from './ui/textarea';
 import { Eraser, Download, Type, PenTool, Loader2, Save, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudySession } from '@/contexts/study-session-context';
+import { ScrollArea, ScrollBar } from './ui/scroll-area';
 
 export function StudySidePanel() {
     const { scratchpad, setScratchpad, sketchpad, setSketchpad, isLoading, isSaving, persistNow } = useStudySession();
@@ -24,6 +25,8 @@ export function StudySidePanel() {
 
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
+        
+        // Ensure canvas backing store matches the CSS size (which is now 2000px height)
         canvas.width = rect.width * dpr;
         canvas.height = rect.height * dpr;
         ctx.scale(dpr, dpr);
@@ -51,6 +54,7 @@ export function StudySidePanel() {
         if (!canvas || !ctx) return;
 
         const rect = canvas.getBoundingClientRect();
+        // clientX/Y - rect.left/top gives the coordinate relative to the top-left of the 2000px canvas
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
@@ -135,8 +139,8 @@ export function StudySidePanel() {
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Chapter-Linked Session Data</p>
             </SidebarHeader>
 
-            <SidebarContent>
-                <SidebarGroup>
+            <SidebarContent className="flex flex-col flex-1 overflow-hidden">
+                <SidebarGroup className="shrink-0">
                     <SidebarGroupLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-2 flex items-center gap-2">
                         <Type className="h-3.5 w-3.5" />
                         Scratchpad
@@ -144,7 +148,7 @@ export function StudySidePanel() {
                     <SidebarGroupContent>
                         <Textarea
                             placeholder="Jot down quick thoughts here..."
-                            className="font-body text-sm bg-white border-stone-200 min-h-[200px] resize-none focus-visible:ring-primary/20"
+                            className="font-body text-sm bg-white border-stone-200 min-h-[150px] resize-none focus-visible:ring-primary/20"
                             value={scratchpad}
                             onChange={(e) => setScratchpad(e.target.value)}
                         />
@@ -155,7 +159,7 @@ export function StudySidePanel() {
                     <SidebarGroupLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-2 flex items-center justify-between w-full">
                         <span className="flex items-center gap-2">
                             <PenTool className="h-3.5 w-3.5" />
-                            Sketchpad (Stylus Enabled)
+                            Sketchpad (Scrollable / Stylus)
                         </span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={clearCanvas} title="Clear">
@@ -166,25 +170,33 @@ export function StudySidePanel() {
                             </Button>
                         </div>
                     </SidebarGroupLabel>
-                    <SidebarGroupContent className="flex-1 relative bg-white border border-stone-200 rounded-lg overflow-hidden">
-                        <canvas
-                            ref={canvasRef}
-                            onPointerDown={startDrawing}
-                            onPointerMove={draw}
-                            onPointerUp={stopDrawing}
-                            onPointerLeave={stopDrawing}
-                            onPointerCancel={stopDrawing}
-                            className="w-full h-full cursor-crosshair touch-none"
-                            style={{ touchAction: 'none' }}
-                        />
-                        <div className="absolute bottom-2 left-2 flex gap-1 bg-stone-100/80 backdrop-blur-sm p-1 rounded-full border shadow-sm">
-                            {['#1c1917', '#991b1b', '#15803d', '#1d4ed8'].map((c) => (
+                    <SidebarGroupContent className="flex-1 relative bg-white border border-stone-200 rounded-lg overflow-hidden flex flex-col">
+                        <ScrollArea className="flex-1 w-full h-full">
+                            <div className="relative w-full h-[2000px] bg-white">
+                                <canvas
+                                    ref={canvasRef}
+                                    onPointerDown={startDrawing}
+                                    onPointerMove={draw}
+                                    onPointerUp={stopDrawing}
+                                    onPointerLeave={stopDrawing}
+                                    onPointerCancel={stopDrawing}
+                                    className="w-full h-full cursor-crosshair touch-none"
+                                    style={{ touchAction: 'none' }}
+                                />
+                            </div>
+                            <ScrollBar orientation="vertical" />
+                            <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
+                        
+                        {/* Fixed Toolbar over the scrollable area */}
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-white/90 backdrop-blur-md p-2 rounded-full border shadow-lg z-10">
+                            {['#1c1917', '#991b1b', '#15803d', '#1d4ed8', '#7e22ce'].map((c) => (
                                 <button
                                     key={c}
                                     onClick={() => setColor(c)}
                                     className={cn(
-                                        "h-5 w-5 rounded-full border border-white transition-transform hover:scale-110",
-                                        color === c && "ring-2 ring-primary ring-offset-1"
+                                        "h-6 w-6 rounded-full border-2 border-transparent transition-all hover:scale-125",
+                                        color === c && "border-white ring-2 ring-primary scale-110"
                                     )}
                                     style={{ backgroundColor: c }}
                                 />
