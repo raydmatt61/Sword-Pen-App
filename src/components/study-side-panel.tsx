@@ -28,6 +28,7 @@ export function StudySidePanel() {
         canvas.height = rect.height * dpr;
         ctx.scale(dpr, dpr);
         ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.lineWidth = 2;
 
         // Load saved sketch
@@ -43,55 +44,56 @@ export function StudySidePanel() {
         }
     }, [sketchpad]);
 
-    const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    const startDrawing = (e: React.PointerEvent) => {
         setIsDrawing(true);
-        draw(e);
-    };
-
-    const stopDrawing = () => {
-        setIsDrawing(false);
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
-        ctx?.beginPath();
+        if (!canvas || !ctx) return;
 
-        // Save on stroke end
-        if (canvas) {
-            setSketchpad(canvas.toDataURL());
-        }
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
     };
 
-    const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    const draw = (e: React.PointerEvent) => {
         if (!isDrawing) return;
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (!canvas || !ctx) return;
 
         const rect = canvas.getBoundingClientRect();
-        let clientX, clientY;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-        if ('touches' in e) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
+        // Modern pen/stylus features: use pressure if available
+        if (e.pointerType === 'pen' && e.pressure > 0) {
+            ctx.lineWidth = 1 + e.pressure * 5;
         } else {
-            clientX = e.clientX;
-            clientY = e.clientY;
+            ctx.lineWidth = 2;
         }
-
-        const x = clientX - rect.left;
-        const y = clientY - rect.top;
 
         ctx.strokeStyle = color;
         ctx.lineTo(x, y);
         ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x, y);
+    };
+
+    const stopDrawing = () => {
+        setIsDrawing(false);
+        const canvas = canvasRef.current;
+        if (canvas) {
+            setSketchpad(canvas.toDataURL());
+        }
     };
 
     const clearCanvas = () => {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (!canvas || !ctx) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const rect = canvas.getBoundingClientRect();
+        ctx.clearRect(0, 0, rect.width, rect.height);
         setSketchpad('');
     };
 
@@ -137,7 +139,7 @@ export function StudySidePanel() {
                     <SidebarGroupLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-2 flex items-center justify-between w-full">
                         <span className="flex items-center gap-2">
                             <PenTool className="h-3.5 w-3.5" />
-                            Sketchpad
+                            Sketchpad (Stylus Enabled)
                         </span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={clearCanvas} title="Clear">
@@ -151,13 +153,13 @@ export function StudySidePanel() {
                     <SidebarGroupContent className="flex-1 relative bg-white border border-stone-200 rounded-lg overflow-hidden">
                         <canvas
                             ref={canvasRef}
-                            onMouseDown={startDrawing}
-                            onMouseUp={stopDrawing}
-                            onMouseMove={draw}
-                            onTouchStart={startDrawing}
-                            onTouchEnd={stopDrawing}
-                            onTouchMove={draw}
+                            onPointerDown={startDrawing}
+                            onPointerMove={draw}
+                            onPointerUp={stopDrawing}
+                            onPointerLeave={stopDrawing}
+                            onPointerCancel={stopDrawing}
                             className="w-full h-full cursor-crosshair touch-none"
+                            style={{ touchAction: 'none' }}
                         />
                         <div className="absolute bottom-2 left-2 flex gap-1 bg-stone-100/80 backdrop-blur-sm p-1 rounded-full border shadow-sm">
                             {['#1c1917', '#991b1b', '#15803d', '#1d4ed8'].map((c) => (
