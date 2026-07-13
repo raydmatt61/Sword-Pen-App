@@ -145,19 +145,19 @@ export function SettingsDialog() {
           <span className="sr-only">Settings</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-w-[95vw] rounded-2xl">
+      <DialogContent className="sm:max-w-md max-w-[95vw] rounded-2xl border-stone-200 shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="font-headline text-2xl">App Settings</DialogTitle>
+          <DialogTitle className="font-headline text-2xl text-primary">App Settings</DialogTitle>
           <DialogDescription className="text-base">
             Manage your study data and display options.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="share" className="w-full mt-2">
-            <TabsList className="grid w-full grid-cols-3 h-12">
-                <TabsTrigger value="share" className="text-xs md:text-sm">Share</TabsTrigger>
-                <TabsTrigger value="data" className="text-xs md:text-sm">Data</TabsTrigger>
-                <TabsTrigger value="branding" className="text-xs md:text-sm">Logo</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 h-12 bg-stone-100 p-1 rounded-xl">
+                <TabsTrigger value="share" className="text-xs md:text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Share</TabsTrigger>
+                <TabsTrigger value="data" className="text-xs md:text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Data</TabsTrigger>
+                <TabsTrigger value="branding" className="text-xs md:text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Logo</TabsTrigger>
             </TabsList>
             
             <TabsContent value="share" className="space-y-6 pt-6">
@@ -168,24 +168,24 @@ export function SettingsDialog() {
                     <div className="w-full space-y-2">
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] text-center">Application URL</p>
                         <div className="flex gap-2">
-                            <Input readOnly value={url} className="bg-muted/50 font-mono text-[11px] h-12" />
-                            <Button size="icon" variant="outline" onClick={handleCopyLink} className="shrink-0 h-12 w-12"><Copy className="h-5 w-5" /></Button>
+                            <Input readOnly value={url} className="bg-white border-stone-200 font-mono text-[11px] h-12" />
+                            <Button size="icon" variant="outline" onClick={handleCopyLink} className="shrink-0 h-12 w-12 border-stone-200"><Copy className="h-5 w-5" /></Button>
                         </div>
                     </div>
                 </div>
             </TabsContent>
 
             <TabsContent value="data" className="space-y-4 pt-4">
-                <div className="grid gap-3 border-2 p-5 rounded-2xl bg-muted/20 border-stone-100">
-                    <h4 className="font-bold text-base flex items-center gap-2"><FileJson className="h-5 w-5" /> Study Portability</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">Export your annotations for backup or import a saved session to another device.</p>
+                <div className="grid gap-3 border-2 p-5 rounded-2xl bg-stone-50 border-stone-100">
+                    <h4 className="font-bold text-base flex items-center gap-2 text-primary"><FileJson className="h-5 w-5" /> Study Portability</h4>
+                    <p className="text-sm text-stone-600 leading-relaxed">Export your annotations for backup or import a saved session to another device.</p>
                     <div className="flex flex-col gap-3 mt-2">
-                        <Button variant="secondary" size="lg" onClick={handleExport} disabled={!allUserAnnotations || allUserAnnotations.length === 0} className="h-12 text-base font-bold">
+                        <Button variant="secondary" size="lg" onClick={handleExport} disabled={!allUserAnnotations || allUserAnnotations.length === 0} className="h-12 text-base font-bold bg-white border border-stone-200 hover:bg-stone-100">
                             <Download className="mr-2 h-5 w-5" /> Export (.json)
                         </Button>
                         <div className="relative">
                             <input type="file" accept=".json" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                            <Button variant="outline" size="lg" className="w-full h-12 text-base font-bold border-stone-200" onClick={handleImportClick} disabled={isImporting || !user}>
+                            <Button variant="outline" size="lg" className="w-full h-12 text-base font-bold border-stone-200 bg-white" onClick={handleImportClick} disabled={isImporting || !user}>
                                 {isImporting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Upload className="mr-2 h-5 w-5" />}
                                 Import (.json)
                             </Button>
@@ -195,13 +195,13 @@ export function SettingsDialog() {
             </TabsContent>
 
             <TabsContent value="branding" className="pt-4 space-y-4">
-                <div className="flex flex-col items-center justify-center border-2 rounded-2xl p-8 bg-muted/20 border-stone-100 gap-6">
+                <div className="flex flex-col items-center justify-center border-2 rounded-2xl p-8 bg-stone-50 border-stone-100 gap-6">
                     <Logo className="h-24 w-24 text-primary" />
                     <div className="text-center">
-                        <h4 className="font-headline font-bold text-xl">The Sword and Pen</h4>
-                        <p className="text-sm text-muted-foreground mt-1 uppercase tracking-widest">Digital Scripture Study Tool</p>
+                        <h4 className="font-headline font-bold text-xl text-primary">The Sword and Pen</h4>
+                        <p className="text-sm text-stone-500 mt-1 uppercase tracking-widest">Digital Scripture Study Tool</p>
                     </div>
-                    <Button variant="outline" size="lg" onClick={handleDownloadLogo} className="h-12 font-bold border-stone-200 hover:bg-primary hover:text-primary-foreground transition-all">
+                    <Button variant="outline" size="lg" onClick={handleDownloadLogo} className="h-12 font-bold border-stone-200 bg-white hover:bg-primary hover:text-primary-foreground transition-all">
                         <Download className="mr-2 h-5 w-5" /> Download Logo (SVG)
                     </Button>
                 </div>
