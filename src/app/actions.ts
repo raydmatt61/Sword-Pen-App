@@ -269,11 +269,11 @@ export async function getBooks(translationId: string): Promise<Book[]> {
 
 export async function getPageData(book: string, chapter: string, translationId: string) {
     try {
-        const canonicalBookAbbr = BIBLE_BOOKS_ABBR[book] || book;
+        const canonicalBook = BIBLE_BOOKS_ABBR[book] || book;
         const [booksData, chapterContent, crossRefData] = await Promise.all([
             getBooks(translationId),
             getChapter(book, chapter, translationId),
-            fetch(`https://bible.helloao.org/api/d/open-cross-ref/${canonicalBookAbbr}/${chapter}.json`).then(r => r.ok ? r.json() : null).catch(() => null)
+            fetch(`https://bible.helloao.org/api/d/open-cross-ref/${canonicalBook}/${chapter}.json`).then(r => r.ok ? r.json() : null).catch(() => null)
         ]);
         if (!booksData || !chapterContent) return null;
         return { books: booksData, chapterData: chapterContent, crossRefs: crossRefData };
