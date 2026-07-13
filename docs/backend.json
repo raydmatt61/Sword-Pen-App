@@ -191,6 +191,46 @@
         "userId",
         "date"
       ]
+    },
+    "StudySession": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StudySession",
+      "type": "object",
+      "description": "Represents a chapter-specific study session including scratchpad and sketchpad.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier (usually book-chapter)."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User."
+        },
+        "book": {
+          "type": "string"
+        },
+        "chapter": {
+          "type": "number"
+        },
+        "scratchpad": {
+          "type": "string",
+          "description": "Text content of the scratchpad."
+        },
+        "sketchpad": {
+          "type": "string",
+          "description": "Base64 data URL of the drawing canvas."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "book",
+        "chapter"
+      ]
     }
   },
   "auth": {
@@ -276,8 +316,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/studySessions/{sessionId}",
+        "definition": {
+          "entityName": "StudySession",
+          "schema": {
+            "$ref": "#/backend/entities/StudySession"
+          },
+          "description": "Stores chapter-specific workspace data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "sessionId",
+              "description": "The session ID (book-chapter)."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "Data is isolated per user to ensure privacy and simple path-based security rules. Annotations, Bookmarks, and Journal entries are stored as subcollections of the user document."
+    "reasoning": "Data is isolated per user to ensure privacy. Chapter-level study sessions are stored in a dedicated subcollection."
   }
 }

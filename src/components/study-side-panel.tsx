@@ -5,22 +5,23 @@ import { useState, useRef, useEffect } from 'react';
 import { SidebarHeader, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from './ui/sidebar';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
-import { Eraser, Download, Type, PenTool } from 'lucide-react';
+import { Eraser, Download, Type, PenTool, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStudySession } from '@/contexts/study-session-context';
 
 export function StudySidePanel() {
-    const [scratchpad, setScratchpad] = useState('');
+    const { scratchpad, setScratchpad, sketchpad, setSketchpad, isLoading } = useStudySession();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [color, setColor] = useState('#1c1917');
 
+    // Initialize Canvas
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Set high res for canvas
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width * dpr;
@@ -28,7 +29,19 @@ export function StudySidePanel() {
         ctx.scale(dpr, dpr);
         ctx.lineCap = 'round';
         ctx.lineWidth = 2;
-    }, []);
+
+        // Load saved sketch
+        if (sketchpad) {
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, rect.width, rect.height);
+                ctx.drawImage(img, 0, 0, rect.width, rect.height);
+            };
+            img.src = sketchpad;
+        } else {
+            ctx.clearRect(0, 0, rect.width, rect.height);
+        }
+    }, [sketchpad]);
 
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
         setIsDrawing(true);
@@ -40,6 +53,11 @@ export function StudySidePanel() {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         ctx?.beginPath();
+
+        // Save on stroke end
+        if (canvas) {
+            setSketchpad(canvas.toDataURL());
+        }
     };
 
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
@@ -74,6 +92,7 @@ export function StudySidePanel() {
         const ctx = canvas?.getContext('2d');
         if (!canvas || !ctx) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setSketchpad('');
     };
 
     const downloadCanvas = () => {
@@ -87,12 +106,15 @@ export function StudySidePanel() {
 
     return (
         <div className="flex flex-col h-full bg-stone-50 border-l border-stone-200">
-            <SidebarHeader className="p-4 border-b bg-stone-100">
-                <h3 className="font-headline font-bold text-lg text-primary flex items-center gap-2">
-                    <PenTool className="h-5 w-5" />
-                    Study Workspace
-                </h3>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Tablet-Only Enhanced Mode</p>
+            <SidebarHeader className="p-4 border-b bg-stone-100 relative">
+                <div className="flex items-center justify-between">
+                    <h3 className="font-headline font-bold text-lg text-primary flex items-center gap-2">
+                        <PenTool className="h-5 w-5" />
+                        Study Workspace
+                    </h3>
+                    {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Chapter-Linked Session Data</p>
             </SidebarHeader>
 
             <SidebarContent>

@@ -15,6 +15,7 @@ import { AnnotationWrapper } from '@/components/annotation-wrapper';
 import { AnnotationProvider, useAnnotationContext } from '@/contexts/annotation-context';
 import { BookmarkProvider } from '@/contexts/bookmark-context';
 import { JournalProvider } from '@/contexts/journal-context';
+import { StudySessionProvider } from '@/contexts/study-session-context';
 import { useToast } from '@/hooks/use-toast';
 import { SearchDialog } from '@/components/search-dialog';
 import { getPageData } from '@/app/actions';
@@ -137,89 +138,91 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     <AnnotationProvider key={providerKey} chapterData={chapterData}>
       <BookmarkProvider>
         <JournalProvider>
-          <SidebarProvider defaultOpen={true}>
-            <div className="flex h-screen w-full bg-background overflow-hidden">
-              <SidebarInset className="flex flex-col flex-1 overflow-hidden">
-                <header className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-                  <div className="flex items-center gap-3">
-                    <Logo className="h-8 w-8 text-primary" />
-                    <div className="flex flex-col">
-                      <h1 className="text-xl md:text-2xl font-headline font-bold text-primary leading-none">
-                        The Sword and Pen
-                      </h1>
-                      <p className="text-[10px] text-muted-foreground mt-1 font-headline uppercase tracking-widest">
-                        Digital Scripture Study Tool
-                      </p>
+          <StudySessionProvider>
+            <SidebarProvider defaultOpen={true}>
+              <div className="flex h-screen w-full bg-background overflow-hidden">
+                <SidebarInset className="flex flex-col flex-1 overflow-hidden">
+                  <header className="flex items-center justify-between border-b px-4 py-3 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <Logo className="h-8 w-8 text-primary" />
+                      <div className="flex flex-col">
+                        <h1 className="text-xl md:text-2xl font-headline font-bold text-primary leading-none">
+                          The Sword and Pen
+                        </h1>
+                        <p className="text-[10px] text-muted-foreground mt-1 font-headline uppercase tracking-widest">
+                          Digital Scripture Study Tool
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 md:gap-2">
+                      <SearchDialog translationId={initialTranslationId} navigate={navigate} />
+                      <VerseIconToggle />
+                      <BookmarksSheet navigate={navigate} />
+                      <JournalSheet />
+                      <FontSizeAdjuster />
+                      <SettingsDialog />
+                      <AuthManager />
+                    </div>
+                  </header>
+
+                  <div className="sticky top-0 z-20 flex flex-row items-center gap-4 bg-background/90 backdrop-blur-md px-4 py-2 border-b shrink-0 shadow-sm">
+                    <div className="flex-[3] min-w-0">
+                      <VerseSelector
+                          defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslationId }}
+                          books={books}
+                          translations={TRANSLATIONS}
+                          onChapterNav={handleChapterNav}
+                          navigate={navigate}
+                          maxVerses={maxVerses}
+                      />
+                    </div>
+                    <div className="flex-[2] min-w-0">
+                      {chapterData && <AnnotationWrapper />}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 md:gap-2">
-                    <SearchDialog translationId={initialTranslationId} navigate={navigate} />
-                    <VerseIconToggle />
-                    <BookmarksSheet navigate={navigate} />
-                    <JournalSheet />
-                    <FontSizeAdjuster />
-                    <SettingsDialog />
-                    <AuthManager />
-                  </div>
-                </header>
 
-                <div className="sticky top-0 z-20 flex flex-row items-center gap-4 bg-background/90 backdrop-blur-md px-4 py-2 border-b shrink-0 shadow-sm">
-                  <div className="flex-[3] min-w-0">
-                    <VerseSelector
-                        defaultValues={{ book: initialBook, chapter: initialChapter, translation: initialTranslationId }}
-                        books={books}
-                        translations={TRANSLATIONS}
+                  <div ref={contentRef} className="flex-grow overflow-y-auto p-4 md:p-8">
+                    {!chapterData ? (
+                      <Card className="mt-6 max-w-lg mx-auto border-none shadow-none bg-stone-100">
+                        <CardContent className="pt-12 pb-12">
+                          <p className="text-center text-muted-foreground text-sm font-headline uppercase tracking-widest">
+                            Could not load chapter <span className="font-bold text-primary">{initialBook} {initialChapter}</span>.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <BibleDisplay
+                        chapterData={chapterData}
+                        crossRefs={crossRefs}
                         onChapterNav={handleChapterNav}
                         navigate={navigate}
-                        maxVerses={maxVerses}
-                    />
+                        currentChapter={parseInt(initialChapter)}
+                        maxChapters={maxChapters}
+                      />
+                    )}
                   </div>
-                  <div className="flex-[2] min-w-0">
-                    {chapterData && <AnnotationWrapper />}
+
+                  <div className="fixed bottom-6 left-6 z-50 flex items-center gap-3 md:hidden">
+                    <Button 
+                      variant="secondary" 
+                      size="icon" 
+                      className="h-12 w-12 rounded-full shadow-xl bg-primary text-primary-foreground hover:scale-110 transition-transform"
+                      onClick={() => {
+                        const event = new CustomEvent('open-mobile-nav');
+                        document.dispatchEvent(event);
+                      }}
+                    >
+                      <NavigateIcon className="h-6 w-6" />
+                    </Button>
                   </div>
-                </div>
-
-                <div ref={contentRef} className="flex-grow overflow-y-auto p-4 md:p-8">
-                  {!chapterData ? (
-                    <Card className="mt-6 max-w-lg mx-auto border-none shadow-none bg-stone-100">
-                      <CardContent className="pt-12 pb-12">
-                        <p className="text-center text-muted-foreground text-sm font-headline uppercase tracking-widest">
-                          Could not load chapter <span className="font-bold text-primary">{initialBook} {initialChapter}</span>.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <BibleDisplay
-                      chapterData={chapterData}
-                      crossRefs={crossRefs}
-                      onChapterNav={handleChapterNav}
-                      navigate={navigate}
-                      currentChapter={parseInt(initialChapter)}
-                      maxChapters={maxChapters}
-                    />
-                  )}
-                </div>
-
-                <div className="fixed bottom-6 left-6 z-50 flex items-center gap-3 md:hidden">
-                  <Button 
-                    variant="secondary" 
-                    size="icon" 
-                    className="h-12 w-12 rounded-full shadow-xl bg-primary text-primary-foreground hover:scale-110 transition-transform"
-                    onClick={() => {
-                      const event = new CustomEvent('open-mobile-nav');
-                      document.dispatchEvent(event);
-                    }}
-                  >
-                    <NavigateIcon className="h-6 w-6" />
-                  </Button>
-                </div>
-              </SidebarInset>
-              
-              <Sidebar side="right" collapsible="none" className="hidden lg:landscape:block w-[350px] shrink-0 border-l">
-                <StudySidePanel />
-              </Sidebar>
-            </div>
-          </SidebarProvider>
+                </SidebarInset>
+                
+                <Sidebar side="right" collapsible="none" className="hidden lg:landscape:block w-[350px] shrink-0 border-l">
+                  <StudySidePanel />
+                </Sidebar>
+              </div>
+            </SidebarProvider>
+          </StudySessionProvider>
         </JournalProvider>
       </BookmarkProvider>
     </AnnotationProvider>

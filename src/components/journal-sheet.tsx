@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import { BookOpen, Calendar as CalendarIcon, Plus, Trash2, Edit2, Search, Heart, Quote } from 'lucide-react';
 import { Button } from './ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from './ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { useJournal } from '@/contexts/journal-context';
 import { ScrollArea } from './ui/scroll-area';
 import { useUser } from '@/firebase';
@@ -41,7 +41,6 @@ export function JournalSheet() {
             });
     }, [entries, searchQuery]);
 
-    // Conditional return MUST happen after all hooks
     if (!user) return null;
 
     const handleNewEntry = () => {
