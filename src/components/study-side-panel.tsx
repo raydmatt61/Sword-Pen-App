@@ -42,7 +42,7 @@ export function StudySidePanel() {
         } else {
             ctx.clearRect(0, 0, rect.width, rect.height);
         }
-    }, [sketchpad]);
+    }, [sketchpad, isLoading]);
 
     const startDrawing = (e: React.PointerEvent) => {
         setIsDrawing(true);
@@ -68,8 +68,9 @@ export function StudySidePanel() {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
+        // Support pressure sensitivity for pen pointers
         if (e.pointerType === 'pen' && e.pressure > 0) {
-            ctx.lineWidth = 1 + e.pressure * 6;
+            ctx.lineWidth = 1 + (e.pressure * 6);
         } else {
             ctx.lineWidth = 2;
         }
