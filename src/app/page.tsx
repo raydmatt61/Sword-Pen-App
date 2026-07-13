@@ -12,7 +12,7 @@ import { AuthManager } from '@/components/auth-manager';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { FontSizeAdjuster } from '@/components/font-size-adjuster';
 import { AnnotationWrapper } from '@/components/annotation-wrapper';
-import { AnnotationProvider } from '@/contexts/annotation-context';
+import { AnnotationProvider, useAnnotationContext } from '@/contexts/annotation-context';
 import { BookmarkProvider } from '@/contexts/bookmark-context';
 import { JournalProvider } from '@/contexts/journal-context';
 import { useToast } from '@/hooks/use-toast';
@@ -21,10 +21,26 @@ import { getPageData } from '@/app/actions';
 import { Logo } from '@/components/logo';
 import { BookmarksSheet } from '@/components/bookmarks-sheet';
 import { JournalSheet } from '@/components/journal-sheet';
-import { Navigation as NavigateIcon } from 'lucide-react';
+import { Navigation as NavigateIcon, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const LAST_LOCATION_KEY = 'verse-insights-last-location';
+
+function VerseIconToggle() {
+    const { showVerseIcons, setShowVerseIcons } = useAnnotationContext();
+    return (
+        <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-10 w-10 md:h-9 md:w-9"
+            onClick={() => setShowVerseIcons(!showVerseIcons)}
+            title={showVerseIcons ? "Hide Study Icons" : "Show Study Icons"}
+        >
+            {showVerseIcons ? <Eye className="h-5 w-5 md:h-4 md:w-4" /> : <EyeOff className="h-5 w-5 md:h-4 md:w-4" />}
+            <span className="sr-only">Toggle Verse Icons</span>
+        </Button>
+    );
+}
 
 function PageContent({ books, chapterData, crossRefs, initialBook, initialChapter, initialTranslationId }: { 
     books: Book[], 
@@ -41,6 +57,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const verseParam = searchParams.get('verse');
+  const lastNotificationRef = useRef("");
 
   const maxChapters = useMemo(() => {
     return books.find(b => b.commonName === initialBook)?.numberOfChapters || 1;
@@ -54,7 +71,6 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     return lastVerse.type === 'verse' ? (lastVerse.number || 0) : 0;
   }, [chapterData]);
 
-  // Handle translation fallback notifications
   useEffect(() => {
     if (!chapterData) return;
     
@@ -65,11 +81,13 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     const requestedChapter = String(initialChapter);
     const returnedChapter = String(chapterData.chapter.number);
 
-    // Only show fallback notifications if the data matches our current chapter request
     const isResponseForCurrentRequest = requestedBookAbbr === returnedBookAbbr && requestedChapter === returnedChapter;
     if (!isResponseForCurrentRequest) return;
+
+    const notificationKey = `${requestedBookAbbr}-${requestedChapter}-${requestedId}-${returnedId}`;
+    if (lastNotificationRef.current === notificationKey) return;
+    lastNotificationRef.current = notificationKey;
     
-    // Whitelist known digital mappings to prevent false error notifications
     const isDirectMatch = returnedId === requestedId;
     const isKnownMapping = (requestedId === 'CSB' && returnedId === 'HCSB') || (requestedId === 'HCSB' && returnedId === 'CSB');
     
@@ -132,6 +150,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
               </div>
               <div className="flex items-center gap-1 md:gap-2">
                 <SearchDialog translationId={initialTranslationId} navigate={navigate} />
+                <VerseIconToggle />
                 <BookmarksSheet navigate={navigate} />
                 <JournalSheet />
                 <FontSizeAdjuster />
@@ -217,7 +236,6 @@ function PageWithSearchParams() {
     setIsMounted(true);
   }, []);
 
-  // Restoration logic
   useEffect(() => {
     if (!isMounted) return;
     const hasParams = searchParams.has('book') || searchParams.has('chapter');
@@ -235,7 +253,6 @@ function PageWithSearchParams() {
     }
   }, [isMounted, searchParams, router, pathname]);
 
-  // Data fetching effect
   useEffect(() => {
     if (!isMounted) return;
     setInitStatus('loading');
