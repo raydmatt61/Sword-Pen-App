@@ -71,7 +71,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     
     // Whitelist known digital mappings to prevent false error notifications
     const isDirectMatch = returnedId === requestedId;
-    const isKnownMapping = (requestedId === 'CSB' && returnedId === 'HCSB');
+    const isKnownMapping = (requestedId === 'CSB' && returnedId === 'HCSB') || (requestedId === 'HCSB' && returnedId === 'CSB');
     
     if (!isDirectMatch && !isKnownMapping) {
         toast({

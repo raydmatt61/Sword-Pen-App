@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode.react';
 import { Button } from './ui/button';
-import { Settings, Download, Upload, Loader2, Share2, Database, Copy, Palette, FileJson } from 'lucide-react';
+import { Settings, Download, Upload, Loader2, Copy, Palette, FileJson, Share2, Eye } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,8 @@ import {
 } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from './ui/input';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
@@ -28,7 +30,7 @@ export function SettingsDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const { allUserAnnotations } = useAnnotationContext();
+  const { allUserAnnotations, showVerseIcons, setShowVerseIcons } = useAnnotationContext();
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -147,15 +149,16 @@ export function SettingsDialog() {
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">App Settings</DialogTitle>
           <DialogDescription className="text-base">
-            Manage your study data and sharing options.
+            Manage your study data and display options.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="share" className="w-full mt-2">
-            <TabsList className="grid w-full grid-cols-3 h-12">
-                <TabsTrigger value="share" className="text-base">Share</TabsTrigger>
-                <TabsTrigger value="data" className="text-base">Data</TabsTrigger>
-                <TabsTrigger value="branding" className="text-base">Logo</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 h-12">
+                <TabsTrigger value="share" className="text-xs md:text-sm">Share</TabsTrigger>
+                <TabsTrigger value="display" className="text-xs md:text-sm">Display</TabsTrigger>
+                <TabsTrigger value="data" className="text-xs md:text-sm">Data</TabsTrigger>
+                <TabsTrigger value="branding" className="text-xs md:text-sm">Logo</TabsTrigger>
             </TabsList>
             
             <TabsContent value="share" className="space-y-6 pt-6">
@@ -169,6 +172,23 @@ export function SettingsDialog() {
                             <Input readOnly value={url} className="bg-muted/50 font-mono text-[11px] h-12" />
                             <Button size="icon" variant="outline" onClick={handleCopyLink} className="shrink-0 h-12 w-12"><Copy className="h-5 w-5" /></Button>
                         </div>
+                    </div>
+                </div>
+            </TabsContent>
+
+            <TabsContent value="display" className="space-y-4 pt-4">
+                <div className="border-2 p-5 rounded-2xl bg-muted/20 border-stone-100 space-y-4">
+                    <h4 className="font-bold text-base flex items-center gap-2"><Eye className="h-5 w-5" /> Reading Experience</h4>
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="verse-icons" className="text-sm font-bold">Verse Study Icons</Label>
+                            <p className="text-[10px] text-muted-foreground">Show icons for bookmarks, notes, and journal entries next to verses.</p>
+                        </div>
+                        <Switch 
+                            id="verse-icons" 
+                            checked={showVerseIcons} 
+                            onCheckedChange={setShowVerseIcons} 
+                        />
                     </div>
                 </div>
             </TabsContent>

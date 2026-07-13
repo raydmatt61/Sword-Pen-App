@@ -1,7 +1,7 @@
 
 "use client";
 
-import { createContext, useContext, ReactNode, useState, Dispatch, SetStateAction, useCallback, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useState, Dispatch, SetStateAction, useCallback, useMemo, useEffect } from 'react';
 import type { Annotation, BibleChapterResponse } from '@/lib/bible';
 import { useUser, useFirestore, setDocumentNonBlocking, deleteDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
@@ -24,6 +24,8 @@ interface AnnotationContextType {
     chapterData: BibleChapterResponse | null;
     fontSize: FontSize;
     setFontSize: Dispatch<SetStateAction<FontSize>>;
+    showVerseIcons: boolean;
+    setShowVerseIcons: Dispatch<SetStateAction<boolean>>;
     createOrUpdateAnnotation: (data: Partial<Omit<Annotation, 'id' | 'userId'>>) => void;
     deleteAnnotation: (annotation: Annotation) => void;
     resetAnnotationState: () => void;
@@ -42,6 +44,27 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
     const [selection, setSelection] = useState<SelectionInfo | null>(null);
     const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
     const [fontSize, setFontSize] = useState<FontSize>('md');
+    const [showVerseIcons, setShowVerseIcons] = useState<boolean>(true);
+
+    // Persist settings
+    useEffect(() => {
+        const savedIcons = localStorage.getItem('sword-and-pen-show-icons');
+        if (savedIcons !== null) {
+            setShowVerseIcons(savedIcons === 'true');
+        }
+        const savedFontSize = localStorage.getItem('sword-and-pen-font-size') as FontSize;
+        if (savedFontSize) {
+            setFontSize(savedFontSize);
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('sword-and-pen-show-icons', String(showVerseIcons));
+    }, [showVerseIcons]);
+
+    useEffect(() => {
+        localStorage.setItem('sword-and-pen-font-size', fontSize);
+    }, [fontSize]);
 
     const annotationsQuery = useMemoFirebase(() => {
         if (!user || !firestore) return null;
@@ -189,6 +212,8 @@ export const AnnotationProvider = ({ children, chapterData }: AnnotationProvider
         chapterData,
         fontSize,
         setFontSize,
+        showVerseIcons,
+        setShowVerseIcons,
         createOrUpdateAnnotation,
         deleteAnnotation,
         resetAnnotationState,

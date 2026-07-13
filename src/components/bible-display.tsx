@@ -12,7 +12,7 @@ import { useBookmarkContext } from '@/contexts/bookmark-context';
 import { useJournal } from '@/contexts/journal-context';
 import { useUser } from '@/firebase';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Bookmark as BookmarkIcon, ExternalLink, Loader2, BookOpen, Heart, Calendar as CalendarIcon, Quote } from 'lucide-react';
+import { ChevronLeft, ChevronRight, StickyNote, Link2 as LinkIcon, Bookmark as BookmarkIcon, ExternalLink, Loader2, BookOpen, Heart, Calendar as CalendarIcon } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -110,7 +110,7 @@ function VerseComponent({
     chapterData: BibleChapterResponse;
     navigate: (newValues: Partial<{ book: string; chapter: string; translation: string; verse: string; }>) => void;
 }) {
-    const { fontSize } = useAnnotationContext();
+    const { fontSize, showVerseIcons } = useAnnotationContext();
     const { isBookmarked, toggleBookmark } = useBookmarkContext();
     const { entries } = useJournal();
     const { user } = useUser();
@@ -315,117 +315,119 @@ function VerseComponent({
                 {verse.number}
             </sup>
             
-            <span className="inline-flex items-center gap-1.5 mr-2 align-baseline">
-                <button 
-                    onClick={handleBookmarkToggle}
-                    className={cn(
-                        "p-1 rounded-full transition-all duration-300",
-                        bookmarked ? "text-primary bg-primary/10" : "text-muted-foreground/40 hover:text-primary hover:bg-stone-200"
-                    )}
-                    title="Bookmark verse"
-                >
-                    <BookmarkIcon className={cn("h-4 w-4 md:h-3.5 md:w-3.5", bookmarked && "fill-current")} />
-                </button>
-                {verseNotes.length > 0 && (
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <button 
-                                className="p-1.5 text-primary bg-primary/20 rounded-full hover:bg-primary/30 border border-primary/40 transition-all shadow-sm" 
-                                title="View notes"
-                            >
-                                <StickyNote className="h-4 w-4 md:h-3.5 md:w-3.5 fill-current" />
-                            </button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Notes for {verseReference}</DialogTitle>
-                            </DialogHeader>
-                            <div className="py-4 font-body whitespace-pre-wrap space-y-4 text-sm max-h-[60vh] overflow-y-auto">
-                                {verseNotes.map((note, index) => (
-                                    <div key={index} className="border-l-4 border-primary/70 pl-4 bg-secondary/30 py-2 rounded-r-md">{note}</div>
-                                ))}
-                            </div>
-                        </DialogContent>
-                    </Dialog>
-                )}
-                {journalEntriesForVerse.length > 0 && (
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <button 
-                                className="p-1.5 text-accent bg-accent/20 rounded-full hover:bg-accent/30 border border-accent/40 transition-all shadow-sm" 
-                                title="Journal entries for this verse"
-                            >
-                                <BookOpen className="h-4 w-4 md:h-3.5 md:w-3.5 fill-current" />
-                            </button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-lg">
-                            <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                    <BookOpen className="h-5 w-5 text-accent" />
-                                    Journal Entries: {verseReference}
-                                </DialogTitle>
-                            </DialogHeader>
-                            <ScrollArea className="max-h-[60vh] py-4">
-                                <div className="space-y-4 pr-4">
-                                    {journalEntriesForVerse.map((e) => {
-                                        const dateObj = new Date(e.date + (e.date.includes('T') ? '' : 'T12:00:00'));
-                                        const displayDate = isValid(dateObj) ? format(dateObj, 'MMMM d, yyyy') : 'Unknown Date';
-                                        return (
-                                            <div key={e.id} className="border rounded-xl p-4 bg-stone-50/50 space-y-3">
-                                                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
-                                                    <CalendarIcon className="h-3.5 w-3.5" />
-                                                    {displayDate}
-                                                </div>
-                                                {e.thoughts && (
-                                                    <div className="space-y-1">
-                                                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Thoughts</p>
-                                                        <p className="font-body text-sm text-stone-700 leading-relaxed italic">"{e.thoughts}"</p>
-                                                    </div>
-                                                )}
-                                                {e.prayer && (
-                                                    <div className="space-y-1 border-t pt-2 mt-2">
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-accent">
-                                                            <Heart className="h-3 w-3 fill-accent/20" />
-                                                            Prayer
-                                                        </div>
-                                                        <p className="font-body text-sm text-stone-800 leading-relaxed">{e.prayer}</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </ScrollArea>
-                        </DialogContent>
-                    </Dialog>
-                )}
-                {crossReferences && crossReferences.length > 0 && (
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <button className="p-1 text-muted-foreground/40 hover:text-primary rounded-full hover:bg-stone-200 transition-colors" title="Cross-references">
-                                <LinkIcon className="h-4 w-4 md:h-3.5 md:w-3.5" />
-                            </button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-lg">
-                            <DialogHeader>
-                                <DialogTitle>Cross-References for {verseReference}</DialogTitle>
-                            </DialogHeader>
-                            <ScrollArea className="py-4 text-sm max-h-[60vh] -mx-6">
-                                <div className="px-6 space-y-2">
-                                    {crossReferences.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((cr, index) => (
-                                        <CrossReferenceItem 
-                                            key={index} 
-                                            cr={cr} 
-                                            translationId={chapterData.translation.id}
-                                            navigate={navigate}
-                                        />
+            {showVerseIcons && (
+                <span className="inline-flex items-center gap-1.5 mr-2 align-baseline">
+                    <button 
+                        onClick={handleBookmarkToggle}
+                        className={cn(
+                            "p-1 rounded-full transition-all duration-300",
+                            bookmarked ? "text-primary bg-primary/10" : "text-muted-foreground/40 hover:text-primary hover:bg-stone-200"
+                        )}
+                        title="Bookmark verse"
+                    >
+                        <BookmarkIcon className={cn("h-4 w-4 md:h-3.5 md:w-3.5", bookmarked && "fill-current")} />
+                    </button>
+                    {verseNotes.length > 0 && (
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <button 
+                                    className="p-1.5 text-primary bg-primary/20 rounded-full hover:bg-primary/30 border border-primary/40 transition-all shadow-sm" 
+                                    title="View notes"
+                                >
+                                    <StickyNote className="h-4 w-4 md:h-3.5 md:w-3.5 fill-current" />
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>Notes for {verseReference}</DialogTitle>
+                                </DialogHeader>
+                                <div className="py-4 font-body whitespace-pre-wrap space-y-4 text-sm max-h-[60vh] overflow-y-auto">
+                                    {verseNotes.map((note, index) => (
+                                        <div key={index} className="border-l-4 border-primary/70 pl-4 bg-secondary/30 py-2 rounded-r-md">{note}</div>
                                     ))}
                                 </div>
-                            </ScrollArea>
-                        </DialogContent>
-                    </Dialog>
-                )}
-            </span>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                    {journalEntriesForVerse.length > 0 && (
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <button 
+                                    className="p-1.5 text-accent bg-accent/20 rounded-full hover:bg-accent/30 border border-accent/40 transition-all shadow-sm" 
+                                    title="Journal entries for this verse"
+                                >
+                                    <BookOpen className="h-4 w-4 md:h-3.5 md:w-3.5 fill-current" />
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-lg">
+                                <DialogHeader>
+                                    <DialogTitle className="flex items-center gap-2">
+                                        <BookOpen className="h-5 w-5 text-accent" />
+                                        Journal Entries: {verseReference}
+                                    </DialogTitle>
+                                </DialogHeader>
+                                <ScrollArea className="max-h-[60vh] py-4">
+                                    <div className="space-y-4 pr-4">
+                                        {journalEntriesForVerse.map((e) => {
+                                            const dateObj = new Date(e.date + (e.date.includes('T') ? '' : 'T12:00:00'));
+                                            const displayDate = isValid(dateObj) ? format(dateObj, 'MMMM d, yyyy') : 'Unknown Date';
+                                            return (
+                                                <div key={e.id} className="border rounded-xl p-4 bg-stone-50/50 space-y-3">
+                                                    <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
+                                                        <CalendarIcon className="h-3.5 w-3.5" />
+                                                        {displayDate}
+                                                    </div>
+                                                    {e.thoughts && (
+                                                        <div className="space-y-1">
+                                                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Thoughts</p>
+                                                            <p className="font-body text-sm text-stone-700 leading-relaxed italic">"{e.thoughts}"</p>
+                                                        </div>
+                                                    )}
+                                                    {e.prayer && (
+                                                        <div className="space-y-1 border-t pt-2 mt-2">
+                                                            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+                                                                <Heart className="h-3 w-3 fill-accent/20" />
+                                                                Prayer
+                                                            </div>
+                                                            <p className="font-body text-sm text-stone-800 leading-relaxed">{e.prayer}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </ScrollArea>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                    {crossReferences && crossReferences.length > 0 && (
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <button className="p-1 text-muted-foreground/40 hover:text-primary rounded-full hover:bg-stone-200 transition-colors" title="Cross-references">
+                                    <LinkIcon className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-lg">
+                                <DialogHeader>
+                                    <DialogTitle>Cross-References for {verseReference}</DialogTitle>
+                                </DialogHeader>
+                                <ScrollArea className="py-4 text-sm max-h-[60vh] -mx-6">
+                                    <div className="px-6 space-y-2">
+                                        {crossReferences.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((cr, index) => (
+                                            <CrossReferenceItem 
+                                                key={index} 
+                                                cr={cr} 
+                                                translationId={chapterData.translation.id}
+                                                navigate={navigate}
+                                            />
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                </span>
+            )}
 
             <span className="verse-text-wrapper">{renderedContent}</span>
             <span className="mr-2"> </span>
