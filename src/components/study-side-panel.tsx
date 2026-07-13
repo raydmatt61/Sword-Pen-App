@@ -13,10 +13,16 @@ import { ScrollArea, ScrollBar } from './ui/scroll-area';
 export function StudySidePanel() {
     const { scratchpad, setScratchpad, sketchpad, setSketchpad, isLoading, isSaving, persistNow } = useStudySession();
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [color, setColor] = useState('#1c1917');
+    const [isEraser, setIsEraser] = useState(false);
+    
+    // Tracking for 2-finger panning
+    const activePointers = useRef<Map<number, { x: number, y: number }>>(new Map());
+    const isPanning = useRef(false);
 
-    // Initialize Canvas with Pointer Events and restore saved drawing
+    // Initialize Canvas and restore saved drawing
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -24,37 +30,44 @@ export function StudySidePanel() {
         if (!ctx) return;
 
         const dpr = window.devicePixelRatio || 1;
-        const rect = canvas.getBoundingClientRect();
+        const width = 350; // Sidebar width approx
+        const height = 2000; // Large scrollable height
         
-        // Ensure canvas backing store matches the CSS size (which is now 2000px height)
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
         ctx.scale(dpr, dpr);
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.lineWidth = 2;
 
-        // Restore saved sketch from state
         if (sketchpad) {
             const img = new Image();
             img.onload = () => {
-                ctx.clearRect(0, 0, rect.width, rect.height);
-                ctx.drawImage(img, 0, 0, rect.width, rect.height);
+                ctx.clearRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
             };
             img.src = sketchpad;
         } else {
-            ctx.clearRect(0, 0, rect.width, rect.height);
+            ctx.clearRect(0, 0, width, height);
         }
     }, [sketchpad, isLoading]);
 
     const startDrawing = (e: React.PointerEvent) => {
+        // Track pointers for multi-touch (panning)
+        activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (activePointers.current.size > 1) {
+            isPanning.current = true;
+            setIsDrawing(false);
+            return;
+        }
+
         setIsDrawing(true);
+        isPanning.current = false;
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (!canvas || !ctx) return;
 
         const rect = canvas.getBoundingClientRect();
-        // clientX/Y - rect.left/top gives the coordinate relative to the top-left of the 2000px canvas
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
@@ -63,6 +76,20 @@ export function StudySidePanel() {
     };
 
     const draw = (e: React.PointerEvent) => {
+        const prevPos = activePointers.current.get(e.pointerId);
+        activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        // Handle Panning with 2 fingers
+        if (isPanning.current || activePointers.current.size > 1) {
+            if (prevPos && scrollContainerRef.current) {
+                const dx = e.clientX - prevPos.x;
+                const dy = e.clientY - prevPos.y;
+                scrollContainerRef.current.scrollTop -= dy;
+                scrollContainerRef.current.scrollLeft -= dx;
+            }
+            return;
+        }
+
         if (!isDrawing) return;
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
@@ -72,8 +99,11 @@ export function StudySidePanel() {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Support pressure sensitivity for pen pointers
-        if (e.pointerType === 'pen' && e.pressure > 0) {
+        // Tool settings
+        ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+        if (isEraser) {
+            ctx.lineWidth = 20;
+        } else if (e.pointerType === 'pen' && e.pressure > 0) {
             ctx.lineWidth = 1 + (e.pressure * 6);
         } else {
             ctx.lineWidth = 2;
@@ -84,7 +114,13 @@ export function StudySidePanel() {
         ctx.stroke();
     };
 
-    const stopDrawing = () => {
+    const stopDrawing = (e: React.PointerEvent) => {
+        activePointers.current.delete(e.pointerId);
+        
+        if (activePointers.current.size === 0) {
+            isPanning.current = false;
+        }
+
         if (!isDrawing) return;
         setIsDrawing(false);
         const canvas = canvasRef.current;
@@ -136,7 +172,6 @@ export function StudySidePanel() {
                         </Button>
                     </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Chapter-Linked Session Data</p>
             </SidebarHeader>
 
             <SidebarContent className="flex flex-col flex-1 overflow-hidden">
@@ -159,7 +194,7 @@ export function StudySidePanel() {
                     <SidebarGroupLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-2 flex items-center justify-between w-full">
                         <span className="flex items-center gap-2">
                             <PenTool className="h-3.5 w-3.5" />
-                            Sketchpad (Scrollable / Stylus)
+                            Sketchpad (2-Finger Scroll)
                         </span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={clearCanvas} title="Clear">
@@ -171,7 +206,11 @@ export function StudySidePanel() {
                         </div>
                     </SidebarGroupLabel>
                     <SidebarGroupContent className="flex-1 relative bg-white border border-stone-200 rounded-lg overflow-hidden flex flex-col">
-                        <ScrollArea className="flex-1 w-full h-full">
+                        <div 
+                            ref={scrollContainerRef}
+                            className="flex-1 w-full overflow-auto scrollbar-hide cursor-crosshair touch-none"
+                            style={{ touchAction: 'none' }}
+                        >
                             <div className="relative w-full h-[2000px] bg-white">
                                 <canvas
                                     ref={canvasRef}
@@ -180,27 +219,33 @@ export function StudySidePanel() {
                                     onPointerUp={stopDrawing}
                                     onPointerLeave={stopDrawing}
                                     onPointerCancel={stopDrawing}
-                                    className="w-full h-full cursor-crosshair touch-none"
-                                    style={{ touchAction: 'none' }}
+                                    className="w-full h-full"
                                 />
                             </div>
-                            <ScrollBar orientation="vertical" />
-                            <ScrollBar orientation="horizontal" />
-                        </ScrollArea>
+                        </div>
                         
-                        {/* Fixed Toolbar over the scrollable area */}
                         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-white/90 backdrop-blur-md p-2 rounded-full border shadow-lg z-10">
                             {['#1c1917', '#991b1b', '#15803d', '#1d4ed8', '#7e22ce'].map((c) => (
                                 <button
                                     key={c}
-                                    onClick={() => setColor(c)}
+                                    onClick={() => { setColor(c); setIsEraser(false); }}
                                     className={cn(
                                         "h-6 w-6 rounded-full border-2 border-transparent transition-all hover:scale-125",
-                                        color === c && "border-white ring-2 ring-primary scale-110"
+                                        !isEraser && color === c && "border-white ring-2 ring-primary scale-110"
                                     )}
                                     style={{ backgroundColor: c }}
                                 />
                             ))}
+                            <button
+                                onClick={() => setIsEraser(!isEraser)}
+                                className={cn(
+                                    "h-6 w-6 rounded-full border-2 border-stone-200 flex items-center justify-center transition-all hover:scale-125",
+                                    isEraser && "bg-primary text-white border-primary ring-2 ring-primary scale-110"
+                                )}
+                                title="Eraser"
+                            >
+                                <Eraser className="h-3 w-3" />
+                            </button>
                         </div>
                     </SidebarGroupContent>
                 </SidebarGroup>
