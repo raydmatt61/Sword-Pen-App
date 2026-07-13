@@ -40,6 +40,7 @@ export function JournalSheet() {
             });
     }, [entries, searchQuery]);
 
+    // Conditional return MUST happen after all hooks
     if (!user) return null;
 
     const handleNewEntry = () => {

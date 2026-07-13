@@ -41,7 +41,7 @@ export const StudySessionProvider = ({ children }: { children: ReactNode }) => {
     const { data: sessionData, isLoading } = useDoc<StudySession>(sessionDocRef);
     const lastSessionId = useRef<string | null>(null);
 
-    // Explicitly handle data loading when the session changes or when data arrives
+    // Synchronize local state when the cloud data changes or session switches
     useEffect(() => {
         if (!sessionId) return;
         
@@ -75,6 +75,7 @@ export const StudySessionProvider = ({ children }: { children: ReactNode }) => {
             updatedAt: serverTimestamp(),
         }, { merge: true });
         
+        // Brief delay for the "Saving" indicator to be meaningful
         setTimeout(() => setIsSaving(false), 1200);
     }, [user, firestore, sessionId, chapterData]);
 

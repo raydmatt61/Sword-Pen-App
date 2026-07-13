@@ -77,6 +77,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
   useEffect(() => {
     if (!chapterData) return;
     
+    // Normalize and extract IDs for comparison
     const requestedId = initialTranslationId.toUpperCase().trim();
     const returnedId = chapterData.translation.id.toUpperCase().trim();
     const requestedBookAbbr = (BIBLE_BOOKS_ABBR[initialBook] || initialBook).toUpperCase().trim();
@@ -84,9 +85,11 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     const requestedChapter = String(initialChapter);
     const returnedChapter = String(chapterData.chapter.number);
 
+    // ONLY trigger logic if the returned data is actually for the current navigation request
     const isResponseForCurrentRequest = requestedBookAbbr === returnedBookAbbr && requestedChapter === returnedChapter;
     if (!isResponseForCurrentRequest) return;
 
+    // Use a notification key to prevent double toasts for the same location state
     const notificationKey = `${requestedBookAbbr}-${requestedChapter}-${requestedId}-${returnedId}`;
     if (lastNotificationRef.current === notificationKey) return;
     lastNotificationRef.current = notificationKey;
