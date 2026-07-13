@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BibleDisplay } from '@/components/bible-display';
 import { VerseSelector } from '@/components/verse-selector';
 import type { BibleChapterResponse, Book, CrossRefChapterResponse } from '@/lib/bible';
-import { TRANSLATIONS } from '@/lib/bible';
+import { TRANSLATIONS, BIBLE_BOOKS_ABBR } from '@/lib/bible';
 import { Card, CardContent } from '@/components/ui/card';
 import { AuthManager } from '@/components/auth-manager';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -59,6 +59,15 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
     
     const requestedId = initialTranslationId.toUpperCase().trim();
     const returnedId = chapterData.translation.id.toUpperCase().trim();
+    const requestedBookAbbr = (BIBLE_BOOKS_ABBR[initialBook] || initialBook).toUpperCase().trim();
+    const returnedBookAbbr = (chapterData.book.id || "").toUpperCase().trim();
+    const requestedChapter = String(initialChapter);
+    const returnedChapter = String(chapterData.chapter.number);
+
+    // Only show fallback notifications if the data matches our current chapter request
+    // to prevent false error notifications during navigation.
+    const isResponseForCurrentRequest = requestedBookAbbr === returnedBookAbbr && requestedChapter === returnedChapter;
+    if (!isResponseForCurrentRequest) return;
     
     // Whitelist known digital mappings to prevent false error notifications
     const isDirectMatch = returnedId === requestedId;
@@ -70,7 +79,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
             description: `Displaying in ${returnedId} as ${requestedId} was unavailable.`,
         });
     }
-  }, [chapterData, initialTranslationId, toast]);
+  }, [chapterData, initialTranslationId, initialBook, initialChapter, toast]);
 
   const navigate = useCallback((newValues: Partial<{ book: string; chapter: string; translation: string; verse: string }>) => {
     const current = new URLSearchParams(searchParams.toString());

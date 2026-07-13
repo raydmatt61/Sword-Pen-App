@@ -318,8 +318,11 @@ function VerseComponent({
                 {verseNotes.length > 0 && (
                     <Dialog>
                         <DialogTrigger asChild>
-                            <button className="p-1 text-muted-foreground/40 hover:text-primary rounded-full hover:bg-stone-200 transition-colors" title="View notes">
-                                <StickyNote className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                            <button 
+                                className="p-1.5 text-primary bg-primary/10 rounded-full hover:bg-primary/20 border border-primary/20 transition-all shadow-sm" 
+                                title="View notes"
+                            >
+                                <StickyNote className="h-4 w-4 md:h-3.5 md:w-3.5 fill-current" />
                             </button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
