@@ -102,17 +102,16 @@ export function StudySidePanel() {
         if (isEraser) {
             ctx.lineWidth = 20;
         } else if (e.pointerType === 'pen' && e.pressure > 0) {
-            // Refined thin line for high-fidelity stylus input
-            ctx.lineWidth = 0.5 + (e.pressure * 2.0);
+            // Refined ultra-thin line for high-fidelity stylus input
+            ctx.lineWidth = 0.2 + (e.pressure * 1.5);
         } else {
-            ctx.lineWidth = 1.0;
+            ctx.lineWidth = 0.8;
         }
 
         ctx.strokeStyle = color;
         ctx.lineTo(x, y);
         ctx.stroke();
         
-        // Ensure smooth continuous curves
         ctx.beginPath();
         ctx.moveTo(x, y);
     };
