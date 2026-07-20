@@ -18,12 +18,13 @@ import {FirestorePermissionError} from '@/firebase/errors';
  */
 function stripUndefined(obj: any): any {
   if (typeof obj !== 'object' || obj === null) return obj;
+  if (Array.isArray(obj)) return obj.map(stripUndefined);
   return Object.keys(obj).reduce((acc: any, key) => {
     if (obj[key] !== undefined) {
       acc[key] = stripUndefined(obj[key]);
     }
     return acc;
-  }, Array.isArray(obj) ? [] : {});
+  }, {});
 }
 
 /**
