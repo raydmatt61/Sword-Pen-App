@@ -1,4 +1,3 @@
-
 'use client';
     
 import {
@@ -14,39 +13,54 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import {FirestorePermissionError} from '@/firebase/errors';
 
 /**
+ * Utility to strip undefined values from an object before sending to Firestore.
+ * Firestore rejects explicit 'undefined' values.
+ */
+function stripUndefined(obj: any): any {
+  if (typeof obj !== 'object' || obj === null) return obj;
+  return Object.keys(obj).reduce((acc: any, key) => {
+    if (obj[key] !== undefined) {
+      acc[key] = stripUndefined(obj[key]);
+    }
+    return acc;
+  }, Array.isArray(obj) ? [] : {});
+}
+
+/**
  * Initiates a setDoc operation for a document reference.
  * Does NOT await the write operation internally.
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
   const operation = options && 'merge' in options ? 'write' : 'create';
-  setDoc(docRef, data, options || {}).catch(error => {
+  const cleanData = stripUndefined(data);
+  
+  setDoc(docRef, cleanData, options || {}).catch(error => {
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
         path: docRef.path,
         operation: operation, 
-        requestResourceData: data,
+        requestResourceData: cleanData,
       })
     )
   })
-  // Execution continues immediately
 }
 
 
 /**
  * Initiates an addDoc operation for a collection reference.
  * Does NOT await the write operation internally.
- * Returns the Promise for the new doc ref, but typically not awaited by caller.
  */
 export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
-  const promise = addDoc(colRef, data)
+  const cleanData = stripUndefined(data);
+  const promise = addDoc(colRef, cleanData)
     .catch(error => {
       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
           path: colRef.path,
           operation: 'create',
-          requestResourceData: data,
+          requestResourceData: cleanData,
         })
       )
     });
@@ -59,14 +73,15 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
  * Does NOT await the write operation internally.
  */
 export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
-  updateDoc(docRef, data)
+  const cleanData = stripUndefined(data);
+  updateDoc(docRef, cleanData)
     .catch(error => {
       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
           path: docRef.path,
           operation: 'update',
-          requestResourceData: data,
+          requestResourceData: cleanData,
         })
       )
     });
@@ -89,5 +104,3 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
       )
     });
 }
-
-    

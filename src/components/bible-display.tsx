@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, type VerseContent, FormattedText, VerseFootnoteReference } from '@/lib/bible';
+import { type Annotation, type BibleChapterResponse, type ChapterContentItem, type CrossRefChapterResponse, type CrossRef, FormattedText, VerseFootnoteReference } from '@/lib/bible';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Balancer from 'react-wrap-balancer';
@@ -525,8 +524,11 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                  setActiveAnnotation(null);
             }
         } else if (sel && sel.isCollapsed) {
-            const toolbar = document.getElementById('annotation-toolbar');
-            if (toolbar && sel.anchorNode && toolbar.contains(sel.anchorNode)) return;
+            // Updated logic: Don't clear selection if interacting with study tools (via data-study-tool attribute)
+            const target = sel.anchorNode?.parentElement;
+            if (target?.closest('[data-study-tool]')) {
+                return;
+            }
             setSelection(null);
         }
     }, [user, setSelection, setActiveAnnotation]);
@@ -558,9 +560,9 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
             return (
                 <VerseComponent 
                     key={`v-${item.number}-${index}`} 
-                    verse={item} 
-                    annotations={chapterAnnotations[item.number] || []}
-                    crossReferences={crossRefMap[item.number] || []}
+                    verse={item as any} 
+                    annotations={chapterAnnotations[item.number!] || []}
+                    crossReferences={crossRefMap[item.number!] || []}
                     onAnnotationClick={handleAnnotationClick}
                     chapterData={chapterData}
                     navigate={navigate}

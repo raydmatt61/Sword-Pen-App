@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useUser } from '@/firebase';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Trash2, StickyNote, Highlighter, Underline, X, Copy, Plus, Palette } from 'lucide-react';
+import { Trash2, StickyNote, Highlighter, Underline, X, Copy, Plus } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useToast } from '@/hooks/use-toast';
@@ -71,7 +71,7 @@ export function AnnotationWrapper() {
     }
     
     const handleSaveNote = () => {
-        if (!activeAnnotation || !noteDirty) return;
+        if (!activeAnnotation && !selection) return;
         createOrUpdateAnnotation({ note: note.trim() });
         toast({ title: "Note Saved", description: "Your annotation note has been updated." });
         setIsEditingNote(false);
@@ -125,13 +125,11 @@ export function AnnotationWrapper() {
 
     const onHighlight = (style: string | null) => {
         if (!selection && !activeAnnotation) return;
-        // Fix for unsupported field value: undefined. Use empty string to clear.
         createOrUpdateAnnotation({ highlight: style || "" });
     };
 
     const onUnderline = (style: string | null) => {
         if (!selection && !activeAnnotation) return;
-        // Fix for unsupported field value: undefined. Use empty string to clear.
         createOrUpdateAnnotation({ underline: style || "" });
     };
 
@@ -157,7 +155,7 @@ export function AnnotationWrapper() {
     const showToolbar = (selection || activeAnnotation) && user;
 
     return (
-        <div className="relative flex items-center justify-center p-1 md:p-2 border rounded-lg bg-background/50 min-h-[52px] md:min-h-[56px] w-full">
+        <div className="relative flex items-center justify-center p-1 md:p-2 border rounded-lg bg-background/50 min-h-[52px] md:min-h-[56px] w-full" data-study-tool="wrapper">
             {!showToolbar ? (
                 <p className={cn(
                     "font-bold text-muted-foreground/80 text-center leading-tight uppercase tracking-[0.05em] select-none",
@@ -170,9 +168,9 @@ export function AnnotationWrapper() {
                    <div className="flex items-center justify-center gap-0.5 md:gap-1 p-0.5 bg-background border rounded-lg shadow-sm w-full overflow-x-auto">
                         <Popover onOpenChange={(open) => !open && setIsAddingCategory(false)}>
                             <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" title="Highlight"><Highlighter className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" title="Highlight" data-study-tool="button"><Highlighter className="h-4 w-4" /></Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-64 p-2 shadow-xl border-stone-200" align="start">
+                            <PopoverContent className="w-64 p-2 shadow-xl border-stone-200" align="start" data-study-tool="content">
                                 {!isAddingCategory ? (
                                     <div className="flex flex-col gap-1">
                                         {highlightColors.map(h => (
@@ -222,8 +220,8 @@ export function AnnotationWrapper() {
                                                     key={c.name}
                                                     onClick={() => setNewCategoryColor(c)}
                                                     className={cn(
-                                                        "h-6 w-6 rounded-full border border-stone-200 transition-all hover:scale-110",
-                                                        newCategoryColor.name === c.name && "ring-2 ring-primary ring-offset-1"
+                                                        "h-6 w-6 rounded-full border border-stone-200 transition-all hover:scale-125",
+                                                        newCategoryColor.name === c.name && "ring-2 ring-primary ring-offset-1 scale-110"
                                                     )}
                                                     style={{ backgroundColor: c.color }}
                                                     title={c.name}
@@ -237,11 +235,12 @@ export function AnnotationWrapper() {
                                 )}
                             </PopoverContent>
                         </Popover>
+                        
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" title="Underline"><Underline className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" title="Underline" data-study-tool="button"><Underline className="h-4 w-4" /></Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-2" align="start">
+                            <PopoverContent className="w-auto p-2" align="start" data-study-tool="content">
                                 <div className="flex flex-wrap gap-2 max-w-[160px]">
                                     {underlineColors.map(u => (
                                         <button 
@@ -263,17 +262,17 @@ export function AnnotationWrapper() {
                             setIsEditingNote(open);
                         }}>
                             <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" onClick={onNote} disabled={!activeAnnotation && !selection} title="Edit Note">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" onClick={onNote} disabled={!activeAnnotation && !selection} title="Edit Note" data-study-tool="button">
                                         <StickyNote className={cn("h-4 w-4", activeAnnotation?.note && "text-primary")} />
                                     </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-80 shadow-xl border-stone-200">
+                            <PopoverContent className="w-80 shadow-xl border-stone-200" data-study-tool="content">
                                 <div className="grid gap-4">
                                     <div className="space-y-2">
                                         <h4 className="font-medium leading-none">Annotation Note</h4>
                                         {(activeAnnotation || selection) && (
                                         <p className="text-sm text-muted-foreground">
-                                            For {fullReference}:{activeAnnotation?.verse || selection?.verseElements[0].dataset.verseNumber}.
+                                            For {fullReference}:{activeAnnotation?.verse || (selection ? selection.verseElements[0].dataset.verseNumber : '')}.
                                         </p>
                                         )}
                                     </div>
@@ -286,7 +285,7 @@ export function AnnotationWrapper() {
                                         autoFocus
                                     />
                                     <div className="flex gap-2 justify-end">
-                                        <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty}>Save Changes</Button>
+                                        <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty && activeAnnotation !== null}>Save Changes</Button>
                                         <Button onClick={handleCancelEdit} size="sm" variant="ghost">Cancel</Button>
                                     </div>
                                 </div>
@@ -306,11 +305,12 @@ export function AnnotationWrapper() {
                             className="h-6 w-6 md:h-8 md:w-8" 
                             onClick={handleCopySelection} 
                             title="Copy Selection"
+                            data-study-tool="button"
                         >
                             <Copy className="h-4 w-4" />
                         </Button>
 
-                        <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 text-destructive" onClick={handleDelete} disabled={!activeAnnotation} title="Delete Annotation"><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 text-destructive" onClick={handleDelete} disabled={!activeAnnotation} title="Delete Annotation" data-study-tool="button"><Trash2 className="h-4 w-4" /></Button>
                    </div>
                </div>
             )}
