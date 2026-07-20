@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Trash2, StickyNote, Highlighter, Underline, X, Copy, Plus } from 'lucide-react';
@@ -11,8 +12,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
+import { collection } from 'firebase/firestore';
 
-const highlightColors = [
+const defaultHighlightColors = [
     { class: 'hl-yellow', color: '#fef08a', label: 'General' },
     { class: 'hl-blue', color: '#bfdbfe', label: 'Promise' },
     { class: 'hl-green', color: '#bbf7d0', label: 'Obedience' },
@@ -42,6 +44,7 @@ const underlineColors = [
 
 export function AnnotationWrapper() {
     const { user } = useUser();
+    const firestore = useFirestore();
     const { toast } = useToast();
 
     const {
@@ -59,6 +62,23 @@ export function AnnotationWrapper() {
     const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [newCategoryLabel, setNewCategoryLabel] = useState('');
     const [newCategoryColor, setNewCategoryColor] = useState(extraColors[0]);
+
+    // Fetch custom categories from Firestore
+    const categoriesQuery = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return collection(firestore, `users/${user.uid}/categories`);
+    }, [user, firestore]);
+    const { data: customCategories } = useCollection(categoriesQuery);
+
+    const allHighlightColors = useMemo(() => {
+        const custom = (customCategories || []).map(cat => ({
+            class: cat.class,
+            color: cat.color,
+            label: cat.label,
+            isCustom: true
+        }));
+        return [...defaultHighlightColors, ...custom];
+    }, [customCategories]);
 
     const noteDirty = useMemo(() => activeAnnotation && note !== (activeAnnotation.note || ''), [activeAnnotation, note]);
 
@@ -141,12 +161,27 @@ export function AnnotationWrapper() {
         }
     };
 
-    const handleCreateCategory = () => {
+    const handleCreateCategory = async () => {
         if (!newCategoryLabel.trim()) {
             toast({ variant: "destructive", title: "Label Required", description: "Please enter a name for your category." });
             return;
         }
+        if (!user || !firestore) return;
+
+        const categoryData = {
+            userId: user.uid,
+            label: newCategoryLabel.trim(),
+            class: newCategoryColor.class,
+            color: newCategoryColor.color
+        };
+
+        // Save the definition to Firestore
+        const catColRef = collection(firestore, `users/${user.uid}/categories`);
+        addDocumentNonBlocking(catColRef, categoryData);
+
+        // Apply it to current selection
         onHighlight(newCategoryColor.class);
+        
         toast({ title: "Category Created", description: `Added "${newCategoryLabel}" highlight category.` });
         setIsAddingCategory(false);
         setNewCategoryLabel('');
@@ -171,68 +206,71 @@ export function AnnotationWrapper() {
                                 <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" title="Highlight" data-study-tool="button"><Highlighter className="h-4 w-4" /></Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-64 p-2 shadow-xl border-stone-200" align="start" data-study-tool="content">
-                                {!isAddingCategory ? (
-                                    <div className="flex flex-col gap-1">
-                                        {highlightColors.map(h => (
-                                            <button 
-                                                key={h.class} 
-                                                onClick={() => onHighlight(h.class)} 
-                                                className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-stone-100 transition-all text-left group"
-                                            >
-                                                <div className="h-4 w-4 rounded-full border border-stone-300 shadow-sm group-hover:scale-110 transition-transform" style={{ backgroundColor: h.color }} />
-                                                <span className="text-sm font-bold text-stone-700">{h.label}</span>
-                                            </button>
-                                        ))}
-                                        <div className="h-px bg-stone-100 my-1" />
-                                        <button 
-                                            onClick={() => onHighlight(null)} 
-                                            className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-destructive/5 text-destructive transition-all text-left"
-                                        >
-                                            <X className="h-4 w-4" />
-                                            <span className="text-sm font-bold">Clear Highlight</span>
-                                        </button>
-                                        <div className="h-px bg-stone-100 my-1" />
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="h-9 w-full justify-start font-bold text-xs text-muted-foreground uppercase tracking-wider" 
-                                            onClick={() => setIsAddingCategory(true)}
-                                        >
-                                            <Plus className="mr-2 h-3 w-3" /> New Category
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4 p-2">
-                                        <div className="flex items-center justify-between">
-                                            <h4 className="font-bold text-xs uppercase tracking-widest text-primary">New Category</h4>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsAddingCategory(false)}><X className="h-3 w-3" /></Button>
-                                        </div>
-                                        <Input 
-                                            placeholder="Category Name" 
-                                            value={newCategoryLabel}
-                                            onChange={(e) => setNewCategoryLabel(e.target.value)}
-                                            className="h-8 text-sm"
-                                            autoFocus
-                                        />
-                                        <div className="grid grid-cols-6 gap-2">
-                                            {extraColors.map((c) => (
-                                                <button
-                                                    key={c.name}
-                                                    onClick={() => setNewCategoryColor(c)}
-                                                    className={cn(
-                                                        "h-6 w-6 rounded-full border border-stone-200 transition-all hover:scale-125",
-                                                        newCategoryColor.name === c.name && "ring-2 ring-primary ring-offset-1 scale-110"
-                                                    )}
-                                                    style={{ backgroundColor: c.color }}
-                                                    title={c.name}
-                                                />
+                                <ScrollArea className="max-h-72">
+                                    {!isAddingCategory ? (
+                                        <div className="flex flex-col gap-1">
+                                            {allHighlightColors.map((h, i) => (
+                                                <button 
+                                                    key={`${h.class}-${i}`} 
+                                                    onClick={() => onHighlight(h.class)} 
+                                                    className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-stone-100 transition-all text-left group"
+                                                >
+                                                    <div className="h-4 w-4 rounded-full border border-stone-300 shadow-sm group-hover:scale-110 transition-transform" style={{ backgroundColor: h.color }} />
+                                                    <span className="text-sm font-bold text-stone-700">{h.label}</span>
+                                                </button>
                                             ))}
+                                            <div className="h-px bg-stone-100 my-1" />
+                                            <button 
+                                                onClick={() => onHighlight(null)} 
+                                                className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-destructive/5 text-destructive transition-all text-left"
+                                            >
+                                                <X className="h-4 w-4" />
+                                                <span className="text-sm font-bold">Clear Highlight</span>
+                                            </button>
+                                            <div className="h-px bg-stone-100 my-1" />
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-9 w-full justify-start font-bold text-xs text-muted-foreground uppercase tracking-wider" 
+                                                onClick={() => setIsAddingCategory(true)}
+                                            >
+                                                <Plus className="mr-2 h-3 w-3" /> New Category
+                                            </Button>
                                         </div>
-                                        <Button className="w-full h-8 text-xs font-bold" onClick={handleCreateCategory}>
-                                            Create & Apply
-                                        </Button>
-                                    </div>
-                                )}
+                                    ) : (
+                                        <div className="space-y-4 p-2">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="font-bold text-xs uppercase tracking-widest text-primary">New Category</h4>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsAddingCategory(false)}><X className="h-3 w-3" /></Button>
+                                            </div>
+                                            <Input 
+                                                placeholder="Category Name" 
+                                                value={newCategoryLabel}
+                                                onChange={(e) => setNewCategoryLabel(e.target.value)}
+                                                className="h-8 text-sm"
+                                                autoFocus
+                                                data-study-tool="input"
+                                            />
+                                            <div className="grid grid-cols-6 gap-2">
+                                                {extraColors.map((c) => (
+                                                    <button
+                                                        key={c.name}
+                                                        onClick={() => setNewCategoryColor(c)}
+                                                        className={cn(
+                                                            "h-6 w-6 rounded-full border border-stone-200 transition-all hover:scale-125",
+                                                            newCategoryColor.name === c.name && "ring-2 ring-primary ring-offset-1 scale-110"
+                                                        )}
+                                                        style={{ backgroundColor: c.color }}
+                                                        title={c.name}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <Button className="w-full h-8 text-xs font-bold" onClick={handleCreateCategory}>
+                                                Create & Apply
+                                            </Button>
+                                        </div>
+                                    )}
+                                </ScrollArea>
                             </PopoverContent>
                         </Popover>
                         

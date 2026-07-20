@@ -52,6 +52,13 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      match /categories/{categoryId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId);
+        allow update: if isOwner(userId) && isUserIdImmutable();
+        allow delete: if isOwner(userId);
+      }
+
       match /bookmarks/{bookmarkId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId);

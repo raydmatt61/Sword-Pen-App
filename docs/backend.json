@@ -93,6 +93,35 @@
         "text"
       ]
     },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a custom highlighter category created by the user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the category."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User."
+        },
+        "label": {
+          "type": "string",
+          "description": "The name of the category (e.g., 'Grace', 'Holy Spirit')."
+        },
+        "class": {
+          "type": "string",
+          "description": "The CSS class for the highlight (e.g., 'hl-yellow')."
+        },
+        "color": {
+          "type": "string",
+          "description": "The hex color code for the icon."
+        }
+      },
+      "required": ["id", "userId", "label", "class", "color"]
+    },
     "Bookmark": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Bookmark",
@@ -273,6 +302,26 @@
             {
               "name": "annotationId",
               "description": "The unique identifier for the annotation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores custom highlighter categories for each user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "categoryId",
+              "description": "The unique identifier for the category."
             }
           ]
         }
