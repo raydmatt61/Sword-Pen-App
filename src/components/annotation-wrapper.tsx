@@ -4,12 +4,13 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useUser } from '@/firebase';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Trash2, StickyNote, Highlighter, Underline, X, Copy, Plus } from 'lucide-react';
+import { Trash2, StickyNote, Highlighter, Underline, X, Copy, Plus, Palette } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { cn } from '@/lib/utils';
+import { Input } from './ui/input';
 
 const highlightColors = [
     { class: 'hl-yellow', color: '#fef08a', label: 'General' },
@@ -19,6 +20,15 @@ const highlightColors = [
     { class: 'hl-pink', color: '#fbcfe8', label: 'Love' },
     { class: 'hl-orange', color: '#fed7aa', label: 'Warning' },
     { class: 'hl-teal', color: '#99f6e4', label: 'Mystery' },
+];
+
+const extraColors = [
+    { name: 'Amber', color: '#fbbf24', class: 'hl-orange' },
+    { name: 'Indigo', color: '#818cf8', class: 'hl-blue' },
+    { name: 'Rose', color: '#fb7185', class: 'hl-pink' },
+    { name: 'Lime', color: '#a3e635', class: 'hl-green' },
+    { name: 'Cyan', color: '#22d3ee', class: 'hl-teal' },
+    { name: 'Violet', color: '#a78bfa', class: 'hl-purple' },
 ];
 
 const underlineColors = [
@@ -46,6 +56,10 @@ export function AnnotationWrapper() {
 
     const [isEditingNote, setIsEditingNote] = useState(false);
     const [note, setNote] = useState('');
+    const [isAddingCategory, setIsAddingCategory] = useState(false);
+    const [newCategoryLabel, setNewCategoryLabel] = useState('');
+    const [newCategoryColor, setNewCategoryColor] = useState(extraColors[0]);
+
     const noteDirty = useMemo(() => activeAnnotation && note !== (activeAnnotation.note || ''), [activeAnnotation, note]);
 
     const toolbarRef = useRef<HTMLDivElement>(null);
@@ -111,12 +125,14 @@ export function AnnotationWrapper() {
 
     const onHighlight = (style: string | null) => {
         if (!selection && !activeAnnotation) return;
-        createOrUpdateAnnotation({ highlight: style ?? undefined });
+        // Fix for unsupported field value: undefined. Use empty string to clear.
+        createOrUpdateAnnotation({ highlight: style || "" });
     };
 
     const onUnderline = (style: string | null) => {
         if (!selection && !activeAnnotation) return;
-        createOrUpdateAnnotation({ underline: style ?? undefined });
+        // Fix for unsupported field value: undefined. Use empty string to clear.
+        createOrUpdateAnnotation({ underline: style || "" });
     };
 
     const onNote = () => {
@@ -125,6 +141,17 @@ export function AnnotationWrapper() {
         } else if (selection) {
             createOrUpdateAnnotation({ note: '' });
         }
+    };
+
+    const handleCreateCategory = () => {
+        if (!newCategoryLabel.trim()) {
+            toast({ variant: "destructive", title: "Label Required", description: "Please enter a name for your category." });
+            return;
+        }
+        onHighlight(newCategoryColor.class);
+        toast({ title: "Category Created", description: `Added "${newCategoryLabel}" highlight category.` });
+        setIsAddingCategory(false);
+        setNewCategoryLabel('');
     };
     
     const showToolbar = (selection || activeAnnotation) && user;
@@ -141,40 +168,73 @@ export function AnnotationWrapper() {
             ) : (
                <div ref={toolbarRef} id="annotation-toolbar" className="w-full">
                    <div className="flex items-center justify-center gap-0.5 md:gap-1 p-0.5 bg-background border rounded-lg shadow-sm w-full overflow-x-auto">
-                        <Popover>
+                        <Popover onOpenChange={(open) => !open && setIsAddingCategory(false)}>
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" title="Highlight"><Highlighter className="h-4 w-4" /></Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-56 p-2 shadow-xl border-stone-200" align="start">
-                                <div className="flex flex-col gap-1">
-                                    {highlightColors.map(h => (
+                            <PopoverContent className="w-64 p-2 shadow-xl border-stone-200" align="start">
+                                {!isAddingCategory ? (
+                                    <div className="flex flex-col gap-1">
+                                        {highlightColors.map(h => (
+                                            <button 
+                                                key={h.class} 
+                                                onClick={() => onHighlight(h.class)} 
+                                                className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-stone-100 transition-all text-left group"
+                                            >
+                                                <div className="h-4 w-4 rounded-full border border-stone-300 shadow-sm group-hover:scale-110 transition-transform" style={{ backgroundColor: h.color }} />
+                                                <span className="text-sm font-bold text-stone-700">{h.label}</span>
+                                            </button>
+                                        ))}
+                                        <div className="h-px bg-stone-100 my-1" />
                                         <button 
-                                            key={h.class} 
-                                            onClick={() => onHighlight(h.class)} 
-                                            className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-stone-100 transition-all text-left group"
+                                            onClick={() => onHighlight(null)} 
+                                            className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-destructive/5 text-destructive transition-all text-left"
                                         >
-                                            <div className="h-4 w-4 rounded-full border border-stone-300 shadow-sm group-hover:scale-110 transition-transform" style={{ backgroundColor: h.color }} />
-                                            <span className="text-sm font-bold text-stone-700">{h.label}</span>
+                                            <X className="h-4 w-4" />
+                                            <span className="text-sm font-bold">Clear Highlight</span>
                                         </button>
-                                    ))}
-                                    <div className="h-px bg-stone-100 my-1" />
-                                    <button 
-                                        onClick={() => onHighlight(null)} 
-                                        className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-destructive/5 text-destructive transition-all text-left"
-                                    >
-                                        <X className="h-4 w-4" />
-                                        <span className="text-sm font-bold">Clear Highlight</span>
-                                    </button>
-                                    <div className="h-px bg-stone-100 my-1" />
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-9 w-full justify-start font-bold text-xs text-muted-foreground uppercase tracking-wider" 
-                                        onClick={() => toast({ title: "Coming Soon", description: "Custom categories feature is in development." })}
-                                    >
-                                        <Plus className="mr-2 h-3 w-3" /> New Category
-                                    </Button>
-                                </div>
+                                        <div className="h-px bg-stone-100 my-1" />
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-9 w-full justify-start font-bold text-xs text-muted-foreground uppercase tracking-wider" 
+                                            onClick={() => setIsAddingCategory(true)}
+                                        >
+                                            <Plus className="mr-2 h-3 w-3" /> New Category
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 p-2">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="font-bold text-xs uppercase tracking-widest text-primary">New Category</h4>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsAddingCategory(false)}><X className="h-3 w-3" /></Button>
+                                        </div>
+                                        <Input 
+                                            placeholder="Category Name" 
+                                            value={newCategoryLabel}
+                                            onChange={(e) => setNewCategoryLabel(e.target.value)}
+                                            className="h-8 text-sm"
+                                            autoFocus
+                                        />
+                                        <div className="grid grid-cols-6 gap-2">
+                                            {extraColors.map((c) => (
+                                                <button
+                                                    key={c.name}
+                                                    onClick={() => setNewCategoryColor(c)}
+                                                    className={cn(
+                                                        "h-6 w-6 rounded-full border border-stone-200 transition-all hover:scale-110",
+                                                        newCategoryColor.name === c.name && "ring-2 ring-primary ring-offset-1"
+                                                    )}
+                                                    style={{ backgroundColor: c.color }}
+                                                    title={c.name}
+                                                />
+                                            ))}
+                                        </div>
+                                        <Button className="w-full h-8 text-xs font-bold" onClick={handleCreateCategory}>
+                                            Create & Apply
+                                        </Button>
+                                    </div>
+                                )}
                             </PopoverContent>
                         </Popover>
                         <Popover>

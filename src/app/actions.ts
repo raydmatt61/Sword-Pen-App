@@ -1,4 +1,3 @@
-
 "use server";
 
 import { generateVerseInsights as generateVerseInsightsFlow } from "@/ai/flows/generate-verse-insights";
@@ -13,7 +12,7 @@ function cleanApiText(text: string): string {
         .replace(/<([^>]+)>/g, ' <$1> ') 
         .replace(/<(br|p|div|span|h[1-6]|b|i|i|em|strong|sup|sub|a)[^>]*>/gi, ' ')
         .replace(/<\/(br|p|div|span|h[1-6]|b|i|i|em|strong|sup|sub|a)>/gi, ' ')
-        .replace(/<[^>]+>/g, ' ')
+        .replace(/<[^+]+>/g, ' ')
         .replace(/&nbsp;/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
@@ -188,11 +187,15 @@ export async function getPageData(book: string, chapter: string, translationId: 
         const canonicalBookAbbr = BIBLE_BOOKS_ABBR[book] || book;
         const crossRefUrl = `https://bible.helloao.org/api/d/open-cross-ref/${canonicalBookAbbr}/${chapter}.json`;
         
-        const [booksData, chapterContent, crossRefData] = await Promise.all([
+        const results = await Promise.all([
             getBooks(translationId),
             getChapter(book, chapter, translationId),
             fetch(crossRefUrl).then(r => r.ok ? r.json() : null).catch(() => null)
         ]);
+        
+        const booksData = results[0];
+        const chapterContent = results[1];
+        const crossRefData = results[2];
         
         if (!booksData || !chapterContent) return null;
         return { books: booksData, chapterData: chapterContent, crossRefs: crossRefData };
