@@ -102,10 +102,9 @@ export function StudySidePanel() {
         if (isEraser) {
             ctx.lineWidth = 20;
         } else if (e.pointerType === 'pen' && e.pressure > 0) {
-            // Refined ultra-thin line for high-fidelity stylus input
-            ctx.lineWidth = 0.2 + (e.pressure * 1.5);
+            ctx.lineWidth = 0.15 + (e.pressure * 1.2);
         } else {
-            ctx.lineWidth = 0.8;
+            ctx.lineWidth = 0.5;
         }
 
         ctx.strokeStyle = color;

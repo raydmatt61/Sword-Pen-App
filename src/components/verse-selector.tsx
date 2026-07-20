@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -12,7 +13,7 @@ import { Skeleton } from './ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-const LAST_LOCATION_KEY = 'verse-insights-last-location';
+const PREV_LOCATION_KEY = 'sword-and-pen-prev-location';
 
 const BookSelectorGrid = ({ books, currentBook, onSelect }: { books: Book[], currentBook: string, onSelect: (bookName: string) => void }) => {
     const otBooks = useMemo(() => books.filter(b => b.testament === 'OT'), [books]);
@@ -148,7 +149,7 @@ export function VerseSelector({
 
   const handleGoBack = () => {
     try {
-        const savedLocationRaw = localStorage.getItem(LAST_LOCATION_KEY);
+        const savedLocationRaw = localStorage.getItem(PREV_LOCATION_KEY);
         if (savedLocationRaw) {
             const savedLocation = JSON.parse(savedLocationRaw);
             navigate({

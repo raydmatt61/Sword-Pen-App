@@ -27,7 +27,8 @@ import { Button } from '@/components/ui/button';
 import { SidebarProvider, SidebarInset, Sidebar } from '@/components/ui/sidebar';
 import { StudySidePanel } from '@/components/study-side-panel';
 
-const LAST_LOCATION_KEY = 'verse-insights-last-location';
+const LAST_LOCATION_KEY = 'sword-and-pen-last-location';
+const PREV_LOCATION_KEY = 'sword-and-pen-prev-location';
 
 function VerseIconToggle() {
     const { showVerseIcons, setShowVerseIcons } = useAnnotationContext();
@@ -275,7 +276,13 @@ function PageWithSearchParams() {
             setPageData(data);
             setInitStatus('ready');
             try {
-              localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ book, chapter, translationId: translation }));
+              const currentLocRaw = localStorage.getItem(LAST_LOCATION_KEY);
+              const newLoc = JSON.stringify({ book, chapter, translationId: translation });
+              
+              if (currentLocRaw && currentLocRaw !== newLoc) {
+                localStorage.setItem(PREV_LOCATION_KEY, currentLocRaw);
+              }
+              localStorage.setItem(LAST_LOCATION_KEY, newLoc);
             } catch (e) {}
           } else {
             setInitStatus('error');
