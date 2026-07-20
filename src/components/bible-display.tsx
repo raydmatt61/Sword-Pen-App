@@ -308,16 +308,16 @@ function VerseComponent({
     );
 
     return (
-        <div data-verse-number={verse.number} className={cn("inline", textClasses)}>
+        <div data-verse-number={verse.number} className={cn("block mb-8 md:mb-10", textClasses)}>
             <sup 
-                className="font-headline font-bold text-primary mr-1 select-none cursor-pointer align-baseline"
+                className="font-headline font-bold text-primary mr-2 select-none cursor-pointer align-baseline"
                 onClick={handleVerseNumberClick}
             >
                 {verse.number}
             </sup>
             
             {showVerseIcons && (
-                <span className="inline-flex items-center gap-1.5 mr-2 align-baseline">
+                <span className="inline-flex items-center gap-1.5 mr-3 align-baseline">
                     <button 
                         onClick={handleBookmarkToggle}
                         className={cn(
@@ -431,7 +431,6 @@ function VerseComponent({
             )}
 
             <span className="verse-text-wrapper">{renderedContent}</span>
-            <span className="mr-2"> </span>
         </div>
     );
 }

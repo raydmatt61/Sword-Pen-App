@@ -40,8 +40,6 @@ export function JournalSheet() {
             });
     }, [entries, searchQuery]);
 
-    if (!user) return null;
-
     const handleNewEntry = () => {
         const currentRef = chapterData ? `${chapterData.book.name} ${chapterData.chapter.number}` : "";
         setEditingEntry({
@@ -63,6 +61,8 @@ export function JournalSheet() {
         addOrUpdateEntry(editingEntry);
         setIsEntryDialogOpen(false);
     };
+
+    if (!user) return null;
 
     return (
         <>
