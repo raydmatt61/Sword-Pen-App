@@ -214,7 +214,7 @@ export function VerseSelector({
         </Button>
         <Popover open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" type="button" className="h-10 w-10 border-stone-200 bg-white" disabled={maxVerses === 0}>
+                <Button variant="outline" size="icon" type="button" className="h-10 w-10 border-stone-200 bg-white" disabled={maxVerses === 0} title="Jump to Verse">
                     <Hash className="h-4 w-4" />
                 </Button>
             </PopoverTrigger>
@@ -228,7 +228,7 @@ export function VerseSelector({
                 />
             </PopoverContent>
         </Popover>
-        <Button variant="outline" size="icon" type="button" onClick={handleGoBack} className="h-10 w-10 border-stone-200 bg-white">
+        <Button variant="outline" size="icon" type="button" onClick={handleGoBack} className="h-10 w-10 border-stone-200 bg-white" title="Go Back">
             <History className="h-4 w-4" />
         </Button>
     </div>
