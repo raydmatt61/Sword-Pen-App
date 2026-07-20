@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useUser } from '@/firebase';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Trash2, StickyNote, Highlighter, Underline, X, Copy } from 'lucide-react';
+import { Trash2, StickyNote, Highlighter, Underline, X, Copy, Plus } from 'lucide-react';
 import { AiInsightGenerator } from './ai-insight-generator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useToast } from '@/hooks/use-toast';
@@ -13,14 +12,15 @@ import { useAnnotationContext } from '@/contexts/annotation-context';
 import { cn } from '@/lib/utils';
 
 const highlightColors = [
-    { class: 'hl-yellow', color: '#fef08a' },
-    { class: 'hl-green', color: '#bbf7d0' },
-    { class: 'hl-blue', color: '#bfdbfe' },
-    { class: 'hl-purple', color: '#e9d5ff' },
-    { class: 'hl-pink', color: '#fbcfe8' },
-    { class: 'hl-orange', color: '#fed7aa' },
-    { class: 'hl-teal', color: '#99f6e4' },
+    { class: 'hl-yellow', color: '#fef08a', label: 'General' },
+    { class: 'hl-blue', color: '#bfdbfe', label: 'Promise' },
+    { class: 'hl-green', color: '#bbf7d0', label: 'Obedience' },
+    { class: 'hl-purple', color: '#e9d5ff', label: 'Reward' },
+    { class: 'hl-pink', color: '#fbcfe8', label: 'Love' },
+    { class: 'hl-orange', color: '#fed7aa', label: 'Warning' },
+    { class: 'hl-teal', color: '#99f6e4', label: 'Mystery' },
 ];
+
 const underlineColors = [
     { class: 'ul-red', color: '#991b1b' },
     { class: 'ul-blue', color: '#2563eb' },
@@ -145,17 +145,35 @@ export function AnnotationWrapper() {
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" title="Highlight"><Highlighter className="h-4 w-4" /></Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-2" align="start">
-                                <div className="flex flex-wrap gap-2 max-w-[160px]">
+                            <PopoverContent className="w-56 p-2 shadow-xl border-stone-200" align="start">
+                                <div className="flex flex-col gap-1">
                                     {highlightColors.map(h => (
                                         <button 
                                             key={h.class} 
                                             onClick={() => onHighlight(h.class)} 
-                                            className="h-6 w-6 rounded border shadow-sm hover:scale-110 transition-transform" 
-                                            style={{ backgroundColor: h.color }}
-                                        />
+                                            className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-stone-100 transition-all text-left group"
+                                        >
+                                            <div className="h-4 w-4 rounded-full border border-stone-300 shadow-sm group-hover:scale-110 transition-transform" style={{ backgroundColor: h.color }} />
+                                            <span className="text-sm font-bold text-stone-700">{h.label}</span>
+                                        </button>
                                     ))}
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onHighlight(null)}><X className="h-4 w-4"/></Button>
+                                    <div className="h-px bg-stone-100 my-1" />
+                                    <button 
+                                        onClick={() => onHighlight(null)} 
+                                        className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-destructive/5 text-destructive transition-all text-left"
+                                    >
+                                        <X className="h-4 w-4" />
+                                        <span className="text-sm font-bold">Clear Highlight</span>
+                                    </button>
+                                    <div className="h-px bg-stone-100 my-1" />
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-9 w-full justify-start font-bold text-xs text-muted-foreground uppercase tracking-wider" 
+                                        onClick={() => toast({ title: "Coming Soon", description: "Custom categories feature is in development." })}
+                                    >
+                                        <Plus className="mr-2 h-3 w-3" /> New Category
+                                    </Button>
                                 </div>
                             </PopoverContent>
                         </Popover>
