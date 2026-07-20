@@ -12,6 +12,7 @@ import { ChevronsRight, ChevronLeft, ChevronRight, History, ChevronsUpDown, Hash
 import { Skeleton } from './ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const PREV_LOCATION_KEY = 'sword-and-pen-prev-location';
 
@@ -214,18 +215,32 @@ export function VerseSelector({
         </Button>
         <Popover open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" type="button" className="h-10 w-10 border-stone-200 bg-white" disabled={maxVerses === 0} title="Jump to Verse">
+                <Button variant="outline" size="icon" type="button" className="h-10 w-10 border-stone-200 bg-white" title="Quick Jump">
                     <Hash className="h-4 w-4" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[340px] p-0 shadow-2xl rounded-2xl border-stone-200">
-                <div className="p-3 border-b border-stone-100">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Jump to Verse</p>
-                </div>
-                <VerseSelectorGrid 
-                    numberOfVerses={maxVerses} 
-                    onSelect={handleVerseSelect} 
-                />
+            <PopoverContent className="w-[340px] p-0 shadow-2xl rounded-2xl border-stone-200 overflow-hidden">
+                <Tabs defaultValue="verses" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 p-1 bg-stone-100 rounded-t-2xl h-10">
+                        <TabsTrigger value="chapters" className="text-[10px] font-bold uppercase tracking-widest">Chapters</TabsTrigger>
+                        <TabsTrigger value="verses" className="text-[10px] font-bold uppercase tracking-widest">Verses</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="chapters" className="mt-0">
+                        <ChapterSelectorGrid 
+                            numberOfChapters={maxChaptersForCurrentBook} 
+                            onSelect={(c) => {
+                                handleChapterSelect(c);
+                                setIsVerseSelectorOpen(false);
+                            }} 
+                        />
+                    </TabsContent>
+                    <TabsContent value="verses" className="mt-0">
+                        <VerseSelectorGrid 
+                            numberOfVerses={maxVerses} 
+                            onSelect={handleVerseSelect} 
+                        />
+                    </TabsContent>
+                </Tabs>
             </PopoverContent>
         </Popover>
         <Button variant="outline" size="icon" type="button" onClick={handleGoBack} className="h-10 w-10 border-stone-200 bg-white" title="Go Back">
@@ -281,27 +296,41 @@ export function VerseSelector({
                         </DialogContent>
                     </Dialog>
 
-                    <Dialog open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline" className="w-full h-16 justify-between text-xl font-bold border-stone-200 shadow-sm rounded-2xl bg-white" disabled={maxVerses === 0}>
-                                Jump to Verse
-                                <Hash className="ml-2 h-6 w-6 shrink-0 opacity-50" />
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-[95vw] rounded-3xl p-0 overflow-hidden shadow-2xl border-stone-200">
-                            <DialogHeader className="p-5 border-b border-stone-100 bg-stone-50">
-                                <DialogTitle className="text-xl font-bold uppercase tracking-widest">Select Verse</DialogTitle>
-                            </DialogHeader>
-                            <VerseSelectorGrid 
-                                numberOfVerses={maxVerses} 
-                                onSelect={(v) => {
-                                    handleVerseSelect(v);
-                                    setIsMobileSheetOpen(false);
-                                    setIsVerseSelectorOpen(false);
-                                }} 
-                            />
-                        </DialogContent>
-                    </Dialog>
+                    <div className="space-y-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground ml-2">Quick Jump</p>
+                        <div className="grid grid-cols-2 gap-3">
+                             <Dialog open={isVerseSelectorOpen} onOpenChange={setIsVerseSelectorOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="h-16 justify-between text-lg font-bold border-stone-200 shadow-sm rounded-2xl bg-white" disabled={maxVerses === 0}>
+                                        Verse
+                                        <Hash className="ml-2 h-5 w-5 opacity-50" />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-[95vw] rounded-3xl p-0 overflow-hidden shadow-2xl border-stone-200">
+                                    <DialogHeader className="p-5 border-b border-stone-100 bg-stone-50">
+                                        <DialogTitle className="text-xl font-bold uppercase tracking-widest">Select Verse</DialogTitle>
+                                    </DialogHeader>
+                                    <VerseSelectorGrid 
+                                        numberOfVerses={maxVerses} 
+                                        onSelect={(v) => {
+                                            handleVerseSelect(v);
+                                            setIsMobileSheetOpen(false);
+                                            setIsVerseSelectorOpen(false);
+                                        }} 
+                                    />
+                                </DialogContent>
+                            </Dialog>
+                            <Dialog onOpenChange={(open) => { if(open) setSelectionStep('chapter'); setIsBookSelectorOpen(open); }}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="h-16 justify-between text-lg font-bold border-stone-200 shadow-sm rounded-2xl bg-white">
+                                        Chapter
+                                        <ChevronsRight className="ml-2 h-5 w-5 opacity-50" />
+                                    </Button>
+                                </DialogTrigger>
+                                {/* This uses the same DialogContent logic as above via state */}
+                            </Dialog>
+                        </div>
+                    </div>
 
                     <div className="space-y-3">
                         <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground ml-2">Translation</p>

@@ -308,7 +308,7 @@ function VerseComponent({
     );
 
     return (
-        <div data-verse-number={verse.number} className={cn("block mb-3 md:mb-4", textClasses)}>
+        <div data-verse-number={verse.number} className={cn("block mb-4", textClasses)}>
             <sup 
                 className="font-headline font-bold text-primary mr-2 select-none cursor-pointer align-baseline"
                 onClick={handleVerseNumberClick}
