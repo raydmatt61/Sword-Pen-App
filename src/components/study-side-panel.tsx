@@ -102,6 +102,7 @@ export function StudySidePanel() {
         if (isEraser) {
             ctx.lineWidth = 20;
         } else if (e.pointerType === 'pen' && e.pressure > 0) {
+            // High fidelity thin stylus line
             ctx.lineWidth = 0.15 + (e.pressure * 1.2);
         } else {
             ctx.lineWidth = 0.5;
