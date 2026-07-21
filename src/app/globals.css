@@ -109,3 +109,41 @@
 .font-headline {
   font-family: 'PT Sans', sans-serif;
 }
+
+/* Citation Box for NIV and others */
+.citation-box {
+    background: #fff;
+    border: 1px solid #E4E4E7;
+    border-radius: 20px;
+    padding: 20px 16px;
+    max-width: 700px;
+    line-height: 1.5;
+    color: #222;
+}
+
+.citation-box p.citation-text {
+    font-style: italic;
+    font-size: 11px;
+}
+
+.citation-box .divider {
+    border-top: 1px solid #e0e0e0;
+    margin: 16px 0;
+}
+
+.citation-box a {
+    color: #0155CC;
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.citation-box a:hover {
+    text-decoration: underline;
+}
+
+.dark .citation-box {
+    background: #1c1917;
+    border-color: #444;
+    color: #eee;
+}

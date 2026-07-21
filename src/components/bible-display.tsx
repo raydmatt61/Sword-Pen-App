@@ -592,6 +592,8 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
         return chapterData.notesUrl;
     }, [chapterData.translation.id, chapterData.notesUrl, isMobile]);
 
+    const isNiv = chapterData.translation.id === 'NIV';
+
     return (
         <TooltipProvider>
             <div ref={emblaRef} className="relative overflow-hidden">
@@ -651,10 +653,23 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                         NET Bible Notes & Commentary
                                     </a>
                                 )}
+                                
                                 {chapterData.copyright && (
-                                    <p className="text-[10px] text-muted-foreground italic leading-relaxed uppercase tracking-wider max-w-2xl">
-                                        {chapterData.copyright}
-                                    </p>
+                                    isNiv ? (
+                                        <div className="citation-box mt-4">
+                                            <p className="citation-text">
+                                                {chapterData.copyright}
+                                            </p>
+                                            <div className="divider" />
+                                            <a href="https://www.biblica.com/" target="_blank" rel="noopener noreferrer">
+                                                Visit Biblica.com
+                                            </a>
+                                        </div>
+                                    ) : (
+                                        <p className="text-[10px] text-muted-foreground italic leading-relaxed uppercase tracking-wider max-w-2xl">
+                                            {chapterData.copyright}
+                                        </p>
+                                    )
                                 )}
                             </CardFooter>
                         </Card>
