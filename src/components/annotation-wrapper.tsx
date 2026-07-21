@@ -13,6 +13,7 @@ import { useAnnotationContext } from '@/contexts/annotation-context';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 import { collection } from 'firebase/firestore';
+import { ScrollArea } from './ui/scroll-area';
 
 const defaultHighlightColors = [
     { class: 'hl-yellow', color: '#fef08a', label: 'General' },
