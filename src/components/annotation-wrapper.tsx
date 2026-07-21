@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useUser, useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, setDocumentNonBlocking, deleteDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Trash2, StickyNote, Highlighter, Underline, X, Copy, Plus } from 'lucide-react';
@@ -12,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAnnotationContext } from '@/contexts/annotation-context';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
-import { collection } from 'firebase/firestore';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { ScrollArea } from './ui/scroll-area';
 
 const defaultHighlightColors = [
@@ -169,7 +168,9 @@ export function AnnotationWrapper() {
         }
         if (!user || !firestore) return;
 
+        const newCatRef = doc(collection(firestore, `users/${user.uid}/categories`));
         const categoryData = {
+            id: newCatRef.id,
             userId: user.uid,
             label: newCategoryLabel.trim(),
             class: newCategoryColor.class,
@@ -177,8 +178,7 @@ export function AnnotationWrapper() {
         };
 
         // Save the definition to Firestore
-        const catColRef = collection(firestore, `users/${user.uid}/categories`);
-        addDocumentNonBlocking(catColRef, categoryData);
+        setDocumentNonBlocking(newCatRef, categoryData);
 
         // Apply it to current selection
         onHighlight(newCategoryColor.class);
@@ -207,7 +207,7 @@ export function AnnotationWrapper() {
                                 <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" title="Highlight" data-study-tool="button"><Highlighter className="h-4 w-4" /></Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-64 p-2 shadow-xl border-stone-200" align="start" data-study-tool="content">
-                                <ScrollArea className="max-h-72">
+                                <ScrollArea className="max-h-80">
                                     {!isAddingCategory ? (
                                         <div className="flex flex-col gap-1">
                                             {allHighlightColors.map((h, i) => (
@@ -215,6 +215,7 @@ export function AnnotationWrapper() {
                                                     key={`${h.class}-${i}`} 
                                                     onClick={() => onHighlight(h.class)} 
                                                     className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-stone-100 transition-all text-left group"
+                                                    data-study-tool="button"
                                                 >
                                                     <div className="h-4 w-4 rounded-full border border-stone-300 shadow-sm group-hover:scale-110 transition-transform" style={{ backgroundColor: h.color }} />
                                                     <span className="text-sm font-bold text-stone-700">{h.label}</span>
@@ -224,6 +225,7 @@ export function AnnotationWrapper() {
                                             <button 
                                                 onClick={() => onHighlight(null)} 
                                                 className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-destructive/5 text-destructive transition-all text-left"
+                                                data-study-tool="button"
                                             >
                                                 <X className="h-4 w-4" />
                                                 <span className="text-sm font-bold">Clear Highlight</span>
@@ -233,7 +235,8 @@ export function AnnotationWrapper() {
                                                 variant="ghost" 
                                                 size="sm" 
                                                 className="h-9 w-full justify-start font-bold text-xs text-muted-foreground uppercase tracking-wider" 
-                                                onClick={() => setIsAddingCategory(true)}
+                                                onClick={(e) => { e.stopPropagation(); setIsAddingCategory(true); }}
+                                                data-study-tool="button"
                                             >
                                                 <Plus className="mr-2 h-3 w-3" /> New Category
                                             </Button>
@@ -242,7 +245,7 @@ export function AnnotationWrapper() {
                                         <div className="space-y-4 p-2">
                                             <div className="flex items-center justify-between">
                                                 <h4 className="font-bold text-xs uppercase tracking-widest text-primary">New Category</h4>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsAddingCategory(false)}><X className="h-3 w-3" /></Button>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsAddingCategory(false)} data-study-tool="button"><X className="h-3 w-3" /></Button>
                                             </div>
                                             <Input 
                                                 placeholder="Category Name" 
@@ -263,10 +266,11 @@ export function AnnotationWrapper() {
                                                         )}
                                                         style={{ backgroundColor: c.color }}
                                                         title={c.name}
+                                                        data-study-tool="button"
                                                     />
                                                 ))}
                                             </div>
-                                            <Button className="w-full h-8 text-xs font-bold" onClick={handleCreateCategory}>
+                                            <Button className="w-full h-8 text-xs font-bold" onClick={handleCreateCategory} data-study-tool="button">
                                                 Create & Apply
                                             </Button>
                                         </div>
@@ -287,11 +291,12 @@ export function AnnotationWrapper() {
                                             onClick={() => onUnderline(u.class)} 
                                             className="h-6 w-6 rounded border shadow-sm flex items-center justify-center hover:scale-110 transition-transform" 
                                             style={{ borderColor: u.color }}
+                                            data-study-tool="button"
                                         >
                                             <div className="w-4 h-0.5" style={{ backgroundColor: u.color }}></div>
                                         </button>
                                     ))}
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUnderline(null)}><X className="h-4 w-4"/></Button>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUnderline(null)} data-study-tool="button"><X className="h-4 w-4"/></Button>
                                 </div>
                             </PopoverContent>
                         </Popover>
@@ -322,10 +327,11 @@ export function AnnotationWrapper() {
                                         className="font-body text-sm"
                                         rows={4}
                                         autoFocus
+                                        data-study-tool="input"
                                     />
                                     <div className="flex gap-2 justify-end">
-                                        <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty && activeAnnotation !== null}>Save Changes</Button>
-                                        <Button onClick={handleCancelEdit} size="sm" variant="ghost">Cancel</Button>
+                                        <Button onClick={handleSaveNote} size="sm" disabled={!noteDirty && activeAnnotation !== null} data-study-tool="button">Save Changes</Button>
+                                        <Button onClick={handleCancelEdit} size="sm" variant="ghost" data-study-tool="button">Cancel</Button>
                                     </div>
                                 </div>
                             </PopoverContent>
