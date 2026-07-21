@@ -22,14 +22,14 @@ const defaultHighlightColors = [
     { class: 'hl-pink', color: '#fbcfe8', label: 'Love' },
     { class: 'hl-orange', color: '#fed7aa', label: 'Warning' },
     { class: 'hl-teal', color: '#99f6e4', label: 'Mystery' },
-    { class: 'hl-yellow', color: '#fde68a', label: 'Grace' },
+    { class: 'hl-lime', color: '#bef264', label: 'Grace' },
 ];
 
 const extraColors = [
     { name: 'Amber', color: '#fbbf24', class: 'hl-orange' },
     { name: 'Indigo', color: '#818cf8', class: 'hl-blue' },
     { name: 'Rose', color: '#fb7185', class: 'hl-pink' },
-    { name: 'Lime', color: '#a3e635', class: 'hl-green' },
+    { name: 'Lime', color: '#a3e635', class: 'hl-lime' },
     { name: 'Cyan', color: '#22d3ee', class: 'hl-teal' },
     { name: 'Violet', color: '#a78bfa', class: 'hl-purple' },
 ];
@@ -146,6 +146,7 @@ export function AnnotationWrapper() {
 
     const onHighlight = (style: string | null) => {
         if (!selection && !activeAnnotation) return;
+        // Pass explicit empty string instead of null/undefined to avoid Firestore errors
         createOrUpdateAnnotation({ highlight: style || "" });
     };
 
@@ -224,7 +225,7 @@ export function AnnotationWrapper() {
                                             ))}
                                             <div className="h-px bg-stone-100 my-1" />
                                             <button 
-                                                onClick={() => onHighlight(null)} 
+                                                onClick={() => onHighlight("")} 
                                                 className="flex items-center gap-3 w-full px-2.5 py-2 rounded-md hover:bg-destructive/5 text-destructive transition-all text-left"
                                                 data-study-tool="button"
                                             >
@@ -297,7 +298,7 @@ export function AnnotationWrapper() {
                                             <div className="w-4 h-0.5" style={{ backgroundColor: u.color }}></div>
                                         </button>
                                     ))}
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUnderline(null)} data-study-tool="button"><X className="h-4 w-4"/></Button>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUnderline("")} data-study-tool="button"><X className="h-4 w-4"/></Button>
                                 </div>
                             </PopoverContent>
                         </Popover>
