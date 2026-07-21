@@ -524,7 +524,6 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                  setActiveAnnotation(null);
             }
         } else if (sel && sel.isCollapsed) {
-            // Updated logic: Don't clear selection if interacting with study tools (via data-study-tool attribute)
             const target = sel.anchorNode?.parentElement;
             if (target?.closest('[data-study-tool]')) {
                 return;
@@ -593,6 +592,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
     }, [chapterData.translation.id, chapterData.notesUrl, isMobile]);
 
     const isNiv = chapterData.translation.id === 'NIV';
+    const isNlt = chapterData.translation.id === 'NLT';
 
     return (
         <TooltipProvider>
@@ -655,14 +655,18 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                 )}
                                 
                                 {chapterData.copyright && (
-                                    isNiv ? (
+                                    (isNiv || isNlt) ? (
                                         <div className="citation-box mt-4">
                                             <p className="citation-text">
                                                 {chapterData.copyright}
                                             </p>
                                             <div className="divider" />
-                                            <a href="https://www.biblica.com/" target="_blank" rel="noopener noreferrer">
-                                                Visit Biblica.com
+                                            <a 
+                                                href={isNiv ? "https://www.biblica.com/" : "https://www.tyndale.com/nlt/"} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                            >
+                                                {isNiv ? "Visit Biblica.com" : "Visit Tyndale.com"}
                                             </a>
                                         </div>
                                     ) : (
