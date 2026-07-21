@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
@@ -343,7 +344,7 @@ function VerseComponent({
                                 </DialogHeader>
                                 <div className="py-4 font-body whitespace-pre-wrap space-y-4 text-sm max-h-[60vh] overflow-y-auto">
                                     {verseNotes.map((note, index) => (
-                                        <div key={index} className="border-l-4 border-primary/70 pl-4 bg-secondary/30 py-2 rounded-r-md">{note}</div>
+                                        <div key={index} className="border-l-4 border-primary/70 <content></content>pl-4 bg-secondary/30 py-2 rounded-r-md">{note}</div>
                                     ))}
                                 </div>
                             </DialogContent>
@@ -613,7 +614,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                     </div>
                                 </div>
 
-                                <div className="mt-24 flex items-center justify-between border-t border-stone-200 pt-12 pb-16">
+                                <div className="mt-10 flex items-center justify-between border-t border-stone-200 pt-8 pb-8">
                                     <Button
                                         variant="ghost"
                                         className="flex flex-col items-start gap-1 h-auto py-6 px-4 md:px-8 group rounded-xl hover:bg-stone-100 transition-all"
@@ -641,7 +642,7 @@ export function BibleDisplay({ chapterData, crossRefs, onChapterNav, navigate, c
                                     </Button>
                                 </div>
                             </CardContent>
-                            <CardFooter className="px-0 pt-6 flex flex-col items-start gap-6 pb-24 border-t border-stone-100">
+                            <CardFooter className="px-0 pt-6 flex flex-col items-start gap-6 pb-12 border-t border-stone-100">
                                 {notesLink && (
                                     <a 
                                         href={notesLink} 

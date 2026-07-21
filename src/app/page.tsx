@@ -182,7 +182,7 @@ function PageContent({ books, chapterData, crossRefs, initialBook, initialChapte
                     </div>
                   </div>
 
-                  <div ref={contentRef} className="flex-grow overflow-y-auto p-4 md:p-8">
+                  <div ref={contentRef} className="flex-grow overflow-y-auto px-8 md:px-24 py-4 md:py-8">
                     {!chapterData ? (
                       <Card className="mt-6 max-w-lg mx-auto border-none shadow-none bg-stone-100">
                         <CardContent className="pt-12 pb-12">
