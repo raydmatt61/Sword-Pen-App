@@ -23,6 +23,7 @@ const defaultHighlightColors = [
     { class: 'hl-orange', color: '#fed7aa', label: 'Warning' },
     { class: 'hl-teal', color: '#99f6e4', label: 'Mystery' },
     { class: 'hl-lime', color: '#bef264', label: 'Grace' },
+    { class: 'hl-rose', color: '#fecdd3', label: 'Pray' },
 ];
 
 const extraColors = [

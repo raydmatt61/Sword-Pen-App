@@ -11,6 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 type DrawingTool = 'pen' | 'eraser' | 'rect' | 'circle' | 'oval' | 'triangle';
 
+const CANVAS_WIDTH = 350;
+const CANVAS_HEIGHT = 2000;
+
 export function StudySidePanel() {
     const { scratchpad, setScratchpad, sketchpad, setSketchpad, isLoading, isSaving, persistNow } = useStudySession();
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,8 +36,8 @@ export function StudySidePanel() {
             if (!ctx) return;
 
             const dpr = window.devicePixelRatio || 1;
-            const width = 350; 
-            const height = 2000; 
+            const width = CANVAS_WIDTH; 
+            const height = CANVAS_HEIGHT; 
             
             canvas.width = width * dpr;
             canvas.height = height * dpr;
@@ -51,12 +54,12 @@ export function StudySidePanel() {
         if (sketchpad && ctx) {
             const img = new Image();
             img.onload = () => {
-                ctx.clearRect(0, 0, 350, 2000);
-                ctx.drawImage(img, 0, 0, 350, 2000);
+                ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.drawImage(img, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
             };
             img.src = sketchpad;
         } else if (ctx) {
-            ctx.clearRect(0, 0, 350, 2000);
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         }
     }, [sketchpad, isLoading]);
 
@@ -64,9 +67,11 @@ export function StudySidePanel() {
         const canvas = canvasRef.current;
         if (!canvas) return { x: 0, y: 0 };
         const rect = canvas.getBoundingClientRect();
+        const widthScale = rect.width ? (CANVAS_WIDTH / rect.width) : 1;
+        const heightScale = rect.height ? (CANVAS_HEIGHT / rect.height) : 1;
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            x: (e.clientX - rect.left) * widthScale,
+            y: (e.clientY - rect.top) * heightScale
         };
     };
 
@@ -166,7 +171,7 @@ export function StudySidePanel() {
             const pCtx = previewCanvas?.getContext('2d');
             if (!previewCanvas || !pCtx) return;
 
-            pCtx.clearRect(0, 0, 350, 2000);
+            pCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
             pCtx.strokeStyle = color;
             pCtx.lineWidth = 0.8;
             drawShape(pCtx, tool, startPos.current, coords);
@@ -195,7 +200,7 @@ export function StudySidePanel() {
             
             // Clear preview
             const previewCanvas = previewCanvasRef.current;
-            previewCanvas?.getContext('2d')?.clearRect(0, 0, 350, 2000);
+            previewCanvas?.getContext('2d')?.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         }
 
         if (canvas) {
